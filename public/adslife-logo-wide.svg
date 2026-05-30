@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 80" fill="none">
+  <!-- Icon mark -->
+  <circle cx="40" cy="40" r="36" fill="#FF6200"/>
+  <path d="M25 56 L40 20 L55 56" stroke="white" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <line x1="31" y1="44" x2="49" y2="44" stroke="white" stroke-width="5.5" stroke-linecap="round"/>
+  <circle cx="58" cy="22" r="7" fill="white"/>
+  <path d="M55.5 22 L58 19.5 L60.5 22 L58 24.5 Z" fill="#FF6200"/>
+
+  <!-- Wordmark -->
+  <!-- Ads -->
+  <text x="88" y="50" font-family="'Segoe UI', Arial, sans-serif" font-weight="800" font-size="30" fill="#1A1A2E" letter-spacing="-0.5">Ads</text>
+  <!-- Life in orange -->
+  <text x="148" y="50" font-family="'Segoe UI', Arial, sans-serif" font-weight="800" font-size="30" fill="#FF6200" letter-spacing="-0.5">Life</text>
+  <!-- Tagline -->
+  <text x="89" y="65" font-family="'Segoe UI', Arial, sans-serif" font-weight="400" font-size="11" fill="#888" letter-spacing="1.5">DISCOVER · EARN · WIN</text>
+</svg>

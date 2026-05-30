@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+Allow: /feed
+Allow: /leaderboard
+Allow: /login
+Allow: /register
+Allow: /offer/
+
+Disallow: /admin/
+Disallow: /vendor/
+Disallow: /profile
+Disallow: /api/
+
+Sitemap: https://adslife.in/sitemap.xml

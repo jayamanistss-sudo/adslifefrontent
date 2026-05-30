@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <!-- Background circle -->
+  <circle cx="100" cy="100" r="100" fill="#FF6200"/>
+
+  <!-- Bold A letterform -->
+  <path d="M55 148 L100 52 L145 148" stroke="white" stroke-width="18" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- Crossbar -->
+  <line x1="72" y1="112" x2="128" y2="112" stroke="white" stroke-width="14" stroke-linecap="round"/>
+
+  <!-- Spark / tag accent top-right -->
+  <circle cx="148" cy="54" r="14" fill="white"/>
+  <path d="M143 54 L148 49 L153 54 L148 59 Z" fill="#FF6200"/>
+</svg>
