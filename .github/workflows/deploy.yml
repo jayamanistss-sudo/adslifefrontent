@@ -16,32 +16,36 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Install & Build
-        run: npm ci && npm run build
-
-      - name: Set deploy target
-        id: target
+      - name: Set deploy config
+        id: cfg
         run: |
-          if [ "${{ github.ref_name }}" = "prod" ]; then
+          BRANCH="${{ github.ref_name }}"
+          if [ "$BRANCH" = "prod" ]; then
             echo "path=/var/www/adslife-frontend" >> $GITHUB_OUTPUT
-            echo "env=PRODUCTION (adslife.in)" >> $GITHUB_OUTPUT
-          elif [ "${{ github.ref_name }}" = "test" ]; then
+            echo "mode=production" >> $GITHUB_OUTPUT
+          elif [ "$BRANCH" = "test" ]; then
             echo "path=/var/www/adslife-frontend-test" >> $GITHUB_OUTPUT
-            echo "env=TEST (test.adslife.in)" >> $GITHUB_OUTPUT
+            echo "mode=test" >> $GITHUB_OUTPUT
           else
             echo "path=/var/www/adslife-frontend-dev" >> $GITHUB_OUTPUT
-            echo "env=DEV (dev.adslife.in)" >> $GITHUB_OUTPUT
+            echo "mode=dev" >> $GITHUB_OUTPUT
           fi
 
-      - name: Deploy via SSH
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build -- --mode ${{ steps.cfg.outputs.mode }}
+
+      - name: Deploy
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.DEPLOY_SERVER_IP }}
           username: ${{ secrets.DEPLOY_SERVER_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           source: "dist/*"
-          target: "${{ steps.target.outputs.path }}"
+          target: ${{ steps.cfg.outputs.path }}
           strip_components: 1
 
-      - name: Notify
-        run: echo "✅ Deployed to ${{ steps.target.outputs.env }} from branch ${{ github.ref_name }}"
+      - name: Done
+        run: echo "Deployed branch ${{ github.ref_name }} to ${{ steps.cfg.outputs.path }}"
