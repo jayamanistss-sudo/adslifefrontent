@@ -1,6 +1,14 @@
 import axios from 'axios';
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://103.190.92.21:3001/api';
+function getBaseURL(): string {
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+  // Auto-detect from hostname so each deployment calls its own backend
+  const host = typeof window !== 'undefined' ? window.location.hostname : 'adslife.in';
+  if (host === 'dev.adslife.in')  return 'https://dev.adslife.in/api';
+  if (host === 'test.adslife.in') return 'https://test.adslife.in/api';
+  return 'https://adslife.in/api';
+}
+const BASE_URL = getBaseURL();
 
 // Rewrite internal IPs in any URL string returned by the server
 const INTERNAL_IP_RE = /http:\/\/160\.250\.224\.242(:\d+)?/g;
