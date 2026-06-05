@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, Save, X } from 'lucide-react';
+import { useEffect, useState, useRef } from 'react';
+import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, Save, X, ChevronDown } from 'lucide-react';
 import { api, endpoints } from '../../utils/api';
 import toast from 'react-hot-toast';
 import CategoryIcon from '../../components/CategoryIcon';
@@ -22,6 +22,8 @@ export default function AdminCategories() {
   const [isNew, setIsNew]             = useState(false);
   const [saving, setSaving]           = useState(false);
   const [deleteId, setDeleteId]       = useState<number | null>(null);
+  const [iconDropdownOpen, setIconDropdownOpen] = useState(false);
+  const iconDropdownRef               = useRef<HTMLDivElement>(null);
 
   const load = async () => {
     setLoading(true);
@@ -35,9 +37,19 @@ export default function AdminCategories() {
 
   useEffect(() => { load(); }, []);
 
-  const openNew = () => { setEditing(empty()); setIsNew(true); };
-  const openEdit = (cat: Category) => { setEditing({ ...cat }); setIsNew(false); };
-  const closeEdit = () => { setEditing(null); setIsNew(false); };
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (iconDropdownRef.current && !iconDropdownRef.current.contains(e.target as Node)) {
+        setIconDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const openNew = () => { setEditing(empty()); setIsNew(true); setIconDropdownOpen(false); };
+  const openEdit = (cat: Category) => { setEditing({ ...cat }); setIsNew(false); setIconDropdownOpen(false); };
+  const closeEdit = () => { setEditing(null); setIsNew(false); setIconDropdownOpen(false); };
 
   const save = async () => {
     if (!editing?.name?.trim()) { toast.error('Name is required'); return; }
@@ -177,15 +189,34 @@ export default function AdminCategories() {
                   <div className="flex items-center justify-center w-12 h-12 rounded-xl border border-[var(--border)] bg-[var(--bg)]">
                     <CategoryIcon name={editing.icon ?? 'tag'} size={24} className="text-[var(--primary)]" />
                   </div>
-                  <select
-                    value={editing.icon ?? 'tag'}
-                    onChange={e => setEditing({ ...editing, icon: e.target.value })}
-                    className="input-field flex-1"
-                  >
-                    {['utensils','shirt','smartphone','sparkles','plane','film','shopping-cart','shopping-bag','heart','dumbbell','tag','package','star','coffee','pizza','car','home','briefcase','music','book-open','camera','scissors','gem','gift','globe','leaf','monitor','tv','watch','wine','baby','bike','dog','flower','gamepad','hammer','headphones','hotel','laptop','paintbrush','pill','stethoscope','ticket','truck','umbrella','wallet','wrench','zap'].map(name => (
-                      <option key={name} value={name}>{name}</option>
-                    ))}
-                  </select>
+                  <div ref={iconDropdownRef} className="relative flex-1">
+                    <button
+                      type="button"
+                      onClick={() => setIconDropdownOpen(!iconDropdownOpen)}
+                      className="input flex items-center justify-between text-left w-full cursor-pointer rounded-lg"
+                    >
+                      <span className="capitalize">{editing.icon ?? 'tag'}</span>
+                      <ChevronDown size={16} className={`text-[var(--text-secondary)] transition-transform duration-200 ${iconDropdownOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    {iconDropdownOpen && (
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-[var(--surface)] border border-[var(--border)] rounded-lg shadow-xl z-50 max-h-60 overflow-y-auto divide-y divide-[var(--border)]">
+                        {['utensils','shirt','smartphone','sparkles','plane','film','shopping-cart','shopping-bag','heart','dumbbell','tag','package','star','coffee','pizza','car','home','briefcase','music','book-open','camera','scissors','gem','gift','globe','leaf','monitor','tv','watch','wine','baby','bike','dog','flower','gamepad','hammer','headphones','hotel','laptop','paintbrush','pill','stethoscope','ticket','truck','umbrella','wallet','wrench','zap'].map(name => (
+                          <button
+                            key={name}
+                            type="button"
+                            onClick={() => {
+                              setEditing({ ...editing, icon: name });
+                              setIconDropdownOpen(false);
+                            }}
+                            className="w-full flex items-center gap-3 px-4 py-2 hover:bg-[var(--bg)] text-left text-[var(--text)] transition-colors cursor-pointer"
+                          >
+                            <CategoryIcon name={name} size={18} className="text-[var(--primary)]" />
+                            <span className="capitalize text-sm font-medium">{name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
               <div>
@@ -194,7 +225,7 @@ export default function AdminCategories() {
                   type="text"
                   value={editing.name ?? ''}
                   onChange={e => setEditing({ ...editing, name: e.target.value })}
-                  className="input-field"
+                  className="input rounded-lg"
                   placeholder="e.g. Food & Dining"
                 />
               </div>
@@ -204,7 +235,7 @@ export default function AdminCategories() {
                   type="number"
                   value={editing.sort_order ?? 0}
                   onChange={e => setEditing({ ...editing, sort_order: Number(e.target.value) })}
-                  className="input-field"
+                  className="input rounded-lg"
                   min={0}
                 />
               </div>
@@ -225,11 +256,11 @@ export default function AdminCategories() {
               )}
             </div>
             <div className="flex gap-3 px-6 pb-6">
-              <button onClick={closeEdit} className="flex-1 btn-secondary py-2.5">Cancel</button>
+              <button onClick={closeEdit} className="flex-1 btn btn-secondary rounded-lg py-3">Cancel</button>
               <button
                 onClick={save}
                 disabled={saving}
-                className="flex-1 flex items-center justify-center gap-2 bg-[var(--primary)] text-white py-2.5 rounded-xl font-semibold hover:opacity-90 disabled:opacity-60"
+                className="flex-1 btn bg-[var(--primary)] text-white hover:opacity-90 disabled:opacity-60 rounded-lg py-3"
               >
                 <Save size={16} /> {saving ? 'Saving…' : 'Save'}
               </button>
@@ -242,15 +273,17 @@ export default function AdminCategories() {
       {deleteId && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-[var(--surface)] rounded-2xl w-full max-w-sm shadow-2xl p-6 space-y-4">
-            <h2 className="font-bold text-lg text-[var(--text)]">Delete Category?</h2>
+            <h2 className="font-bold text-lg text-[var(--text)]">
+              Delete "{categories.find(c => c.id === deleteId)?.name}"?
+            </h2>
             <p className="text-sm text-[var(--text-secondary)]">
               This will remove the category. Existing offers with this category won't be affected.
             </p>
             <div className="flex gap-3">
-              <button onClick={() => setDeleteId(null)} className="flex-1 btn-secondary py-2.5">Cancel</button>
+              <button onClick={() => setDeleteId(null)} className="flex-1 btn btn-secondary rounded-lg py-3">Cancel</button>
               <button
                 onClick={confirmDelete}
-                className="flex-1 bg-red-500 text-white py-2.5 rounded-xl font-semibold hover:bg-red-600"
+                className="flex-1 btn bg-red-500 text-white hover:bg-red-600 rounded-lg py-3"
               >
                 Delete
               </button>

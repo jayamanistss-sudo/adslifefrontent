@@ -270,7 +270,7 @@ export default function Layout({ children }: Props) {
         </header>
 
         {/* ── Page content ── */}
-        <main className="flex-1 p-6 overflow-auto">
+        <main className="flex-1 p-6 overflow-x-hidden overflow-y-auto">
           {children}
         </main>
       </div>
@@ -309,7 +309,7 @@ export default function Layout({ children }: Props) {
         </header>
 
         {/* Mobile content */}
-        <main className="flex-1 pb-20 overflow-auto">
+        <main className="flex-1 pb-20 overflow-x-hidden overflow-y-auto">
           {children}
         </main>
 

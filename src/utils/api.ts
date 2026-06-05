@@ -46,7 +46,9 @@ api.interceptors.response.use(
     if (err.response?.status === 401) {
       localStorage.removeItem('adslife_token');
       localStorage.removeItem('adslife_user');
-      globalThis.location.href = '/login';
+      if (globalThis.location.pathname !== '/login') {
+        globalThis.location.href = '/login';
+      }
     }
     return Promise.reject(err);
   }
