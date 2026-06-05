@@ -9,8 +9,6 @@ import { useUserStore } from '../store/useUserStore';
 import { useSiteSettings } from '../store/useSiteSettings';
 import { useSavedStore } from '../store/useSavedStore';
 import NotificationPanel from './NotificationPanel';
-import { usePushNotifications } from '../hooks/usePushNotifications';
-import { useNotificationSocket } from '../hooks/useNotificationSocket';
 
 interface Props { readonly children: React.ReactNode }
 
@@ -25,8 +23,6 @@ export default function Layout({ children }: Props) {
   const { user, isAuthenticated, logout } = useUserStore();
   const { settings: site, fetch: fetchSite } = useSiteSettings();
   const { load: loadSaved } = useSavedStore();
-  usePushNotifications();
-  useNotificationSocket();
   useEffect(() => { fetchSite(); }, []);
   useEffect(() => { if (isAuthenticated) loadSaved(); }, [isAuthenticated]);
   const location = useLocation();

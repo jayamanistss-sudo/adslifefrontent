@@ -144,7 +144,6 @@ export const endpoints = {
   // Notifications
   notificationsList:     (limit = 30) => `/notifications?limit=${limit}`,
   notificationsMarkRead: '/notifications/mark-read',
-  saveFcmToken:          '/notifications/save-token',
 
   // Plans
   plansList:    '/plans',

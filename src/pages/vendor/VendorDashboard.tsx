@@ -9,7 +9,6 @@ import {
 import BackButton from '../../components/BackButton';
 import { api, endpoints } from '../../utils/api';
 import { useUserStore } from '../../store/useUserStore';
-import { useVendorStatsSync } from '../../hooks/useRealtimeSync';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, BarChart, Bar,
@@ -83,9 +82,6 @@ export default function VendorDashboard() {
   }, []);
 
   useEffect(() => { fetchDashboard(); }, []);
-
-  // Real-time: silently refresh stats when interactions are logged
-  useVendorStatsSync(data?.vendor.id, () => fetchDashboard(true));
 
   const navLinks = [
     { to: '/vendor/heatmap',   icon: Map,         label: 'Heatmap',      desc: 'Where your customers are',  color: 'bg-blue-50 text-blue-700' },
