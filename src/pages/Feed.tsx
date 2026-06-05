@@ -9,8 +9,12 @@ import CategoryIcon from '../components/CategoryIcon';
 import { useUserStore } from '../store/useUserStore';
 import { useGeolocation } from '../hooks/useGeolocation';
 import { useOffers, useCategories } from '../powersync/queries';
+import { api, endpoints } from '../utils/api';
+import type { Offer } from '../types';
 
 const PER_PAGE_OPTIONS = [10, 20, 50, 100];
+
+interface Category { id: number; name: string; slug: string; icon: string; }
 
 const FILTER_TABS = [
   { key: 'all',       label: 'All',         icon: null },
@@ -18,6 +22,22 @@ const FILTER_TABS = [
   { key: 'flash',     label: 'Flash Sales', icon: Zap },
   { key: 'ending',    label: 'Ending Soon', icon: Clock },
 ];
+
+function mapApiOffer(o: any): Offer {
+  return {
+    id: o.id, vendorId: o.vendor_id, title: o.title, description: o.description,
+    category: o.category, discountPercent: Number.parseFloat(o.discount_percent) || 0,
+    originalPrice: Number.parseFloat(o.original_price) || 0, offerPrice: Number.parseFloat(o.offer_price) || 0,
+    imageUrl: o.image_url, bannerUrl: o.banner_url, couponCode: o.coupon_code,
+    maxRedemptions: Number.parseInt(o.max_redemptions) || 0, currentRedemptions: Number.parseInt(o.current_redemptions) || 0,
+    validFrom: o.valid_from, validUntil: o.valid_until, isFeatured: !!o.is_featured,
+    isActive: !!o.is_active, views: Number.parseInt(o.views) || 0, clicks: Number.parseInt(o.clicks) || 0,
+    saves: Number.parseInt(o.saves) || 0, createdAt: o.created_at, videoUrl: o.video_url || undefined,
+    businessName: o.business_name, vendorLogo: o.vendor_logo, vendorCity: o.vendor_city,
+    vendorLat: o.vlat ? Number.parseFloat(o.vlat) : undefined, vendorLng: o.vlng ? Number.parseFloat(o.vlng) : undefined,
+    distance: o.distance === undefined ? undefined : Number.parseFloat(o.distance),
+  };
+}
 
 export default function Feed() {
   const { user } = useUserStore();
@@ -32,9 +52,35 @@ export default function Feed() {
   const [search, setSearch]                 = useState(urlQuery);
   const [perPage, setPerPage]               = useState(20);
   const [page, setPage]                     = useState(1);
+  const [loading, setLoading]               = useState(false);
+  const [apiOffers, setApiOffers]           = useState<Offer[]>([]);
+  const [apiCategories, setApiCategories]   = useState<Category[]>([]);
 
-  const allOffers  = useOffers(activeCategory);
-  const categories = useCategories();
+  const psOffers     = useOffers(activeCategory);
+  const psCategories = useCategories();
+
+  // Use PowerSync data if available, fallback to API
+  const allOffers  = psOffers.length > 0 ? psOffers : apiOffers;
+  const categories = psCategories.length > 0 ? psCategories : apiCategories;
+
+  // API fallback — only fires when PowerSync has no data yet
+  useEffect(() => {
+    if (psOffers.length > 0) return;
+    setLoading(true);
+    const cityParam = user?.city || 'Chennai';
+    const feedPromise = user
+      ? api.get(endpoints.feed(user.id, lat || 13.08, lng || 80.27, 1, 50, ''))
+      : api.get(endpoints.trending(cityParam, 1, 50, ''));
+    feedPromise
+      .then(r => { if (r.data.success) setApiOffers((r.data.data ?? []).map(mapApiOffer)); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [psOffers.length, user?.id]);
+
+  useEffect(() => {
+    if (psCategories.length > 0) return;
+    api.get(endpoints.categoriesList()).then(r => setApiCategories(r.data.data ?? [])).catch(() => {});
+  }, [psCategories.length]);
 
   useEffect(() => {
     const goOnline  = () => setIsOnline(true);
@@ -194,14 +240,30 @@ export default function Feed() {
         </div>
       </div>
 
+      {/* Skeleton */}
+      {loading && pagedOffers.length === 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="card overflow-hidden">
+              <div className="skeleton h-44 w-full rounded-none" />
+              <div className="p-4 space-y-2">
+                <div className="skeleton h-4 w-3/4" />
+                <div className="skeleton h-3 w-1/2" />
+                <div className="skeleton h-6 w-1/3" />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Offers grid */}
-      {pagedOffers.length === 0 ? (
+      {!loading && pagedOffers.length === 0 ? (
         <div className="text-center py-16 text-[var(--text-muted)]">
           <div className="text-5xl mb-4">🎁</div>
           <p className="font-heading font-semibold text-[var(--text-secondary)] mb-1">No offers found</p>
           <p className="text-sm">Try a different category or filter</p>
         </div>
-      ) : (
+      ) : !loading && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {pagedOffers.map((offer, i) => (
             <motion.div
