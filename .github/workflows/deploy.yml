@@ -1,24 +1,24 @@
 name: Deploy Frontend
-
+ 
 on:
   push:
     branches: [dev, test, prod]
-
+ 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
+ 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-
+ 
       - name: Install & Build
         run: npm ci && npm run build
-
+ 
       - name: Set deploy target
         id: target
         run: |
@@ -32,7 +32,7 @@ jobs:
             echo "path=/var/www/adslife-frontend-dev" >> $GITHUB_OUTPUT
             echo "env=DEV (dev.adslife.in)" >> $GITHUB_OUTPUT
           fi
-
+ 
       - name: Deploy via SSH
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -42,6 +42,7 @@ jobs:
           source: "dist/*"
           target: "${{ steps.target.outputs.path }}"
           strip_components: 1
-
+ 
       - name: Notify
         run: echo "✅ Deployed to ${{ steps.target.outputs.env }} from branch ${{ github.ref_name }}"
+ 
