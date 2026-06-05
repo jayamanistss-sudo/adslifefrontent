@@ -227,7 +227,7 @@ export default function AdminSubscriptions() {
                       ...(isNew ? { slug: autoSlug(name) } : {}),
                     }));
                   }}
-                  className="input-field"
+                  className="input"
                   placeholder="e.g. Growth"
                 />
               </div>
@@ -239,7 +239,7 @@ export default function AdminSubscriptions() {
                   type="text"
                   value={editing.slug ?? ''}
                   onChange={(e) => isNew && setEditing({ ...editing, slug: e.target.value })}
-                  className={`input-field font-mono text-sm ${!isNew ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  className={`input font-mono text-sm ${!isNew ? 'opacity-50 cursor-not-allowed' : ''}`}
                   placeholder="e.g. growth"
                   readOnly={!isNew}
                 />
@@ -255,7 +255,7 @@ export default function AdminSubscriptions() {
                     value={editing.price ?? 0}
                     min={0}
                     onChange={(e) => setEditing({ ...editing, price: parseFloat(e.target.value) || 0 })}
-                    className="input-field"
+                    className="input"
                   />
                 </div>
                 <div>
@@ -265,7 +265,7 @@ export default function AdminSubscriptions() {
                     value={editing.duration_days ?? 30}
                     min={1}
                     onChange={(e) => setEditing({ ...editing, duration_days: parseInt(e.target.value) || 30 })}
-                    className="input-field"
+                    className="input"
                   />
                 </div>
               </div>
@@ -278,7 +278,7 @@ export default function AdminSubscriptions() {
                   value={editing.max_offers ?? 5}
                   min={1}
                   onChange={(e) => setEditing({ ...editing, max_offers: parseInt(e.target.value) || 1 })}
-                  className="input-field"
+                  className="input"
                 />
               </div>
 
@@ -291,13 +291,13 @@ export default function AdminSubscriptions() {
                     value={featureInput}
                     onChange={(e) => setFeatureInput(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addFeature())}
-                    className="input-field flex-1"
+                    className="input flex-1"
                     placeholder="e.g. Priority listing"
                   />
                   <button
                     type="button"
                     onClick={addFeature}
-                    className="px-3 py-2 bg-[var(--primary)] text-white rounded-xl text-sm font-medium hover:opacity-90"
+                    className="btn bg-[var(--primary)] text-white font-medium hover:opacity-90"
                   >
                     Add
                   </button>
@@ -332,11 +332,11 @@ export default function AdminSubscriptions() {
             </div>
 
             <div className="flex gap-3 px-6 pb-6">
-              <button onClick={closeEdit} className="flex-1 btn-secondary py-2.5">Cancel</button>
+              <button onClick={closeEdit} className="flex-1 btn btn-secondary">Cancel</button>
               <button
                 onClick={save}
                 disabled={saving}
-                className="flex-1 flex items-center justify-center gap-2 bg-[var(--primary)] text-white py-2.5 rounded-xl font-semibold hover:opacity-90 disabled:opacity-60"
+                className="flex-1 btn bg-[var(--primary)] text-white hover:opacity-90 disabled:opacity-60"
               >
                 <Save size={16} /> {saving ? 'Saving…' : 'Save'}
               </button>
@@ -354,10 +354,10 @@ export default function AdminSubscriptions() {
               Plans used by existing vendor applications cannot be deleted.
             </p>
             <div className="flex gap-3">
-              <button onClick={() => setDeleteId(null)} className="flex-1 btn-secondary py-2.5">Cancel</button>
+              <button onClick={() => setDeleteId(null)} className="flex-1 btn btn-secondary">Cancel</button>
               <button
                 onClick={confirmDelete}
-                className="flex-1 bg-red-500 text-white py-2.5 rounded-xl font-semibold hover:bg-red-600"
+                className="flex-1 btn bg-red-500 text-white hover:bg-red-600"
               >
                 Delete
               </button>

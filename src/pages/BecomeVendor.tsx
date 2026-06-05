@@ -82,11 +82,11 @@ export default function BecomeVendor() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Business Name *</label>
-              <input className="input-field w-full" placeholder="e.g. Sharma Electronics" value={form.business_name} onChange={e => set('business_name', e.target.value)} required />
+              <input className="input w-full" placeholder="e.g. Sharma Electronics" value={form.business_name} onChange={e => set('business_name', e.target.value)} required />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-              <select className="input-field w-full" value={form.category} onChange={e => set('category', e.target.value)}>
+              <select className="input w-full" value={form.category} onChange={e => set('category', e.target.value)}>
                 <option value="">Select category</option>
                 {CATEGORIES.map(c => <option key={c} value={c.toLowerCase().replace(/\s+&\s+/, '-').replace(/\s+/g, '-')}>{c}</option>)}
               </select>
@@ -94,24 +94,24 @@ export default function BecomeVendor() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
-                <input className="input-field w-full" placeholder="Chennai" value={form.city} onChange={e => set('city', e.target.value)} />
+                <input className="input w-full" placeholder="Chennai" value={form.city} onChange={e => set('city', e.target.value)} />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                <input className="input-field w-full" placeholder="9876543210" type="tel" value={form.phone} onChange={e => set('phone', e.target.value)} />
+                <input className="input w-full" placeholder="9876543210" type="tel" value={form.phone} onChange={e => set('phone', e.target.value)} />
               </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-              <input className="input-field w-full" placeholder="Shop address" value={form.address} onChange={e => set('address', e.target.value)} />
+              <input className="input w-full" placeholder="Shop address" value={form.address} onChange={e => set('address', e.target.value)} />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Website (optional)</label>
-              <input className="input-field w-full" placeholder="https://yourshop.com" type="url" value={form.website} onChange={e => set('website', e.target.value)} />
+              <input className="input w-full" placeholder="https://yourshop.com" type="url" value={form.website} onChange={e => set('website', e.target.value)} />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">About your business</label>
-              <textarea className="input-field w-full" rows={3} placeholder="What do you sell? What makes you special?" value={form.description} onChange={e => set('description', e.target.value)} />
+              <textarea className="input w-full" rows={3} placeholder="What do you sell? What makes you special?" value={form.description} onChange={e => set('description', e.target.value)} />
             </div>
             {!user && (
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-700">
