@@ -24,7 +24,7 @@ export default function Layout({ children }: Props) {
   const { settings: site, fetch: fetchSite } = useSiteSettings();
   const { load: loadSaved } = useSavedStore();
   useEffect(() => { fetchSite(); }, []);
-  useEffect(() => { if (isAuthenticated) loadSaved(); }, [isAuthenticated]);
+  useEffect(() => { if (isAuthenticated && user) loadSaved(user.id); }, [isAuthenticated, user?.id]);
   const location = useLocation();
   const navigate = useNavigate();
 

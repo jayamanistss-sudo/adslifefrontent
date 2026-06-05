@@ -1,10 +1,11 @@
 import { create } from 'zustand';
 import { api, endpoints } from '../utils/api';
+import { db } from '../powersync/database';
 
 interface SavedState {
   savedIds: Set<number>;
   loaded: boolean;
-  load: () => Promise<void>;
+  load: (userId: number) => Promise<void>;
   save: (offerId: number) => Promise<void>;
   unsave: (offerId: number) => Promise<void>;
   isSaved: (offerId: number) => boolean;
@@ -14,13 +15,16 @@ export const useSavedStore = create<SavedState>((set, get) => ({
   savedIds: new Set(),
   loaded: false,
 
-  load: async () => {
+  load: async (userId: number) => {
     try {
-      const r = await api.get(endpoints.savedIds);
-      if (r.data.success) {
-        set({ savedIds: new Set<number>(r.data.data.ids), loaded: true });
-      }
-    } catch {}
+      const rows = await db.getAll('SELECT offer_id FROM saved_offers WHERE user_id = ?', [userId]);
+      set({ savedIds: new Set<number>(rows.map((r: any) => Number(r.offer_id))), loaded: true });
+    } catch {
+      try {
+        const r = await api.get(endpoints.savedIds);
+        if (r.data.success) set({ savedIds: new Set<number>(r.data.data.ids), loaded: true });
+      } catch {}
+    }
   },
 
   save: async (offerId) => {

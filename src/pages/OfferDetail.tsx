@@ -11,6 +11,7 @@ import 'leaflet/dist/leaflet.css';
 import { api, endpoints } from '../utils/api';
 import { useUserStore } from '../store/useUserStore';
 import { useSavedStore } from '../store/useSavedStore';
+import { useOffer } from '../powersync/queries';
 import type { Offer } from '../types';
 import toast from 'react-hot-toast';
 
@@ -49,31 +50,43 @@ export default function OfferDetail() {
   const mapSectionRef = useRef<HTMLDivElement>(null);
   const videoRef     = useRef<HTMLVideoElement>(null);
 
-  // Fetch offer detail
+  const psOffer = useOffer(Number(id));
+
   useEffect(() => {
     if (!id) return;
+    const loadFollowStatus = (o: Offer) => {
+      if (user && o.vendorId) {
+        api.get(endpoints.vendorFollowStatus(o.vendorId))
+          .then((r) => {
+            if (r.data.success) {
+              setFollowing(r.data.data.following);
+              setFollowersCount(r.data.data.followers_count);
+            }
+          }).catch(() => {});
+      }
+    };
+
+    if (psOffer) {
+      setOffer(psOffer);
+      setLoading(false);
+      api.post(endpoints.offerView(Number(id))).catch(() => {});
+      loadFollowStatus(psOffer);
+      return;
+    }
+    // Fallback to API if PowerSync hasn't synced yet
     setLoading(true);
     api.get(endpoints.offerDetail(Number(id)))
       .then((res) => {
         if (res.data.success) {
           const o = res.data.data as Offer;
           setOffer(o);
-          // Track view (fire-and-forget)
           api.post(endpoints.offerView(Number(id))).catch(() => {});
-          if (user && o.vendorId) {
-            api.get(endpoints.vendorFollowStatus(o.vendorId))
-              .then((r) => {
-                if (r.data.success) {
-                  setFollowing(r.data.data.following);
-                  setFollowersCount(r.data.data.followers_count);
-                }
-              }).catch(() => {});
-          }
+          loadFollowStatus(o);
         }
       })
       .catch(() => toast.error('Offer not found'))
       .finally(() => setLoading(false));
-  }, [id, user]);
+  }, [id, user, psOffer]);
 
   // Init Leaflet map when offer loads
   useEffect(() => {

@@ -6,14 +6,11 @@ import NearbyDropdown from '../components/NearbyDropdown';
 import SpotlightHero from '../components/SpotlightHero';
 import OfferCard from '../components/OfferCard';
 import CategoryIcon from '../components/CategoryIcon';
-import { useFeedStore } from '../store/useFeedStore';
 import { useUserStore } from '../store/useUserStore';
 import { useGeolocation } from '../hooks/useGeolocation';
-import { api, endpoints } from '../utils/api';
+import { useOffers, useCategories } from '../powersync/queries';
 
 const PER_PAGE_OPTIONS = [10, 20, 50, 100];
-
-interface Category { id: number; name: string; slug: string; icon: string; }
 
 const FILTER_TABS = [
   { key: 'all',       label: 'All',         icon: null },
@@ -28,19 +25,16 @@ export default function Feed() {
   const [searchParams] = useSearchParams();
   const urlQuery = searchParams.get('q') ?? '';
 
-  const {
-    forYouOffers, trendingOffers, loading,
-    activeTab, setTab, loadFeed, loadTrending,
-    page, perPage, totalPages, totalOffers, setPerPage,
-    search, setSearch,
-  } = useFeedStore();
-
   const [isOnline, setIsOnline]             = useState(globalThis.navigator.onLine);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const [offerCount, setOfferCount]         = useState(0);
   const [activeFilter, setActiveFilter]     = useState('all');
   const [nearbyRadius, setNearbyRadius]     = useState(0);
-  const [categories, setCategories]         = useState<Category[]>([]);
+  const [search, setSearch]                 = useState(urlQuery);
+  const [perPage, setPerPage]               = useState(20);
+  const [page, setPage]                     = useState(1);
+
+  const allOffers  = useOffers(activeCategory);
+  const categories = useCategories();
 
   useEffect(() => {
     const goOnline  = () => setIsOnline(true);
@@ -53,56 +47,42 @@ export default function Feed() {
     };
   }, []);
 
-  useEffect(() => {
-    api.get(endpoints.categoriesList(true))
-      .then(r => setCategories(r.data.data ?? []))
-      .catch(() => {});
-    api.get(endpoints.feedCount)
-      .then(r => { if (r.data.total) setOfferCount(r.data.total); })
-      .catch(() => {});
-  }, []);
+  useEffect(() => { setSearch(urlQuery); setPage(1); }, [urlQuery]);
 
-  // Sync ?q= from URL into store and reload page 1
-  useEffect(() => {
-    setSearch(urlQuery);
-  }, [urlQuery]);
-
-  const goToPage = (p: number) => {
-    if (p < 1 || p > totalPages || loading) return;
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    if (activeTab === 'forYou' && user) loadFeed(user.id, lat, lng, p);
-    else loadTrending('Chennai', p);
-  };
-
-  const changePerPage = (n: number) => {
-    setPerPage(n);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    if (activeTab === 'forYou' && user) loadFeed(user.id, lat, lng, 1);
-    else loadTrending('Chennai', 1);
-  };
-
-  useEffect(() => {
-    if (!isOnline) return;
-    if (activeTab === 'forYou' && user) {
-      loadFeed(user.id, lat, lng, 1);
-    } else {
-      loadTrending('Chennai', 1);
+  const displayOffers = allOffers.filter(o => {
+    if (search && !o.title.toLowerCase().includes(search.toLowerCase()) &&
+        !o.description?.toLowerCase().includes(search.toLowerCase())) return false;
+    if (nearbyRadius > 0 && lat && lng) {
+      if (o.vendorLat && o.vendorLng) {
+        const d = Math.sqrt(Math.pow((o.vendorLat - lat) * 111, 2) + Math.pow((o.vendorLng - lng) * 111, 2));
+        if (d > nearbyRadius) return false;
+      }
     }
-  }, [activeTab, lat, lng, user?.id, isOnline, search]);
-
-  const apiOffers = (activeTab === 'forYou' && user) ? forYouOffers : trendingOffers;
-
-  const displayOffers = apiOffers.filter(o => {
-    if (activeCategory && o.category !== activeCategory) return false;
-    if (nearbyRadius > 0 && (o.distance === undefined || o.distance > nearbyRadius)) return false;
     if (activeFilter === 'flash' && (o.discountPercent ?? 0) < 30) return false;
     if (activeFilter === 'ending') {
       if (!o.validUntil) return false;
       const diff = new Date(o.validUntil).getTime() - Date.now();
       if (diff > 86400000 * 2) return false;
     }
+    if (activeFilter === 'trending') return (o.views ?? 0) > 100;
     return true;
   });
+
+  const totalOffers = displayOffers.length;
+  const totalPages  = Math.max(1, Math.ceil(totalOffers / perPage));
+  const pagedOffers = displayOffers.slice((page - 1) * perPage, page * perPage);
+
+  const goToPage = (p: number) => {
+    if (p < 1 || p > totalPages) return;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setPage(p);
+  };
+
+  const changePerPage = (n: number) => {
+    setPerPage(n);
+    setPage(1);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   return (
     <div className="pb-20 sm:pb-6">
@@ -134,7 +114,7 @@ export default function Feed() {
       )}
 
       {/* Hero — spotlight video carousel */}
-      <SpotlightHero onExplore={() => setTab('trending')} />
+      <SpotlightHero onExplore={() => setActiveFilter('trending')} />
 
       {/* Browse Categories */}
       <div className="mb-6">
@@ -170,12 +150,9 @@ export default function Feed() {
 
         <div className="flex items-center gap-2">
           <NearbyDropdown radius={nearbyRadius} onChange={setNearbyRadius} />
-          <button
-            onClick={() => setTab(activeTab === 'forYou' ? 'trending' : 'forYou')}
-            className="filter-tab"
-          >
+          <button className="filter-tab">
             <SlidersHorizontal size={13} />
-            {activeTab === 'forYou' ? 'For You' : 'Trending'}
+            All Offers
           </button>
         </div>
       </div>
@@ -186,9 +163,7 @@ export default function Feed() {
           <h2 className="font-heading font-bold text-[var(--text)] text-lg">
             {search ? `Results for "${search}"` : 'All Offers'}
           </h2>
-          <span className="badge badge-primary">
-            {totalOffers > 0 ? totalOffers : offerCount} offers
-          </span>
+          <span className="badge badge-primary">{totalOffers} offers</span>
           {search && (
             <button
               onClick={() => { setSearch(''); window.history.pushState({}, '', '/feed'); }}
@@ -220,7 +195,7 @@ export default function Feed() {
       </div>
 
       {/* Offers grid */}
-      {displayOffers.length === 0 && !loading ? (
+      {pagedOffers.length === 0 ? (
         <div className="text-center py-16 text-[var(--text-muted)]">
           <div className="text-5xl mb-4">🎁</div>
           <p className="font-heading font-semibold text-[var(--text-secondary)] mb-1">No offers found</p>
@@ -228,7 +203,7 @@ export default function Feed() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {displayOffers.map((offer, i) => (
+          {pagedOffers.map((offer, i) => (
             <motion.div
               key={offer.id}
               initial={{ opacity: 0, y: 16 }}
@@ -241,24 +216,8 @@ export default function Feed() {
         </div>
       )}
 
-      {/* Skeleton — initial load */}
-      {loading && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-4">
-          {Array.from({ length: perPage > 20 ? 8 : 4 }).map((_, i) => (
-            <div key={i} className="card overflow-hidden">
-              <div className="skeleton h-44 w-full rounded-none" />
-              <div className="p-4 space-y-2">
-                <div className="skeleton h-4 w-3/4" />
-                <div className="skeleton h-3 w-1/2" />
-                <div className="skeleton h-6 w-1/3" />
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
       {/* Pagination bar */}
-      {!loading && totalPages > 1 && (
+      {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2 mt-8 flex-wrap">
           {/* Prev */}
           <button
