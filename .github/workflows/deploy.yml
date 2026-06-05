@@ -16,6 +16,14 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
+      - name: Fetch .env from server
+        run: |
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > /tmp/deploy_key
+          chmod 600 /tmp/deploy_key
+          scp -o StrictHostKeyChecking=no -i /tmp/deploy_key \
+            ${{ secrets.DEPLOY_SERVER_USER }}@${{ secrets.DEPLOY_SERVER_IP }}:/var/www/adslife-frontend-dev/.env .env
+          rm /tmp/deploy_key
+
       - name: Install & Build
         run: npm ci && npm run build
 
