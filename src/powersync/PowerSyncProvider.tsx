@@ -6,37 +6,45 @@ import { useUserStore } from '../store/useUserStore';
 
 interface Props { readonly children: React.ReactNode }
 
-/**
- * Mounts the PowerSync database and connects/disconnects it
- * whenever the user logs in or out.
- *
- * Place this inside <BrowserRouter> but outside any auth-gated routes
- * so the DB is always available even on public pages.
- */
 export default function PowerSyncProvider({ children }: Props) {
   const { isAuthenticated } = useUserStore();
   const connectorRef = useRef<AdslifeConnector | null>(null);
 
   useEffect(() => {
-    if (!import.meta.env.VITE_POWERSYNC_URL) {
-      // No PowerSync URL configured — skip sync, local DB still works as a
-      // read-through cache seeded by the REST fallbacks in each hook.
+    const url = import.meta.env.VITE_POWERSYNC_URL;
+    if (!url) {
+      console.warn('[PowerSync] VITE_POWERSYNC_URL is not set — sync disabled');
       return;
     }
 
+    console.log('[PowerSync] URL:', url);
+    console.log('[PowerSync] Authenticated:', isAuthenticated);
+
     if (isAuthenticated) {
       connectorRef.current = new AdslifeConnector();
-      db.connect(connectorRef.current).catch((e) => {
-        console.warn('[PowerSync] connect failed:', e);
+
+      db.connect(connectorRef.current)
+        .then(() => console.log('[PowerSync] Connected successfully'))
+        .catch((e) => console.error('[PowerSync] connect() failed:', e));
+
+      // Log status changes
+      const unsub = db.registerListener({
+        statusChanged: (status) => {
+          console.log('[PowerSync] Status changed:', JSON.stringify(status));
+          if ((status as any).error) {
+            console.error('[PowerSync] Sync error:', (status as any).error);
+          }
+        },
       });
+
+      return () => {
+        unsub?.();
+        db.disconnect().catch(() => {});
+      };
     } else {
       db.disconnect().catch(() => {});
       connectorRef.current = null;
     }
-
-    return () => {
-      db.disconnect().catch(() => {});
-    };
   }, [isAuthenticated]);
 
   return (
