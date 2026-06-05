@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { api, endpoints } from '../utils/api';
 import { useNotificationStore } from '../store/useNotificationStore';
 import { useUserStore } from '../store/useUserStore';
-import { useNotificationSync } from '../hooks/useRealtimeSync';
 import type { Notification } from '../types';
 
 const TYPE_ICON: Record<string, { icon: React.ReactNode; color: string }> = {
@@ -89,9 +88,6 @@ export default function NotificationPanel() {
     const t = setInterval(fetchUnread, 60000);
     return () => clearInterval(t);
   }, [fetchUnread]);
-
-  // Real-time: instantly refresh when server signals a new notification
-  useNotificationSync(user?.id, fetchUnread);
 
   const handleNotifClick = async (n: Notification) => {
     if (!n.isRead) {
