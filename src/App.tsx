@@ -33,6 +33,7 @@ class ErrorBoundary extends Component<{ children: React.ReactNode }, { hasError:
   }
 }
 import Layout from "./components/Layout";
+import PowerSyncProvider from "./powersync/PowerSyncProvider";
 import { useUserStore } from "./store/useUserStore";
 // Pages
 import Login from "./pages/Login";
@@ -113,6 +114,7 @@ export default function App() {
   return (
     <ErrorBoundary>
       <BrowserRouter>
+        <PowerSyncProvider>
         <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
         <Routes>
           <Route path="/login" element={<Login />} />
@@ -443,6 +445,7 @@ export default function App() {
 
           <Route path="*" element={<Navigate to="/feed" replace />} />
         </Routes>
+        </PowerSyncProvider>
       </BrowserRouter>
     </ErrorBoundary>
   );
