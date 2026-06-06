@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
-import { Settings, Upload, Save, Globe, Search, Mail, Phone, Image } from 'lucide-react';
-import { api, endpoints } from '../../utils/api';
-import toast from 'react-hot-toast';
+import { useEffect, useRef, useState } from "react";
+import { Settings, Upload, Save, Globe, Search, Mail, Phone, Image } from "lucide-react";
+import { api, endpoints } from "../../utils/api";
+import toast from "react-hot-toast";
+import { useSiteSettings } from "../../store/useSiteSettings";
 
 interface SiteSettings {
   site_name: string;
@@ -15,17 +16,18 @@ interface SiteSettings {
 }
 
 const defaults: SiteSettings = {
-  site_name: '',
-  site_tagline: '',
-  site_logo_url: '',
-  seo_title: '',
-  seo_description: '',
-  seo_keywords: '',
-  contact_email: '',
-  contact_phone: '',
+  site_name: "",
+  site_tagline: "",
+  site_logo_url: "",
+  seo_title: "",
+  seo_description: "",
+  seo_keywords: "",
+  contact_email: "",
+  contact_phone: "",
 };
 
 export default function AdminSiteSettings() {
+  const { setSettings } = useSiteSettings();
   const [form, setForm] = useState<SiteSettings>(defaults);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -33,45 +35,59 @@ export default function AdminSiteSettings() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    api.get(endpoints.siteSettings)
-      .then((r) => { if (r.data.success) setForm({ ...defaults, ...r.data.data }); })
-      .catch(() => toast.error('Failed to load settings'))
+    api
+      .get(endpoints.siteSettings)
+      .then((r) => {
+        if (r.data.success) setForm({ ...defaults, ...r.data.data });
+      })
+      .catch(() => toast.error("Failed to load settings"))
       .finally(() => setLoading(false));
   }, []);
 
-  const set = (key: keyof SiteSettings, val: string) =>
-    setForm((f) => ({ ...f, [key]: val }));
+  const set = (key: keyof SiteSettings, val: string) => setForm((f) => ({ ...f, [key]: val }));
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
     const fd = new FormData();
-    fd.append('file', file);
+    fd.append("file", file);
     try {
-      const res = await api.post('/upload/image.php', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      const res = await api.post("/upload/image.php", fd, { headers: { "Content-Type": "multipart/form-data" } });
       if (res.data.success) {
-        set('site_logo_url', res.data.data.url);
-        toast.success('Logo uploaded');
+        set("site_logo_url", res.data.data.url);
+        toast.success("Logo uploaded");
       }
-    } catch { toast.error('Upload failed'); }
-    finally { setUploading(false); }
+    } catch {
+      toast.error("Upload failed");
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleSave = async () => {
     setSaving(true);
     try {
       const res = await api.put(endpoints.siteSettings, form);
-      if (res.data.success) toast.success('Settings saved!');
-    } catch { toast.error('Failed to save'); }
-    finally { setSaving(false); }
+      if (res.data.success) {
+        toast.success("Settings saved!");
+        setSettings(form);
+      }
+    } catch {
+      toast.error("Failed to save");
+    } finally {
+      setSaving(false);
+    }
   };
 
-  if (loading) return (
-    <div className="animate-pulse space-y-4">
-      {[...Array(4)].map((_, i) => <div key={i} className="skeleton h-16 rounded-xl" />)}
-    </div>
-  );
+  if (loading)
+    return (
+      <div className="animate-pulse space-y-4">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="skeleton h-16 rounded-xl" />
+        ))}
+      </div>
+    );
 
   return (
     <div className="max-w-2xl mx-auto pb-20">
@@ -92,9 +108,11 @@ export default function AdminSiteSettings() {
         </h2>
         <div className="flex items-center gap-4">
           <div className="w-20 h-20 rounded-2xl border-2 border-dashed border-gray-200 flex items-center justify-center overflow-hidden bg-gray-50">
-            {form.site_logo_url
-              ? <img src={form.site_logo_url} alt="logo" className="w-full h-full object-contain p-1" />
-              : <Image size={28} className="text-gray-300" />}
+            {form.site_logo_url ? (
+              <img src={form.site_logo_url} alt="logo" className="w-full h-full object-contain p-1" />
+            ) : (
+              <Image size={28} className="text-gray-300" />
+            )}
           </div>
           <div>
             <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
@@ -104,13 +122,13 @@ export default function AdminSiteSettings() {
               className="flex items-center gap-2 bg-primary/10 text-primary font-semibold text-sm px-4 py-2 rounded-xl hover:bg-primary/20 transition-colors disabled:opacity-50"
             >
               <Upload size={14} />
-              {uploading ? 'Uploading…' : 'Upload Logo'}
+              {uploading ? "Uploading…" : "Upload Logo"}
             </button>
             <p className="text-xs text-gray-400 mt-1.5">PNG, SVG, or WebP recommended</p>
             {form.site_logo_url && (
               <input
                 value={form.site_logo_url}
-                onChange={(e) => set('site_logo_url', e.target.value)}
+                onChange={(e) => set("site_logo_url", e.target.value)}
                 className="mt-2 w-64 text-xs border border-gray-200 rounded-lg px-2 py-1.5 text-gray-500 focus:outline-none focus:border-primary"
                 placeholder="Or paste URL"
               />
@@ -129,7 +147,7 @@ export default function AdminSiteSettings() {
             <label className="text-xs font-medium text-gray-600 block mb-1">Site Name</label>
             <input
               value={form.site_name}
-              onChange={(e) => set('site_name', e.target.value)}
+              onChange={(e) => set("site_name", e.target.value)}
               className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-primary"
               placeholder="AdsLife"
             />
@@ -138,7 +156,7 @@ export default function AdminSiteSettings() {
             <label className="text-xs font-medium text-gray-600 block mb-1">Tagline</label>
             <input
               value={form.site_tagline}
-              onChange={(e) => set('site_tagline', e.target.value)}
+              onChange={(e) => set("site_tagline", e.target.value)}
               className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-primary"
               placeholder="Discover · Earn · Win"
             />
@@ -156,7 +174,7 @@ export default function AdminSiteSettings() {
             <label className="text-xs font-medium text-gray-600 block mb-1">Meta Title</label>
             <input
               value={form.seo_title}
-              onChange={(e) => set('seo_title', e.target.value)}
+              onChange={(e) => set("seo_title", e.target.value)}
               className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-primary"
               placeholder="AdsLife - Discover Local Offers & Deals"
             />
@@ -166,7 +184,7 @@ export default function AdminSiteSettings() {
             <label className="text-xs font-medium text-gray-600 block mb-1">Meta Description</label>
             <textarea
               value={form.seo_description}
-              onChange={(e) => set('seo_description', e.target.value)}
+              onChange={(e) => set("seo_description", e.target.value)}
               rows={3}
               className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-primary resize-none"
               placeholder="Find the best local deals, earn coins, and win rewards on AdsLife."
@@ -174,10 +192,12 @@ export default function AdminSiteSettings() {
             <p className="text-xs text-gray-400 mt-1">{form.seo_description.length}/160 chars recommended</p>
           </div>
           <div>
-            <label className="text-xs font-medium text-gray-600 block mb-1">Keywords <span className="font-normal text-gray-400">(comma separated)</span></label>
+            <label className="text-xs font-medium text-gray-600 block mb-1">
+              Keywords <span className="font-normal text-gray-400">(comma separated)</span>
+            </label>
             <input
               value={form.seo_keywords}
-              onChange={(e) => set('seo_keywords', e.target.value)}
+              onChange={(e) => set("seo_keywords", e.target.value)}
               className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-primary"
               placeholder="offers, deals, discounts, local"
             />
@@ -198,7 +218,7 @@ export default function AdminSiteSettings() {
               <input
                 type="email"
                 value={form.contact_email}
-                onChange={(e) => set('contact_email', e.target.value)}
+                onChange={(e) => set("contact_email", e.target.value)}
                 className="w-full pl-9 border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-primary"
                 placeholder="support@adslife.in"
               />
@@ -211,7 +231,7 @@ export default function AdminSiteSettings() {
               <input
                 type="tel"
                 value={form.contact_phone}
-                onChange={(e) => set('contact_phone', e.target.value)}
+                onChange={(e) => set("contact_phone", e.target.value)}
                 className="w-full pl-9 border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-primary"
                 placeholder="+91 99999 99999"
               />
@@ -226,7 +246,7 @@ export default function AdminSiteSettings() {
         className="w-full flex items-center justify-center gap-2 bg-primary text-white font-semibold py-3.5 rounded-xl hover:opacity-90 transition-opacity shadow-lg shadow-primary/30 disabled:opacity-50"
       >
         <Save size={18} />
-        {saving ? 'Saving…' : 'Save Settings'}
+        {saving ? "Saving…" : "Save Settings"}
       </button>
     </div>
   );

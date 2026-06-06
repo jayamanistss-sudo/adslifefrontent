@@ -1,5 +1,5 @@
-import { create } from 'zustand';
-import type { User } from '../types';
+import { create } from "zustand";
+import type { User } from "../types";
 
 interface UserState {
   user: User | null;
@@ -11,8 +11,8 @@ interface UserState {
 
 function isTokenValid(token: string): boolean {
   try {
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    return typeof payload.exp === 'number' && payload.exp * 1000 > Date.now();
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return typeof payload.exp === "number" && payload.exp * 1000 > Date.now();
   } catch {
     return false;
   }
@@ -20,14 +20,14 @@ function isTokenValid(token: string): boolean {
 
 function loadFromStorage(): { user: User | null; token: string | null } {
   try {
-    const token = localStorage.getItem('adslife_token');
+    const token = localStorage.getItem("adslife_token");
     // Clear storage immediately if the token is expired
     if (token && !isTokenValid(token)) {
-      localStorage.removeItem('adslife_token');
-      localStorage.removeItem('adslife_user');
+      localStorage.removeItem("adslife_token");
+      localStorage.removeItem("adslife_user");
       return { user: null, token: null };
     }
-    const user = JSON.parse(localStorage.getItem('adslife_user') || 'null');
+    const user = JSON.parse(localStorage.getItem("adslife_user") || "null");
     return { user, token };
   } catch {
     return { user: null, token: null };
@@ -37,19 +37,19 @@ function loadFromStorage(): { user: User | null; token: string | null } {
 const stored = loadFromStorage();
 
 export const useUserStore = create<UserState>((set) => ({
-  user:            stored.user,
-  token:           stored.token,
+  user: stored.user,
+  token: stored.token,
   isAuthenticated: !!stored.token && isTokenValid(stored.token),
 
   setUser: (user, token) => {
-    localStorage.setItem('adslife_user',  JSON.stringify(user));
-    localStorage.setItem('adslife_token', token);
+    localStorage.setItem("adslife_user", JSON.stringify(user));
+    localStorage.setItem("adslife_token", token);
     set({ user, token, isAuthenticated: true });
   },
 
   logout: () => {
-    localStorage.removeItem('adslife_user');
-    localStorage.removeItem('adslife_token');
+    localStorage.removeItem("adslife_user");
+    localStorage.removeItem("adslife_token");
     set({ user: null, token: null, isAuthenticated: false });
   },
 }));

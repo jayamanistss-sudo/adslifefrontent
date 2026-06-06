@@ -16,6 +16,8 @@
     "@powersync/web": "^1.38.2",
     "@react-oauth/google": "^0.13.5",
     "@types/leaflet": "^1.9.21",
+    "ag-grid-community": "^35.3.1",
+    "ag-grid-react": "^35.3.1",
     "autoprefixer": "^10.5.0",
     "axios": "^1.16.1",
     "firebase": "^12.13.0",
@@ -43,6 +45,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.6.0",
+    "sass": "^1.100.0",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.59.2",
     "vite": "^8.0.12"
