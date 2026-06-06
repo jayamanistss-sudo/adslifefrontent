@@ -29,7 +29,9 @@ export default function AdminOffers() {
   useEffect(() => {
     api.get(endpoints.categoriesList(true)).then((r) => {
       if (r.data.success) setCategories(r.data.data ?? []);
-    }).catch(() => {});
+    }).catch((err) => {
+      console.error('[AdminOffers] Failed to load categories:', err);
+    });
   }, []);
 
   const load = useCallback(() => {

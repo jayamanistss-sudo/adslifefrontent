@@ -17,28 +17,15 @@ export default function PowerSyncProvider({ children }: Props) {
       return;
     }
 
-    console.log('[PowerSync] URL:', url);
-    console.log('[PowerSync] Authenticated:', isAuthenticated);
-
     if (isAuthenticated) {
       connectorRef.current = new AdslifeConnector();
 
-      db.connect(connectorRef.current)
-        .then(() => console.log('[PowerSync] Connected successfully'))
-        .catch((e) => console.error('[PowerSync] connect() failed:', e));
-
-      // Log status changes
-      const unsub = db.registerListener({
-        statusChanged: (status) => {
-          console.log('[PowerSync] Status changed:', JSON.stringify(status));
-          if ((status as any).error) {
-            console.error('[PowerSync] Sync error:', (status as any).error);
-          }
-        },
-      });
+      const status = db.currentStatus;
+      if (!status.connected && !status.connecting) {
+        db.connect(connectorRef.current).catch(() => {});
+      }
 
       return () => {
-        unsub?.();
         db.disconnect().catch(() => {});
       };
     } else {

@@ -60,14 +60,12 @@ export class AdslifeConnector implements PowerSyncBackendConnector {
         }
         if (op.table === 'saved_offers') {
           if (op.op === 'PUT') {
-            await api.post(endpoints.savedIds, {
-              offer_id: op.opData?.offer_id,
-            }).catch(() => {});
+            // Save an offer — POST /feed/save
+            await api.post('/feed/save', { offer_id: op.opData?.offer_id }).catch(() => {});
           }
           if (op.op === 'DELETE') {
-            await api.post(endpoints.unsaveOffer, {
-              offer_id: op.id,
-            }).catch(() => {});
+            // Unsave an offer — DELETE /feed/unsave
+            await api.delete(endpoints.unsaveOffer, { data: { offer_id: op.id } }).catch(() => {});
           }
         }
       }

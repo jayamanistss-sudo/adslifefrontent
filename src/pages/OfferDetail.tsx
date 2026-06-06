@@ -45,48 +45,51 @@ export default function OfferDetail() {
   const [followersCount, setFollowersCount] = useState(0);
   const [followLoading, setFollowLoading] = useState(false);
 
-  const mapRef       = useRef<HTMLDivElement>(null);
-  const mapInst      = useRef<L.Map | null>(null);
+  const mapRef        = useRef<HTMLDivElement>(null);
+  const mapInst       = useRef<L.Map | null>(null);
   const mapSectionRef = useRef<HTMLDivElement>(null);
-  const videoRef     = useRef<HTMLVideoElement>(null);
+  const videoRef      = useRef<HTMLVideoElement>(null);
+  const viewRecorded  = useRef<number | null>(null);
 
   const psOffer = useOffer(Number(id));
 
+  // Load offer — prefer PowerSync local data, fall back to API
   useEffect(() => {
     if (!id) return;
-    const loadFollowStatus = (o: Offer) => {
-      if (user && o.vendorId) {
-        api.get(endpoints.vendorFollowStatus(o.vendorId))
-          .then((r) => {
-            if (r.data.success) {
-              setFollowing(r.data.data.following);
-              setFollowersCount(r.data.data.followers_count);
-            }
-          }).catch(() => {});
-      }
-    };
-
     if (psOffer) {
       setOffer(psOffer);
       setLoading(false);
-      api.post(endpoints.offerView(Number(id))).catch(() => {});
-      loadFollowStatus(psOffer);
       return;
     }
-    // Fallback to API if PowerSync hasn't synced yet
     setLoading(true);
     api.get(endpoints.offerDetail(Number(id)))
       .then((res) => {
-        if (res.data.success) {
-          const o = res.data.data as Offer;
-          setOffer(o);
-          api.post(endpoints.offerView(Number(id))).catch(() => {});
-          loadFollowStatus(o);
-        }
+        if (res.data.success) setOffer(res.data.data as Offer);
       })
       .catch(() => toast.error('Offer not found'))
       .finally(() => setLoading(false));
-  }, [id, user, psOffer]);
+  }, [id, psOffer]);
+
+  // Record view exactly once per offer ID
+  useEffect(() => {
+    if (!id || !offer) return;
+    const numId = Number(id);
+    if (viewRecorded.current === numId) return;
+    viewRecorded.current = numId;
+    api.post(endpoints.offerView(numId)).catch(() => {});
+  }, [id, offer]);
+
+  // Load follow status when vendor changes — runs once per vendor, not on every sync
+  useEffect(() => {
+    if (!user || !offer?.vendorId) return;
+    api.get(endpoints.vendorFollowStatus(offer.vendorId))
+      .then((r) => {
+        if (r.data.success) {
+          setFollowing(r.data.data.following);
+          setFollowersCount(r.data.data.followers_count);
+        }
+      }).catch(() => {});
+  }, [offer?.vendorId, user?.id]);
 
   // Init Leaflet map when offer loads
   useEffect(() => {

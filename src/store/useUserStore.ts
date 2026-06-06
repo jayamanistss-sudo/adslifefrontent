@@ -9,10 +9,25 @@ interface UserState {
   logout: () => void;
 }
 
+function isTokenValid(token: string): boolean {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return typeof payload.exp === 'number' && payload.exp * 1000 > Date.now();
+  } catch {
+    return false;
+  }
+}
+
 function loadFromStorage(): { user: User | null; token: string | null } {
   try {
-    const user  = JSON.parse(localStorage.getItem('adslife_user') || 'null');
     const token = localStorage.getItem('adslife_token');
+    // Clear storage immediately if the token is expired
+    if (token && !isTokenValid(token)) {
+      localStorage.removeItem('adslife_token');
+      localStorage.removeItem('adslife_user');
+      return { user: null, token: null };
+    }
+    const user = JSON.parse(localStorage.getItem('adslife_user') || 'null');
     return { user, token };
   } catch {
     return { user: null, token: null };
@@ -24,7 +39,7 @@ const stored = loadFromStorage();
 export const useUserStore = create<UserState>((set) => ({
   user:            stored.user,
   token:           stored.token,
-  isAuthenticated: !!stored.token,
+  isAuthenticated: !!stored.token && isTokenValid(stored.token),
 
   setUser: (user, token) => {
     localStorage.setItem('adslife_user',  JSON.stringify(user));

@@ -40,26 +40,42 @@ function mapOffer(o: any): Offer {
   };
 }
 
-// All active offers
+// Shared vendor JOIN fragment — keeps all vendor fields in sync
+const VENDOR_JOIN = `
+  LEFT JOIN vendors v ON o.vendor_id = v.id`;
+
+const VENDOR_COLS = `
+  v.business_name, v.logo_url AS vendor_logo, v.city AS vendor_city,
+  v.address AS vendor_address, v.lat AS vendor_lat, v.lng AS vendor_lng,
+  v.phone AS vendor_phone, v.website AS vendor_website,
+  v.category AS vendor_category, v.description AS vendor_description`;
+
+// All active offers with vendor info
 export function useOffers(category?: string | null) {
   const sql = category
-    ? 'SELECT * FROM offers WHERE is_active = 1 AND category = ? ORDER BY created_at DESC'
-    : 'SELECT * FROM offers WHERE is_active = 1 ORDER BY created_at DESC';
+    ? `SELECT o.*, ${VENDOR_COLS} FROM offers o ${VENDOR_JOIN}
+       WHERE o.is_active = 1 AND o.category = ? ORDER BY o.created_at DESC`
+    : `SELECT o.*, ${VENDOR_COLS} FROM offers o ${VENDOR_JOIN}
+       WHERE o.is_active = 1 ORDER BY o.created_at DESC`;
   const params = category ? [category] : [];
   const { data } = useQuery(sql, params);
   return (data ?? []).map(mapOffer);
 }
 
-// Single offer by id
+// Single offer by id with vendor info
 export function useOffer(id: number) {
-  const { data } = useQuery('SELECT * FROM offers WHERE id = ?', [id]);
+  const { data } = useQuery(
+    `SELECT o.*, ${VENDOR_COLS} FROM offers o ${VENDOR_JOIN} WHERE o.id = ?`,
+    [id],
+  );
   return data?.[0] ? mapOffer(data[0]) : null;
 }
 
-// Featured offers
+// Featured offers with vendor info
 export function useFeaturedOffers() {
   const { data } = useQuery(
-    'SELECT * FROM offers WHERE is_active = 1 AND is_featured = 1 ORDER BY created_at DESC',
+    `SELECT o.*, ${VENDOR_COLS} FROM offers o ${VENDOR_JOIN}
+     WHERE o.is_active = 1 AND o.is_featured = 1 ORDER BY o.created_at DESC`,
   );
   return (data ?? []).map(mapOffer);
 }
@@ -98,8 +114,8 @@ export function useNotifications(userId: number) {
   }));
 }
 
-// Vendors
+// Vendors (approved only)
 export function useVendors() {
-  const { data } = useQuery('SELECT * FROM vendors WHERE status = "approved"');
+  const { data } = useQuery("SELECT * FROM vendors WHERE status = 'approved'");
   return data ?? [];
 }

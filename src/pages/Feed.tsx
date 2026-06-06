@@ -53,6 +53,7 @@ export default function Feed() {
   const [perPage, setPerPage]               = useState(20);
   const [page, setPage]                     = useState(1);
   const [loading, setLoading]               = useState(false);
+  const [error, setError]                   = useState<string | null>(null);
   const [apiOffers, setApiOffers]           = useState<Offer[]>([]);
   const [apiCategories, setApiCategories]   = useState<Category[]>([]);
 
@@ -67,19 +68,25 @@ export default function Feed() {
   useEffect(() => {
     if (psOffers.length > 0) return;
     setLoading(true);
+    setError(null);
     const cityParam = user?.city || 'Chennai';
     const feedPromise = user
       ? api.get(endpoints.feed(user.id, lat || 13.08, lng || 80.27, 1, 50, ''))
       : api.get(endpoints.trending(cityParam, 1, 50, ''));
     feedPromise
       .then(r => { if (r.data.success) setApiOffers((r.data.data ?? []).map(mapApiOffer)); })
-      .catch(() => {})
+      .catch((err) => {
+        console.error('[Feed] Failed to load offers:', err);
+        setError('Failed to load offers. Please check your connection and try again.');
+      })
       .finally(() => setLoading(false));
   }, [psOffers.length, user?.id]);
 
   useEffect(() => {
     if (psCategories.length > 0) return;
-    api.get(endpoints.categoriesList()).then(r => setApiCategories(r.data.data ?? [])).catch(() => {});
+    api.get(endpoints.categoriesList()).then(r => setApiCategories(r.data.data ?? [])).catch((err) => {
+      console.error('[Feed] Failed to load categories:', err);
+    });
   }, [psCategories.length]);
 
   useEffect(() => {
@@ -96,6 +103,7 @@ export default function Feed() {
   useEffect(() => { setSearch(urlQuery); setPage(1); }, [urlQuery]);
 
   const displayOffers = allOffers.filter(o => {
+    if (activeCategory && o.category !== activeCategory) return false;
     if (search && !o.title.toLowerCase().includes(search.toLowerCase()) &&
         !o.description?.toLowerCase().includes(search.toLowerCase())) return false;
     if (nearbyRadius > 0 && lat && lng) {
@@ -159,6 +167,19 @@ export default function Feed() {
         </div>
       )}
 
+      {/* API error banner */}
+      {error && (
+        <div className="mb-4 bg-red-50 border border-red-200 rounded-xl px-4 py-2.5 flex items-center justify-between gap-2 text-red-700 text-sm">
+          <span>{error}</span>
+          <button
+            onClick={() => { setError(null); globalThis.location.reload(); }}
+            className="text-xs font-semibold underline hover:no-underline flex-shrink-0"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
       {/* Hero — spotlight video carousel */}
       <SpotlightHero onExplore={() => setActiveFilter('trending')} />
 
@@ -169,7 +190,7 @@ export default function Feed() {
           {categories.map((cat) => (
             <button
               key={cat.slug}
-              onClick={() => setActiveCategory(activeCategory === cat.slug ? null : cat.slug)}
+              onClick={() => { setActiveCategory(activeCategory === cat.slug ? null : cat.slug); setPage(1); }}
               className={`category-chip ${activeCategory === cat.slug ? 'active' : ''}`}
             >
               <CategoryIcon name={cat.icon} size={22} />
