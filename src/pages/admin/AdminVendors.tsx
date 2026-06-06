@@ -1,55 +1,296 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Search, CheckCircle, XCircle, PauseCircle, Tag, Eye } from 'lucide-react';
-import BackButton from '../../components/BackButton';
-import { api, endpoints } from '../../utils/api';
-import toast from 'react-hot-toast';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { Search, CheckCircle, XCircle, PauseCircle, Tag, Eye } from "lucide-react";
+import BackButton from "../../components/BackButton";
+import { api, endpoints } from "../../utils/api";
+import toast from "react-hot-toast";
+import { DataTable, Pagination } from "../../components";
+import { type ColDef } from "ag-grid-community";
+import { usePlansStore } from "../../store/usePlansStore";
 
 interface VendorRow {
-  id: number; business_name: string; category: string; city: string;
-  status: string; subscription_plan: string; plan_expires_at: string | null;
-  total_followers: number; created_at: string; email: string;
-  user_id: number; user_active: number;
-  total_offers: number; active_offers: number; total_views: number; total_clicks: number;
+  id: number;
+  business_name: string;
+  category: string;
+  city: string;
+  status: string;
+  subscription_plan: string;
+  plan_expires_at: string | null;
+  total_followers: number;
+  created_at: string;
+  email: string;
+  user_id: number;
+  user_active: number;
+  total_offers: number;
+  active_offers: number;
+  total_views: number;
+  total_clicks: number;
 }
 
-const STATUSES = ['', 'approved', 'pending_review', 'suspended', 'rejected'];
-const PLANS    = ['', 'free', 'starter', 'growth', 'professional'];
+const STATUSES = ["", "approved", "pending_review", "suspended", "rejected"];
 
 export default function AdminVendors() {
   const [vendors, setVendors] = useState<VendorRow[]>([]);
-  const [total, setTotal]     = useState(0);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch]   = useState('');
-  const [status, setStatus]   = useState('');
-  const [plan, setPlan]       = useState('');
-  const [offset, setOffset]   = useState(0);
-  const LIMIT = 30;
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState("");
+  const [plan, setPlan] = useState("");
+  const [offset, setOffset] = useState(0);
+  const [limit, setLimit] = useState(30);
+
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [bulkPlan, setBulkPlan] = useState("");
+  const [bulkUpdating, setBulkUpdating] = useState(false);
+
+  const { plans, fetchPlans } = usePlansStore();
+
+  useEffect(() => {
+    fetchPlans();
+  }, [fetchPlans]);
+
+  const planOptions = useMemo(() => {
+    return ["", ...plans.map((p) => p.slug)];
+  }, [plans]);
 
   const load = useCallback(() => {
     setLoading(true);
-    api.get(endpoints.adminVendors(search, status, plan, LIMIT, offset))
+    api
+      .get(endpoints.adminVendors(search, status, plan, limit, offset))
       .then((r) => {
-        if (r.data.success) { setVendors(r.data.data.vendors); setTotal(r.data.data.total); }
-      }).finally(() => setLoading(false));
-  }, [search, status, plan, offset]);
+        if (r.data.success) {
+          setVendors(r.data.data.vendors);
+          setTotal(r.data.data.total);
+        }
+      })
+      .finally(() => setLoading(false));
+  }, [search, status, plan, limit, offset]);
 
-  useEffect(() => { setOffset(0); }, [search, status, plan]);
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    setOffset(0);
+    setSelectedIds([]);
+    setBulkPlan("");
+  }, [search, status, plan]);
 
-  const action = async (vendorId: number, act: string, extra?: Record<string, string>) => {
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const action = useCallback(
+    async (vendorId: number, act: string, extra?: Record<string, string>) => {
+      try {
+        const res = await api.put(endpoints.adminVendorAction(vendorId), { action: act, ...extra });
+        toast.success(res.data.message);
+        load();
+      } catch {
+        toast.error("Action failed");
+      }
+    },
+    [load],
+  );
+
+  const handleSelection = useCallback((selectedRows: VendorRow[]) => {
+    setSelectedIds(selectedRows.map((r) => r.id));
+  }, []);
+
+  const handleBulkPlanUpdate = useCallback(async () => {
+    if (selectedIds.length === 0 || !bulkPlan) return;
+    setBulkUpdating(true);
     try {
-      const res = await api.put(endpoints.adminVendorAction(vendorId), { action: act, ...extra });
-      toast.success(res.data.message);
+      const res = await api.put(endpoints.adminVendorsBulkPlan, {
+        vendor_ids: selectedIds,
+        plan: bulkPlan,
+      });
+      toast.success(res.data.message || "Bulk plan updated successfully");
+      setSelectedIds([]);
+      setBulkPlan("");
       load();
-    } catch { toast.error('Action failed'); }
-  };
+    } catch {
+      toast.error("Bulk update failed");
+    } finally {
+      setBulkUpdating(false);
+    }
+  }, [selectedIds, bulkPlan, load]);
 
-  const statusColor = (s: string) => ({
-    approved:       'bg-emerald-50 text-emerald-600',
-    pending_review: 'bg-amber-50 text-amber-600',
-    suspended:      'bg-orange-50 text-orange-600',
-    rejected:       'bg-red-50 text-red-500',
-  }[s] ?? 'bg-gray-100 text-gray-500');
+  const statusColor = (s: string) =>
+    ({
+      approved: "bg-emerald-50 text-emerald-600",
+      pending_review: "bg-amber-50 text-amber-600",
+      suspended: "bg-orange-50 text-orange-600",
+      rejected: "bg-red-50 text-red-500",
+    })[s] ?? "bg-gray-100 text-gray-500";
+
+  const columnDefs = useMemo<ColDef<VendorRow>[]>(
+    () => [
+      {
+        headerCheckboxSelection: true,
+        checkboxSelection: true,
+        width: 50,
+        maxWidth: 50,
+        minWidth: 50,
+        suppressSizeToFit: true,
+        flex: 0,
+        resizable: false,
+        sortable: false,
+      },
+      {
+        headerName: "Vendor",
+        field: "business_name",
+        flex: 1.5,
+        cellRenderer: (params: any) => {
+          const v = params.data;
+          if (!v) return null;
+          return (
+            <div className="flex items-center gap-2 h-full py-1">
+              <div className="w-7 h-7 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 font-bold text-xs flex-shrink-0">
+                {v.business_name[0]?.toUpperCase()}
+              </div>
+              <div className="min-w-0 leading-tight">
+                <p className="font-medium text-[var(--text)] truncate max-w-32" title={v.business_name}>
+                  {v.business_name}
+                </p>
+                <p className="text-xs text-[var(--text-muted)] truncate max-w-32" title={v.email}>
+                  {v.email}
+                </p>
+              </div>
+            </div>
+          );
+        },
+      },
+      {
+        headerName: "City",
+        field: "city",
+        flex: 1,
+        cellRenderer: (params: any) => {
+          const v = params.data;
+          if (!v) return null;
+          return <span className="text-[var(--text-muted)] capitalize">{v.city || "–"}</span>;
+        },
+      },
+      {
+        headerName: "Plan",
+        field: "subscription_plan",
+        flex: 1.2,
+        cellRenderer: (params: any) => {
+          const v = params.data;
+          if (!v) return null;
+          return (
+            <div className="flex flex-col justify-center leading-tight py-1 h-full">
+              <span className="text-xs font-semibold capitalize text-[var(--text)]">{v.subscription_plan}</span>
+              {v.plan_expires_at && (
+                <p className="text-xs text-[var(--text-muted)]">exp {v.plan_expires_at.slice(0, 10)}</p>
+              )}
+            </div>
+          );
+        },
+      },
+      {
+        headerName: "Offers",
+        field: "active_offers",
+        flex: 0.8,
+        cellRenderer: (params: any) => {
+          const v = params.data;
+          if (!v) return null;
+          return (
+            <span className="flex items-center gap-1 text-xs text-[var(--text-muted)]">
+              <Tag size={11} /> {v.active_offers}/{v.total_offers}
+            </span>
+          );
+        },
+      },
+      {
+        headerName: "Reach",
+        field: "total_views",
+        flex: 1,
+        cellRenderer: (params: any) => {
+          const v = params.data;
+          if (!v) return null;
+          return (
+            <span className="flex items-center gap-1 text-xs text-[var(--text-muted)]">
+              <Eye size={11} /> {Number(v.total_views).toLocaleString()}
+            </span>
+          );
+        },
+      },
+      {
+        headerName: "Followers",
+        field: "total_followers",
+        flex: 0.8,
+        cellRenderer: (params: any) => {
+          const v = params.data;
+          if (!v) return null;
+          return <span className="text-[var(--text-muted)]">{v.total_followers}</span>;
+        },
+      },
+      {
+        headerName: "Joined",
+        field: "created_at",
+        flex: 1,
+        cellRenderer: (params: any) => {
+          const v = params.data;
+          if (!v) return null;
+          return (
+            <span className="text-xs text-[var(--text-muted)] whitespace-nowrap">{v.created_at.slice(0, 10)}</span>
+          );
+        },
+      },
+      {
+        headerName: "Status",
+        field: "status",
+        flex: 1,
+        cellRenderer: (params: any) => {
+          const v = params.data;
+          if (!v) return null;
+          return (
+            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full capitalize ${statusColor(v.status)}`}>
+              {v.status.replace("_", " ")}
+            </span>
+          );
+        },
+      },
+      {
+        headerName: "Actions",
+        field: "id",
+        flex: 1.2,
+        cellRenderer: (params: any) => {
+          const v = params.data;
+          if (!v) return null;
+          return (
+            <div className="flex items-center gap-1 h-full py-1">
+              {v.status !== "approved" && (
+                <button
+                  onClick={() => action(v.id, "approve")}
+                  title="Approve"
+                  className="p-1.5 rounded-lg hover:bg-emerald-50 text-emerald-600 transition-colors"
+                >
+                  <CheckCircle size={14} />
+                </button>
+              )}
+              {v.status === "approved" && (
+                <button
+                  onClick={() => action(v.id, "suspend")}
+                  title="Suspend"
+                  className="p-1.5 rounded-lg hover:bg-orange-50 text-orange-500 transition-colors"
+                >
+                  <PauseCircle size={14} />
+                </button>
+              )}
+              {v.status !== "rejected" && v.status === "pending_review" && (
+                <button
+                  onClick={() => action(v.id, "reject")}
+                  title="Reject"
+                  className="p-1.5 rounded-lg hover:bg-red-50 text-red-500 transition-colors"
+                >
+                  <XCircle size={14} />
+                </button>
+              )}
+            </div>
+          );
+        },
+      },
+    ],
+    [action, plans],
+  );
 
   return (
     <div className="pb-8">
@@ -64,102 +305,95 @@ export default function AdminVendors() {
       <div className="flex flex-wrap gap-3 mb-5">
         <div className="relative flex-1 min-w-48">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input className="input pl-8 w-full" placeholder="Search name, email, city…"
-            value={search} onChange={(e) => setSearch(e.target.value)} />
+          <input
+            className="input pl-8 w-full"
+            placeholder="Search name, email, city…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
         <select className="input w-36" value={status} onChange={(e) => setStatus(e.target.value)}>
-          {STATUSES.map((s) => <option key={s} value={s}>{s ? s.replace('_', ' ') : 'All status'}</option>)}
+          {STATUSES.map((s) => (
+            <option key={s} value={s}>
+              {s ? s.replace("_", " ") : "All status"}
+            </option>
+          ))}
         </select>
         <select className="input w-36" value={plan} onChange={(e) => setPlan(e.target.value)}>
-          {PLANS.map((p) => <option key={p} value={p}>{p || 'All plans'}</option>)}
+          {planOptions.map((p) => (
+            <option key={p} value={p}>
+              {p || "All plans"}
+            </option>
+          ))}
         </select>
       </div>
 
-      <div className="card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-[var(--border)] bg-gray-50/50">
-                {['Vendor', 'City', 'Plan', 'Offers', 'Reach', 'Followers', 'Joined', 'Status', 'Actions'].map((h) => (
-                  <th key={h} className="text-left py-3 px-4 text-xs font-semibold text-[var(--text-muted)] whitespace-nowrap">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                Array.from({ length: 5 }).map((_, i) => (
-                  <tr key={i} className="border-b border-[var(--border)]">
-                    {Array.from({ length: 9 }).map((__, j) => (
-                      <td key={j} className="py-3 px-4"><div className="skeleton h-4 w-20 rounded" /></td>
-                    ))}
-                  </tr>
-                ))
-              ) : vendors.map((v) => (
-                <tr key={v.id} className="border-b border-[var(--border)] hover:bg-gray-50/50 transition-colors">
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 font-bold text-xs flex-shrink-0">
-                        {v.business_name[0]?.toUpperCase()}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-medium text-[var(--text)] truncate max-w-32">{v.business_name}</p>
-                        <p className="text-xs text-[var(--text-muted)] truncate max-w-32">{v.email}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="py-3 px-4 text-[var(--text-muted)] capitalize">{v.city || '–'}</td>
-                  <td className="py-3 px-4">
-                    <span className="text-xs font-semibold capitalize text-[var(--text)]">{v.subscription_plan}</span>
-                    {v.plan_expires_at && <p className="text-xs text-[var(--text-muted)]">exp {v.plan_expires_at.slice(0,10)}</p>}
-                  </td>
-                  <td className="py-3 px-4">
-                    <span className="flex items-center gap-1 text-xs text-[var(--text-muted)]"><Tag size={11} /> {v.active_offers}/{v.total_offers}</span>
-                  </td>
-                  <td className="py-3 px-4">
-                    <span className="flex items-center gap-1 text-xs text-[var(--text-muted)]"><Eye size={11} /> {Number(v.total_views).toLocaleString()}</span>
-                  </td>
-                  <td className="py-3 px-4 text-[var(--text-muted)]">{v.total_followers}</td>
-                  <td className="py-3 px-4 text-xs text-[var(--text-muted)] whitespace-nowrap">{v.created_at.slice(0,10)}</td>
-                  <td className="py-3 px-4">
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full capitalize ${statusColor(v.status)}`}>
-                      {v.status.replace('_', ' ')}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-1">
-                      {v.status !== 'approved' && (
-                        <button onClick={() => action(v.id, 'approve')} title="Approve"
-                          className="p-1.5 rounded-lg hover:bg-emerald-50 text-emerald-600 transition-colors"><CheckCircle size={14} /></button>
-                      )}
-                      {v.status === 'approved' && (
-                        <button onClick={() => action(v.id, 'suspend')} title="Suspend"
-                          className="p-1.5 rounded-lg hover:bg-orange-50 text-orange-500 transition-colors"><PauseCircle size={14} /></button>
-                      )}
-                      {v.status !== 'rejected' && (
-                        <button onClick={() => action(v.id, 'reject')} title="Reject"
-                          className="p-1.5 rounded-lg hover:bg-red-50 text-red-500 transition-colors"><XCircle size={14} /></button>
-                      )}
-                      <select className="text-xs border border-[var(--border)] rounded-lg px-1.5 py-1 bg-[var(--surface)] text-[var(--text)] cursor-pointer"
-                        value={v.subscription_plan}
-                        onChange={(e) => action(v.id, 'update_plan', { plan: e.target.value })}>
-                        {PLANS.filter(Boolean).map((p) => <option key={p} value={p}>{p}</option>)}
-                      </select>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <div className="flex justify-between items-center mb-4 flex-wrap gap-3">
+        <div className="text-xs text-[var(--text-muted)]">
+          Showing {total === 0 ? 0 : offset + 1}–{Math.min(offset + limit, total)} of {total}
         </div>
-        {total > LIMIT && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-[var(--border)]">
-            <span className="text-xs text-[var(--text-muted)]">Showing {offset + 1}–{Math.min(offset + LIMIT, total)} of {total}</span>
-            <div className="flex gap-2">
-              <button disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - LIMIT))} className="btn btn-secondary btn-sm">Prev</button>
-              <button disabled={offset + LIMIT >= total} onClick={() => setOffset(offset + LIMIT)} className="btn btn-secondary btn-sm">Next</button>
+
+        <div className="flex items-center gap-3 flex-wrap">
+          {selectedIds.length > 0 && (
+            <div className="flex items-center gap-2 bg-[var(--surface-2)] border border-[var(--border)] px-3 py-1 rounded-xl text-xs">
+              <span className="font-semibold text-[var(--text)]">{selectedIds.length} selected</span>
+              <div className="h-3 w-px bg-[var(--border-strong)] mx-1" />
+              <span className="text-[var(--text-secondary)]">Change plan to:</span>
+              <select
+                className="bg-transparent border border-[var(--border)] rounded-lg px-2 py-0.5 text-[var(--text)] outline-none cursor-pointer text-xs"
+                value={bulkPlan}
+                onChange={(e) => setBulkPlan(e.target.value)}
+              >
+                <option value="">Select Plan...</option>
+                {plans.map((p) => (
+                  <option key={p.slug} value={p.slug}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+              {bulkPlan && (
+                <button
+                  onClick={handleBulkPlanUpdate}
+                  disabled={bulkUpdating}
+                  className="bg-primary text-white font-semibold px-2 py-0.5 rounded-lg hover:opacity-90 transition-opacity text-xs"
+                >
+                  {bulkUpdating ? "Saving..." : "Update"}
+                </button>
+              )}
             </div>
-          </div>
-        )}
+          )}
+
+          <Pagination
+            page={Math.floor(offset / limit) + 1}
+            totalPages={Math.ceil(total / limit) || 1}
+            currentPageSize={limit}
+            pageSizeOptions={[
+              { value: "10", label: "10" },
+              { value: "30", label: "30" },
+              { value: "50", label: "50" },
+              { value: "100", label: "100" },
+            ]}
+            onPageChange={(p) => setOffset((p - 1) * limit)}
+            onPageSizeChanged={(sz) => {
+              setLimit(Number(sz));
+              setOffset(0);
+            }}
+          />
+        </div>
+      </div>
+
+      <div className="card overflow-hidden">
+        <DataTable
+          rowData={vendors}
+          columnDefs={columnDefs}
+          domLayout="autoHeight"
+          rowHeight={56}
+          headerHeight={44}
+          loading={loading}
+          rowSelection="multiple"
+          suppressRowClickSelection={true}
+          onSelection={handleSelection}
+        />
       </div>
     </div>
   );

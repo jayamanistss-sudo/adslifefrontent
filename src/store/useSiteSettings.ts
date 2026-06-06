@@ -7,12 +7,16 @@ interface SiteSettings {
   site_logo_url: string;
   seo_title: string;
   seo_description: string;
+  seo_keywords?: string;
+  contact_email?: string;
+  contact_phone?: string;
 }
 
 interface SiteSettingsStore {
   settings: SiteSettings;
   loaded: boolean;
-  fetch: () => Promise<void>;
+  fetch: (force?: boolean) => Promise<void>;
+  setSettings: (settings: SiteSettings) => void;
 }
 
 const defaults: SiteSettings = {
@@ -21,13 +25,16 @@ const defaults: SiteSettings = {
   site_logo_url:   '',
   seo_title:       'AdsLife',
   seo_description: '',
+  seo_keywords:    '',
+  contact_email:   '',
+  contact_phone:   '',
 };
 
 export const useSiteSettings = create<SiteSettingsStore>((set, get) => ({
   settings: defaults,
   loaded:   false,
-  fetch: async () => {
-    if (get().loaded) return;
+  fetch: async (force = false) => {
+    if (get().loaded && !force) return;
     try {
       const res = await api.get(endpoints.siteSettings);
       if (res.data.success) {
@@ -35,4 +42,5 @@ export const useSiteSettings = create<SiteSettingsStore>((set, get) => ({
       }
     } catch { /* keep defaults */ }
   },
+  setSettings: (settings) => set({ settings }),
 }));

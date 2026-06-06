@@ -1,0 +1,153 @@
+.ag-theme-quartz {
+  --ag-font-family: 'Inter', sans-serif !important;
+  --ag-font-size: 14px !important;
+  --ag-background-color: var(--surface) !important;
+  --ag-header-background-color: rgba(249, 250, 251, 0.5) !important;
+  --ag-header-foreground-color: var(--text-muted) !important;
+  --ag-header-cell-font-weight: 600 !important;
+  --ag-header-cell-font-size: 12px !important;
+  --ag-border-color: var(--border) !important;
+  --ag-row-border-color: var(--border) !important;
+  --ag-row-hover-color: rgba(249, 250, 251, 0.5) !important;
+  --ag-selected-row-background-color: rgba(255, 98, 0, 0.08) !important;
+}
+
+.dark .ag-theme-quartz {
+  --ag-header-background-color: var(--surface-2) !important;
+  --ag-row-hover-color: var(--surface-2) !important;
+  --ag-selected-row-background-color: rgba(255, 98, 0, 0.15) !important;
+}
+
+.ag-layout-auto-height .ag-header {
+  position: sticky !important;
+  top: 0;
+  z-index: 10 !important;
+}
+
+.ag-layout-auto-height .ag-body-horizontal-scroll {
+  position: sticky !important;
+  bottom: 0;
+  z-index: 10 !important;
+}
+
+.ag-header-row {
+  background-color: var(--ag-header-background-color) !important;
+  border-bottom: 1px solid var(--ag-border-color) !important;
+  
+  .ag-header-cell-text {
+    color: var(--ag-header-foreground-color) !important;
+    font-weight: var(--ag-header-cell-font-weight) !important;
+    font-size: var(--ag-header-cell-font-size) !important;
+    @media (min-width: 1200px) and (max-width: 1400px) {
+      font-size: 11px !important;
+    }
+  }
+  .ag-header-cell-label {
+    justify-content: left;
+  }
+}
+.ag-cell {
+  font-size: var(--ag-font-size) !important;
+  font-weight: 400;
+  color: var(--text) !important;
+  display: flex !important;
+  align-items: center !important;
+
+  @media (min-width: 1280px) and (max-width: 1599px) {
+    font-size: 13px !important;
+  }
+}
+.ag-cell .textResponse {
+  @media (min-width: 1280px) and (max-width: 1599px) {
+    font-size: 13px !important;
+  }
+}
+.textResponse {
+  @media (min-width: 1280px) and (max-width: 1599px) {
+    font-size: 13px !important;
+  }
+}
+.MuiSelect-select {
+  @media (min-width: 1280px) and (max-width: 1599px) {
+    font-size: 13px !important;
+  }
+}
+.custom-no-rows {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text-muted);
+  padding: 20px;
+  text-align: center;
+}
+.ag-cell:focus {
+  outline: none !important;
+  border: none !important;
+}
+
+//scrollbar
+/* Contain the grid so the wide content never bleeds into the page layout */
+.has-top-scroll {
+  overflow: hidden;
+}
+
+.ag-top-horizontal-scroll {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  height: 14px;
+  /* Must NOT be wider than the host container – let the host clip it */
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.ag-top-horizontal-scroll-inner {
+  height: 1px;
+  min-width: 1px;
+}
+
+/* Only offset the sticky header in auto-height layout;
+   normal layout headers are not sticky so top: N causes a visible gap */
+.has-top-scroll .ag-layout-auto-height .ag-header {
+  top: 14px !important;
+}
+
+//for table pagiantion
+
+.formControl {
+  /* replaces: sx={{ mx: { xs: 0, sm: 1, md: 1 } }} */
+  margin: 0;
+}
+
+@media (min-width: 640px) {
+  .formControl {
+    margin-left: 8px;
+    margin-right: 8px;
+  }
+}
+
+.selectRoot {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  color: var(--text);
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s;
+  font-family: 'Inter', sans-serif;
+  
+  &:focus {
+    border-color: var(--primary);
+  }
+}
+
+/* Select padding: replaces sx for .MuiSelect-select */
+.selectRoot :global(.MuiSelect-select) {
+  padding-top: 4.5px !important;
+  padding-bottom: 4.5px !important;
+}
