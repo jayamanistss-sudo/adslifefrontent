@@ -12,6 +12,8 @@
   "dependencies": {
     "@cashfreepayments/cashfree-js": "^1.0.7",
     "@headlessui/react": "^2.2.10",
+    "@powersync/react": "^1.10.0",
+    "@powersync/web": "^1.38.2",
     "@react-oauth/google": "^0.13.5",
     "@types/leaflet": "^1.9.21",
     "autoprefixer": "^10.5.0",

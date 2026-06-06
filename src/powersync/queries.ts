@@ -80,12 +80,14 @@ export function useFeaturedOffers() {
   return (data ?? []).map(mapOffer);
 }
 
+export interface Category { id: number; name: string; slug: string; icon: string; sort_order: number; }
+
 // Categories
-export function useCategories() {
+export function useCategories(): Category[] {
   const { data } = useQuery(
     'SELECT * FROM categories WHERE is_active = 1 ORDER BY sort_order ASC, name ASC',
   );
-  return data ?? [];
+  return (data ?? []) as Category[];
 }
 
 // Saved offer IDs for current user

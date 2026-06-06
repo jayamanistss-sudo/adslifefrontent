@@ -8,13 +8,11 @@ import OfferCard from '../components/OfferCard';
 import CategoryIcon from '../components/CategoryIcon';
 import { useUserStore } from '../store/useUserStore';
 import { useGeolocation } from '../hooks/useGeolocation';
-import { useOffers, useCategories } from '../powersync/queries';
+import { useOffers, useCategories, type Category } from '../powersync/queries';
 import { api, endpoints } from '../utils/api';
 import type { Offer } from '../types';
 
 const PER_PAGE_OPTIONS = [10, 20, 50, 100];
-
-interface Category { id: number; name: string; slug: string; icon: string; }
 
 const FILTER_TABS = [
   { key: 'all',       label: 'All',         icon: null },
@@ -102,7 +100,7 @@ export default function Feed() {
 
   useEffect(() => { setSearch(urlQuery); setPage(1); }, [urlQuery]);
 
-  const displayOffers = allOffers.filter(o => {
+  const displayOffers = allOffers.filter((o: Offer) => {
     if (activeCategory && o.category !== activeCategory) return false;
     if (search && !o.title.toLowerCase().includes(search.toLowerCase()) &&
         !o.description?.toLowerCase().includes(search.toLowerCase())) return false;
@@ -187,7 +185,7 @@ export default function Feed() {
       <div className="mb-6">
         <h2 className="font-heading font-bold text-[var(--text)] text-lg mb-4">Browse Categories</h2>
         <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-12 gap-2">
-          {categories.map((cat) => (
+          {categories.map((cat: Category) => (
             <button
               key={cat.slug}
               onClick={() => { setActiveCategory(activeCategory === cat.slug ? null : cat.slug); setPage(1); }}
@@ -286,7 +284,7 @@ export default function Feed() {
         </div>
       ) : !loading && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {pagedOffers.map((offer, i) => (
+          {pagedOffers.map((offer: Offer, i: number) => (
             <motion.div
               key={offer.id}
               initial={{ opacity: 0, y: 16 }}
