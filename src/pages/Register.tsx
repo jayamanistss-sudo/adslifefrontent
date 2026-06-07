@@ -302,23 +302,23 @@ export default function Register() {
           <form onSubmit={handleSubmit} noValidate className="space-y-4">
 
             <InputField id="name" label="Full name" icon={User} error={isErr('name')} touched={!!touched.name}>
-              <input id="reg-name" type="text" required className={inp} placeholder="Arjun Kumar"
+              <input id="reg-name" type="text" required className={inp} placeholder="Enter your full name"
                 value={form.name} onChange={e => field('name', e.target.value)} onBlur={() => blur('name')} />
             </InputField>
 
             <InputField id="email" label="Email" icon={Mail} error={isErr('email')} touched={!!touched.email}>
-              <input id="reg-email" type="email" required className={inp} placeholder="you@example.com"
+              <input id="reg-email" type="email" required className={inp} placeholder="Enter your email"
                 value={form.email} onChange={e => field('email', e.target.value)} onBlur={() => blur('email')} />
             </InputField>
 
             <div className="grid grid-cols-2 gap-3">
               <InputField id="phone" label="Phone" icon={Phone} error={isErr('phone')} touched={!!touched.phone}>
                 <input id="reg-phone" type="tel" inputMode="numeric" maxLength={10}
-                  className={inp} placeholder="9876543210"
+                  className={inp} placeholder="Enter your phone number"
                   value={form.phone} onChange={e => field('phone', e.target.value)} onBlur={() => blur('phone')} />
               </InputField>
               <InputField id="city" label="City" icon={MapPin} error={isErr('city')} touched={!!touched.city}>
-                <input id="reg-city" type="text" className={inp} placeholder="Chennai"
+                <input id="reg-city" type="text" className={inp} placeholder="Enter your city"
                   value={form.city} onChange={e => field('city', e.target.value)} onBlur={() => blur('city')} />
               </InputField>
             </div>
@@ -326,7 +326,7 @@ export default function Register() {
             <div>
               <InputField id="password" label="Password" icon={Lock} error={isErr('password')} touched={!!touched.password}>
                 <input id="reg-password" type={showPw ? 'text' : 'password'} required
-                  className={`${inp} pr-16`} placeholder="Min 6 characters"
+                  className={`${inp} pr-16`} placeholder="Enter your password"
                   value={form.password} onChange={e => field('password', e.target.value)} onBlur={() => blur('password')} />
                 <button type="button" onClick={() => setShowPw(!showPw)} tabIndex={-1}
                   className="absolute right-8 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text)] transition-colors">
