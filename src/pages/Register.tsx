@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock, User, Phone, MapPin, Gift, CheckCircle2, XCircle } from 'lucide-react';
 import { api, endpoints } from '../utils/api';
