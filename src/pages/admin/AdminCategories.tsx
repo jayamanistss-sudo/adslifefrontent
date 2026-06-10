@@ -1,8 +1,10 @@
 import { useEffect, useState, useRef } from 'react';
-import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, Save, X, ChevronDown } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Plus, Pencil, Trash2, Save, X, ChevronDown } from 'lucide-react';
 import { api, endpoints } from '../../utils/api';
 import toast from 'react-hot-toast';
 import CategoryIcon from '../../components/CategoryIcon';
+import BackButton from '../../components/BackButton';
 
 interface Category {
   id: number;
@@ -93,113 +95,146 @@ export default function AdminCategories() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="pb-8">
+      <BackButton to="/admin/dashboard" label="Admin Panel" />
+      
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="page-header mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--text)]">Categories</h1>
-          <p className="text-sm text-[var(--text-secondary)] mt-1">
+          <h1 className="page-title">Categories</h1>
+          <p className="page-subtitle">
             Manage categories shown in Browse &amp; offer forms
           </p>
         </div>
         <button
           onClick={openNew}
-          className="flex items-center gap-2 bg-[var(--primary)] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:opacity-90"
+          className="btn btn-primary"
         >
           <Plus size={16} /> Add Category
         </button>
       </div>
 
-      {/* Table */}
-      <div className="bg-[var(--surface)] rounded-2xl border border-[var(--border)] overflow-hidden">
+      {/* Table Container */}
+      <div className="bg-[var(--surface)] rounded-2xl border border-[var(--border)] overflow-hidden shadow-sm">
         {loading ? (
-          <div className="p-8 text-center text-[var(--text-secondary)]">Loading…</div>
+          <div className="flex justify-center items-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--primary)]" />
+          </div>
+        ) : categories.length === 0 ? (
+          <div className="p-12 text-center text-[var(--text-secondary)]">No categories yet</div>
         ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-[var(--bg)] border-b border-[var(--border)]">
-              <tr>
-                <th className="text-left px-4 py-3 font-semibold text-[var(--text-secondary)]">Icon</th>
-                <th className="text-left px-4 py-3 font-semibold text-[var(--text-secondary)]">Name</th>
-                <th className="text-left px-4 py-3 font-semibold text-[var(--text-secondary)]">Slug</th>
-                <th className="text-left px-4 py-3 font-semibold text-[var(--text-secondary)]">Order</th>
-                <th className="text-left px-4 py-3 font-semibold text-[var(--text-secondary)]">Status</th>
-                <th className="text-right px-4 py-3 font-semibold text-[var(--text-secondary)]">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--border)]">
-              {categories.map((cat) => (
-                <tr key={cat.id} className="hover:bg-[var(--bg)] transition-colors">
-                  <td className="px-4 py-3">
-                    <CategoryIcon name={cat.icon} size={24} className="text-[var(--primary)]" />
-                  </td>
-                  <td className="px-4 py-3 font-medium text-[var(--text)]">{cat.name}</td>
-                  <td className="px-4 py-3 text-[var(--text-secondary)] font-mono text-xs">{cat.slug}</td>
-                  <td className="px-4 py-3 text-[var(--text-secondary)]">{cat.sort_order}</td>
-                  <td className="px-4 py-3">
-                    <button onClick={() => toggleActive(cat)} className="flex items-center gap-1.5">
-                      {cat.is_active ? (
-                        <><ToggleRight size={20} className="text-green-500" /><span className="text-green-600 text-xs font-medium">Active</span></>
-                      ) : (
-                        <><ToggleLeft size={20} className="text-gray-400" /><span className="text-gray-400 text-xs font-medium">Inactive</span></>
-                      )}
-                    </button>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => openEdit(cat)}
-                        className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-600"
-                      >
-                        <Pencil size={15} />
-                      </button>
-                      <button
-                        onClick={() => setDeleteId(cat.id)}
-                        className="p-1.5 rounded-lg hover:bg-red-50 text-red-500"
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    </div>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-left">
+              <thead>
+                <tr className="border-b border-[var(--border)] bg-[var(--surface-2)]/40 text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">
+                  <th className="px-6 py-4">Icon</th>
+                  <th className="px-6 py-4">Category Details</th>
+                  <th className="px-6 py-4">Sort Order</th>
+                  <th className="px-6 py-4">Status</th>
+                  <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
-              ))}
-              {categories.length === 0 && (
-                <tr><td colSpan={6} className="px-4 py-8 text-center text-[var(--text-secondary)]">No categories yet</td></tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-[var(--border)] text-sm">
+                {categories.map((cat) => (
+                  <tr
+                    key={cat.id}
+                    className={`group transition-colors duration-150 hover:bg-[var(--surface-2)]/30 ${
+                      !cat.is_active && "opacity-75 bg-[var(--surface-2)]/10"
+                    }`}
+                  >
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="w-10 h-10 rounded-xl bg-[var(--primary-light)] dark:bg-primary/10 flex items-center justify-center text-[var(--primary)] border border-[var(--primary)]/10">
+                        <CategoryIcon name={cat.icon} size={20} />
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col leading-tight">
+                        <span className="font-semibold text-[var(--text)] text-sm">{cat.name}</span>
+                        <span className="text-xs text-[var(--text-secondary)] font-mono mt-0.5">{cat.slug}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="bg-[var(--surface-2)] px-2 py-0.5 rounded text-xs font-medium text-[var(--text-secondary)]">
+                        {cat.sort_order}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <button
+                        onClick={() => toggleActive(cat)}
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold cursor-pointer border border-transparent hover:border-[var(--primary)]/20 transition-all ${
+                          cat.is_active
+                            ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-400"
+                            : "bg-gray-100 text-gray-500 dark:bg-slate-800 dark:text-slate-400"
+                        }`}
+                        title="Click to toggle status"
+                      >
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full ${
+                            cat.is_active ? "bg-emerald-500 animate-pulse" : "bg-gray-400"
+                          }`}
+                        />
+                        {cat.is_active ? "Active" : "Inactive"}
+                      </button>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={() => openEdit(cat)}
+                          className="p-2 rounded-lg text-[var(--text-secondary)] hover:text-[var(--primary)] hover:bg-[var(--surface-2)] transition-colors cursor-pointer"
+                          title="Edit"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                        <button
+                          onClick={() => setDeleteId(cat.id)}
+                          className="p-2 rounded-lg text-[var(--text-secondary)] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors cursor-pointer"
+                          title="Delete"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
       {/* Edit / Create Modal */}
-      {editing && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-[var(--surface)] rounded-2xl w-full max-w-md shadow-2xl">
-            <div className="flex items-center justify-between p-6 border-b border-[var(--border)]">
-              <h2 className="font-bold text-lg text-[var(--text)]">
-                {isNew ? 'Add Category' : 'Edit Category'}
-              </h2>
-              <button onClick={closeEdit} className="p-1.5 rounded-lg hover:bg-[var(--bg)]">
+      {editing && createPortal(
+        <div className="modal-overlay">
+          <div className="modal-content max-w-md">
+            <div className="modal-header">
+              <div className="flex flex-col">
+                <h2 className="modal-title">
+                  {isNew ? 'Add Category' : 'Edit Category'}
+                </h2>
+                <span className="block w-8 h-[2.5px] bg-[var(--primary)] rounded-full mt-1"></span>
+              </div>
+              <button onClick={closeEdit} className="modal-close">
                 <X size={18} />
               </button>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="modal-body space-y-4">
               <div>
-                <label className="block text-sm font-medium text-[var(--text)] mb-1">Icon</label>
+                <label className="modal-label">Icon</label>
                 <div className="flex items-center gap-3">
-                  <div className="flex items-center justify-center w-12 h-12 rounded-xl border border-[var(--border)] bg-[var(--bg)]">
+                  <div className="flex items-center justify-center w-12 h-12 rounded-xl border border-[var(--border)] bg-[var(--bg)] flex-shrink-0 shadow-sm">
                     <CategoryIcon name={editing.icon ?? 'tag'} size={24} className="text-[var(--primary)]" />
                   </div>
                   <div ref={iconDropdownRef} className="relative flex-1">
                     <button
                       type="button"
                       onClick={() => setIconDropdownOpen(!iconDropdownOpen)}
-                      className="input flex items-center justify-between text-left w-full cursor-pointer rounded-lg"
+                      className="input flex items-center justify-between text-left w-full cursor-pointer rounded-lg hover:border-[var(--primary)]/50 transition-colors"
                     >
-                      <span className="capitalize">{editing.icon ?? 'tag'}</span>
+                      <span className="capitalize font-medium">{editing.icon ?? 'tag'}</span>
                       <ChevronDown size={16} className={`text-[var(--text-secondary)] transition-transform duration-200 ${iconDropdownOpen ? 'rotate-180' : ''}`} />
                     </button>
                     {iconDropdownOpen && (
-                      <div className="absolute top-full left-0 right-0 mt-1 bg-[var(--surface)] border border-[var(--border)] rounded-lg shadow-xl z-50 max-h-60 overflow-y-auto divide-y divide-[var(--border)]">
+                      <div className="absolute top-full left-0 right-0 mt-2 bg-[var(--surface)] border border-[var(--border)] rounded-2xl shadow-xl z-50 max-h-60 overflow-y-auto p-3 grid grid-cols-4 gap-2">
                         {['utensils','shirt','smartphone','sparkles','plane','film','shopping-cart','shopping-bag','heart','dumbbell','tag','package','star','coffee','pizza','car','home','briefcase','music','book-open','camera','scissors','gem','gift','globe','leaf','monitor','tv','watch','wine','baby','bike','dog','flower','gamepad','hammer','headphones','hotel','laptop','paintbrush','pill','stethoscope','ticket','truck','umbrella','wallet','wrench','zap'].map(name => (
                           <button
                             key={name}
@@ -208,10 +243,14 @@ export default function AdminCategories() {
                               setEditing({ ...editing, icon: name });
                               setIconDropdownOpen(false);
                             }}
-                            className="w-full flex items-center gap-3 px-4 py-2 hover:bg-[var(--bg)] text-left text-[var(--text)] transition-colors cursor-pointer"
+                            className={`flex flex-col items-center justify-center p-2.5 rounded-xl border transition-all duration-200 cursor-pointer ${
+                              editing.icon === name
+                                ? 'border-[var(--primary)] bg-[var(--primary-light)] text-[var(--primary)]'
+                                : 'border-[var(--border)] hover:border-[var(--primary)]/40 hover:bg-[var(--surface-2)] text-[var(--text-secondary)] hover:text-[var(--text)]'
+                            }`}
+                            title={name}
                           >
-                            <CategoryIcon name={name} size={18} className="text-[var(--primary)]" />
-                            <span className="capitalize text-sm font-medium">{name}</span>
+                            <CategoryIcon name={name} size={20} />
                           </button>
                         ))}
                       </div>
@@ -220,7 +259,7 @@ export default function AdminCategories() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-[var(--text)] mb-1">Name *</label>
+                <label className="modal-label">Name *</label>
                 <input
                   type="text"
                   value={editing.name ?? ''}
@@ -230,7 +269,7 @@ export default function AdminCategories() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-[var(--text)] mb-1">Sort Order</label>
+                <label className="modal-label">Sort Order</label>
                 <input
                   type="number"
                   value={editing.sort_order ?? 0}
@@ -240,56 +279,75 @@ export default function AdminCategories() {
                 />
               </div>
               {!isNew && (
-                <div className="flex items-center gap-3">
-                  <label className="text-sm font-medium text-[var(--text)]">Active</label>
+                <div className="flex items-center justify-between bg-[var(--bg)] p-3 rounded-xl border border-[var(--border)]">
+                  <div className="flex flex-col">
+                    <span className="text-sm font-semibold text-[var(--text)]">Active Status</span>
+                    <span className="text-xs text-[var(--text-secondary)]">Show this category on feed & forms</span>
+                  </div>
                   <button
                     type="button"
                     onClick={() => setEditing({ ...editing, is_active: editing.is_active ? 0 : 1 })}
+                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      editing.is_active ? 'bg-emerald-500' : 'bg-gray-200 dark:bg-slate-700'
+                    }`}
                   >
-                    {editing.is_active ? (
-                      <ToggleRight size={28} className="text-green-500" />
-                    ) : (
-                      <ToggleLeft size={28} className="text-gray-400" />
-                    )}
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                        editing.is_active ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
                   </button>
                 </div>
               )}
             </div>
-            <div className="flex gap-3 px-6 pb-6">
-              <button onClick={closeEdit} className="flex-1 btn btn-secondary rounded-lg py-3">Cancel</button>
+            <div className="modal-footer">
+              <button onClick={closeEdit} className="btn btn-secondary flex-1 py-2.5">Cancel</button>
               <button
                 onClick={save}
                 disabled={saving}
-                className="flex-1 btn bg-[var(--primary)] text-white hover:opacity-90 disabled:opacity-60 rounded-lg py-3"
+                className="btn btn-primary flex-1 py-2.5 hover:scale-[1.02] active:scale-[0.98] transition-transform"
               >
                 <Save size={16} /> {saving ? 'Saving…' : 'Save'}
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Delete Confirm */}
-      {deleteId && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-[var(--surface)] rounded-2xl w-full max-w-sm shadow-2xl p-6 space-y-4">
-            <h2 className="font-bold text-lg text-[var(--text)]">
-              Delete "{categories.find(c => c.id === deleteId)?.name}"?
-            </h2>
-            <p className="text-sm text-[var(--text-secondary)]">
-              This will remove the category. Existing offers with this category won't be affected.
-            </p>
-            <div className="flex gap-3">
-              <button onClick={() => setDeleteId(null)} className="flex-1 btn btn-secondary rounded-lg py-3">Cancel</button>
+      {deleteId && createPortal(
+        <div className="modal-overlay">
+          <div className="modal-content max-w-sm">
+            <div className="modal-header">
+              <div className="flex flex-col">
+                <h2 className="modal-title">Delete Category?</h2>
+                <span className="block w-8 h-[2.5px] bg-red-500 rounded-full mt-1"></span>
+              </div>
+              <button onClick={() => setDeleteId(null)} className="modal-close">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="modal-body space-y-3">
+              <p className="text-sm text-[var(--text)] font-semibold">
+                Delete "{categories.find(c => c.id === deleteId)?.name}"?
+              </p>
+              <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+                This will remove the category. Existing offers with this category won't be affected.
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button onClick={() => setDeleteId(null)} className="btn btn-secondary flex-1 py-2.5">Cancel</button>
               <button
                 onClick={confirmDelete}
-                className="flex-1 btn bg-red-500 text-white hover:bg-red-600 rounded-lg py-3"
+                className="btn bg-red-500 hover:bg-red-600 text-white flex-1 py-2.5 hover:scale-[1.02] active:scale-[0.98] transition-all"
               >
                 Delete
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
