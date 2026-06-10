@@ -8,23 +8,23 @@ import toast from 'react-hot-toast';
 
 const SLIDES = [
   {
-    url: 'https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?w=1920&q=90&auto=format&fit=crop',
+    url: 'https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?w=1200&q=60&fm=webp&fit=crop',
     label: 'Fashion & Style',
   },
   {
-    url: 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=1920&q=90&auto=format&fit=crop',
+    url: 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=1200&q=60&fm=webp&fit=crop',
     label: 'Shopping Mall Deals',
   },
   {
-    url: 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=1920&q=90&auto=format&fit=crop',
+    url: 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=1200&q=60&fm=webp&fit=crop',
     label: 'Exclusive Offers',
   },
   {
-    url: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1920&q=90&auto=format&fit=crop',
+    url: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1200&q=60&fm=webp&fit=crop',
     label: 'Top Brands Near You',
   },
   {
-    url: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=1920&q=90&auto=format&fit=crop',
+    url: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=1200&q=60&fm=webp&fit=crop',
     label: 'Flash Sales Today',
   },
 ];
@@ -41,6 +41,14 @@ export default function Login() {
   const [current, setCurrent] = useState(0);
   const [prev, setPrev]       = useState<number | null>(null);
   const [transitioning, setTransitioning] = useState(false);
+
+  /* Preload slide images to prevent transition flashes */
+  useEffect(() => {
+    SLIDES.forEach((slide) => {
+      const img = new Image();
+      img.src = slide.url;
+    });
+  }, []);
 
   /* Auto-advance slides */
   useEffect(() => {
@@ -137,7 +145,7 @@ export default function Login() {
         }
       `}</style>
 
-      <div className="relative min-h-screen flex items-center justify-center overflow-hidden">
+      <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-[#0B1120]">
 
         {/* ── Background slideshow ── */}
         <div className="absolute inset-0">
