@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, Save, X, CreditCard } from "lucide-react";
 import toast from "react-hot-toast";
 import { usePlansStore, type Plan } from "../../store/usePlansStore";
@@ -207,25 +208,24 @@ export default function AdminSubscriptions() {
           )}
         </div>
       )}
-
       {/* Edit / Create Modal */}
-      {editing && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-[var(--surface)] rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-4 border-b border-[var(--border)] sticky top-0 bg-[var(--surface)]">
-              <div>
-                <h2 className="font-bold text-lg text-[var(--text)]">{isNew ? "Add Plan" : "Edit Plan"}</h2>
-                <span className="block w-12 h-[1.5px] bg-orange-400 "></span>
+      {editing && createPortal(
+        <div className="modal-overlay">
+          <div className="modal-content max-w-lg">
+            <div className="modal-header">
+              <div className="flex flex-col">
+                <h2 className="modal-title">{isNew ? "Add Plan" : "Edit Plan"}</h2>
+                <span className="block w-8 h-[2.5px] bg-[var(--primary)] rounded-full mt-1"></span>
               </div>
-              <button onClick={closeEdit} className="p-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--bg)]">
+              <button onClick={closeEdit} className="modal-close">
                 <X size={18} />
               </button>
             </div>
 
-            <div className="p-6 space-y-4">
+            <div className="modal-body space-y-4">
               {/* Name */}
               <div>
-                <label className="block text-sm font-medium text-[var(--text)] mb-1">Plan Name *</label>
+                <label className="modal-label">Plan Name *</label>
                 <input
                   type="text"
                   value={editing.name ?? ""}
@@ -244,7 +244,7 @@ export default function AdminSubscriptions() {
 
               {/* Slug (only editable on create) */}
               <div>
-                <label className="block text-sm font-medium text-[var(--text)] mb-1">Slug *</label>
+                <label className="modal-label">Slug *</label>
                 <input
                   type="text"
                   value={editing.slug ?? ""}
@@ -254,7 +254,7 @@ export default function AdminSubscriptions() {
                   readOnly={!isNew}
                 />
                 {isNew && (
-                  <p className="text-xs text-[var(--text-secondary)] mt-1">
+                  <p className="text-[11px] text-[var(--text-secondary)] mt-1.5">
                     Auto-filled from name. Lowercase, no spaces.
                   </p>
                 )}
@@ -263,7 +263,7 @@ export default function AdminSubscriptions() {
               {/* Price + Duration in a row */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-[var(--text)] mb-1">Price (₹/mo)</label>
+                  <label className="modal-label">Price (₹/mo)</label>
                   <input
                     type="number"
                     value={editing.price ?? 0}
@@ -273,7 +273,7 @@ export default function AdminSubscriptions() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[var(--text)] mb-1">Duration (days)</label>
+                  <label className="modal-label">Duration (days)</label>
                   <input
                     type="number"
                     value={editing.duration_days ?? 30}
@@ -286,7 +286,7 @@ export default function AdminSubscriptions() {
 
               {/* Max offers */}
               <div>
-                <label className="block text-sm font-medium text-[var(--text)] mb-1">Max Offers</label>
+                <label className="modal-label">Max Offers</label>
                 <input
                   type="number"
                   value={editing.max_offers ?? 5}
@@ -298,8 +298,8 @@ export default function AdminSubscriptions() {
 
               {/* Features */}
               <div>
-                <label className="block text-sm font-medium text-[var(--text)] mb-1">Features</label>
-                <div className="flex gap-2 mb-2">
+                <label className="modal-label">Features</label>
+                <div className="flex gap-2 mb-3">
                   <input
                     type="text"
                     value={featureInput}
@@ -311,76 +311,105 @@ export default function AdminSubscriptions() {
                   <button
                     type="button"
                     onClick={addFeature}
-                    className="btn bg-[var(--primary)] text-white font-medium hover:opacity-90"
+                    className="btn btn-primary"
                   >
                     Add
                   </button>
                 </div>
-                <div className="space-y-1.5 flex flex-wrap">
+                <div className="flex flex-wrap gap-2">
                   {(editing.features ?? []).map((f, i) => (
                     <div
                       key={i}
-                      className="flex gap-2 items-center justify-between bg-[var(--bg)] px-3 py-2 rounded-xl"
+                      className="flex items-center gap-1.5 bg-[var(--surface-2)] border border-[var(--border)] pl-3 pr-2 py-1.5 rounded-xl text-xs font-semibold text-[var(--text)] transition-all hover:border-[var(--primary)]/30"
                     >
-                      <span className="text-sm text-[var(--text)]">{f}</span>
-                      <button onClick={() => removeFeature(i)} className="text-red-400 hover:text-red-600">
-                        <X size={14} />
+                      <span>{f}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeFeature(i)}
+                        className="text-[var(--text-secondary)] hover:text-red-500 p-0.5 rounded-full hover:bg-[var(--surface)] transition-all"
+                      >
+                        <X size={12} />
                       </button>
                     </div>
                   ))}
                   {(editing.features ?? []).length === 0 && (
-                    <p className="text-xs text-[var(--text-secondary)]">No features added yet</p>
+                    <p className="text-xs text-[var(--text-secondary)] italic">No features added yet</p>
                   )}
                 </div>
               </div>
 
               {/* Active toggle */}
-              <div className="flex items-center gap-3">
-                <label className="text-sm font-medium text-[var(--text)]">Active</label>
-                <button type="button" onClick={() => setEditing({ ...editing, is_active: editing.is_active ? 0 : 1 })}>
+              <div className="flex items-center justify-between bg-[var(--bg)] p-3 rounded-xl border border-[var(--border)]">
+                <div className="flex flex-col">
+                  <span className="text-sm font-semibold text-[var(--text)]">Active Status</span>
+                  <span className="text-xs text-[var(--text-secondary)]">Show this plan during vendor registration</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEditing({ ...editing, is_active: editing.is_active ? 0 : 1 })}
+                  className="text-[var(--primary)] hover:opacity-90 transition-opacity"
+                >
                   {editing.is_active ? (
-                    <ToggleRight size={28} className="text-green-500" />
+                    <ToggleRight size={36} className="text-green-500" />
                   ) : (
-                    <ToggleLeft size={28} className="text-gray-400" />
+                    <ToggleLeft size={36} className="text-gray-400" />
                   )}
                 </button>
               </div>
             </div>
 
-            <div className="flex gap-3 px-6 pb-6">
-              <button onClick={closeEdit} className="flex-1 btn btn-secondary">
+            <div className="modal-footer">
+              <button onClick={closeEdit} className="btn btn-secondary flex-1 py-2.5">
                 Cancel
               </button>
               <button
                 onClick={save}
                 disabled={saving}
-                className="flex-1 btn bg-[var(--primary)] text-white hover:opacity-90 disabled:opacity-60"
+                className="btn btn-primary flex-1 py-2.5 hover:scale-[1.02] active:scale-[0.98] transition-transform"
               >
                 <Save size={16} /> {saving ? "Saving…" : "Save"}
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Delete Confirm */}
-      {deleteId && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-[var(--surface)] rounded-2xl w-full max-w-sm shadow-2xl p-6 space-y-4">
-            <h2 className="font-bold text-lg text-[var(--text)]">Delete Plan?</h2>
-            <p className="text-sm text-[var(--text-secondary)]">
-              Plans used by existing vendor applications cannot be deleted.
-            </p>
-            <div className="flex gap-3">
-              <button onClick={() => setDeleteId(null)} className="flex-1 btn btn-secondary">
+      {deleteId && createPortal(
+        <div className="modal-overlay">
+          <div className="modal-content max-w-sm">
+            <div className="modal-header">
+              <div className="flex flex-col">
+                <h2 className="modal-title">Delete Plan?</h2>
+                <span className="block w-8 h-[2.5px] bg-red-500 rounded-full mt-1"></span>
+              </div>
+              <button onClick={() => setDeleteId(null)} className="modal-close">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="modal-body space-y-3">
+              <p className="text-sm text-[var(--text)] font-semibold">
+                Delete "{plans.find(p => p.id === deleteId)?.name}"?
+              </p>
+              <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+                Plans used by existing vendor applications cannot be deleted.
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button onClick={() => setDeleteId(null)} className="btn btn-secondary flex-1 py-2.5">
                 Cancel
               </button>
-              <button onClick={confirmDelete} className="flex-1 btn bg-red-500 text-white hover:bg-red-600">
+              <button
+                onClick={confirmDelete}
+                className="btn bg-red-500 hover:bg-red-600 text-white flex-1 py-2.5 hover:scale-[1.02] active:scale-[0.98] transition-all"
+              >
                 Delete
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

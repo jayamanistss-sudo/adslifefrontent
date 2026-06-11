@@ -27,7 +27,7 @@ interface VendorRow {
   total_clicks: number;
 }
 
-const STATUSES = ["", "approved", "pending_review", "suspended", "rejected"];
+
 
 export default function AdminVendors() {
   const [vendors, setVendors] = useState<VendorRow[]>([]);
@@ -302,30 +302,63 @@ export default function AdminVendors() {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-3 mb-5">
-        <div className="relative flex-1 min-w-48">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            className="input pl-8 w-full"
-            placeholder="Search name, email, city…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+      {/* Filters */}
+      <div className="flex flex-col gap-4 mb-6">
+        {/* Search & Plan Dropdown */}
+        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+          <div className="relative flex-1 min-w-[240px] max-w-md">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]" />
+            <input
+              className="input pl-8 w-full"
+              placeholder="Search business name, email, city…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          
+          {/* Plan filter (custom styled select) */}
+          <div className="relative w-full sm:w-48">
+            <select
+              className="input pr-10 w-full appearance-none cursor-pointer bg-[var(--surface)] text-[var(--text)] border-[1.5px] border-[var(--border)] rounded-xl"
+              value={plan}
+              onChange={(e) => setPlan(e.target.value)}
+            >
+              {planOptions.map((p) => (
+                <option key={p} value={p}>
+                  {p ? (p.charAt(0).toUpperCase() + p.slice(1)) : "All plans"}
+                </option>
+              ))}
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-[var(--text-secondary)]">
+              <svg className="h-4 w-4 fill-current" viewBox="0 0 20 20">
+                <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+              </svg>
+            </div>
+          </div>
         </div>
-        <select className="input w-36" value={status} onChange={(e) => setStatus(e.target.value)}>
-          {STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {s ? s.replace("_", " ") : "All status"}
-            </option>
+
+        {/* Status filter (segmented tab bar) */}
+        <div className="flex items-center gap-1 bg-[var(--surface-2)] p-1 rounded-xl border border-[var(--border)] overflow-x-auto scrollbar-none max-w-full">
+          {[
+            { value: "", label: "All Status" },
+            { value: "approved", label: "Approved" },
+            { value: "pending_review", label: "Pending" },
+            { value: "suspended", label: "Suspended" },
+            { value: "rejected", label: "Rejected" },
+          ].map((tab) => (
+            <button
+              key={tab.value}
+              onClick={() => setStatus(tab.value)}
+              className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 whitespace-nowrap ${
+                status === tab.value
+                  ? "bg-[var(--surface)] text-[var(--text)] shadow-sm border border-[var(--border)]"
+                  : "text-[var(--text-secondary)] hover:text-[var(--text)] border border-transparent"
+              }`}
+            >
+              {tab.label}
+            </button>
           ))}
-        </select>
-        <select className="input w-36" value={plan} onChange={(e) => setPlan(e.target.value)}>
-          {planOptions.map((p) => (
-            <option key={p} value={p}>
-              {p || "All plans"}
-            </option>
-          ))}
-        </select>
+        </div>
       </div>
 
       <div className="flex justify-between items-center mb-4 flex-wrap gap-3">

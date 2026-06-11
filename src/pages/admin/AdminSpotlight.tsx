@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { CheckCircle, XCircle, Star, Play } from 'lucide-react';
 import BackButton from '../../components/BackButton';
 import { api, endpoints } from '../../utils/api';
@@ -64,37 +65,90 @@ export default function AdminSpotlight() {
       </div>
 
       {/* Review modal */}
-      {selected && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6">
-            <h2 className="font-heading font-bold text-lg text-gray-900 mb-1">{selected.title}</h2>
-            <p className="text-sm text-gray-500 mb-3">{selected.business_name} · {selected.city}</p>
-            {selected.tagline && <p className="text-sm italic text-gray-600 mb-3">"{selected.tagline}"</p>}
-            {selected.video_url && (
-              <a href={selected.video_url} target="_blank" rel="noopener noreferrer"
-                className="flex items-center gap-2 text-primary text-sm mb-4 hover:underline">
-                <Play size={14} /> Watch video
-              </a>
-            )}
-            {selected.offer_title && (
-              <p className="text-xs text-gray-500 mb-4">Offer: {selected.offer_title} ({selected.discount_percent}% off)</p>
-            )}
-            <textarea className="input w-full resize-none mb-4" rows={2} placeholder="Review note (optional)…"
-              value={note} onChange={(e) => setNote(e.target.value)} />
-            <div className="flex gap-3">
-              <button onClick={() => action(selected.id, 'approve')}
-                className="flex-1 btn btn-primary flex items-center justify-center gap-2">
-                <CheckCircle size={15} /> Approve
+      {selected && createPortal(
+        <div className="modal-overlay">
+          <div className="modal-content max-w-lg">
+            <div className="modal-header">
+              <div className="flex flex-col">
+                <h2 className="modal-title">Review Request</h2>
+                <span className="block w-8 h-[2.5px] bg-[var(--primary)] rounded-full mt-1"></span>
+              </div>
+              <button onClick={() => { setSelected(null); setNote(''); }} className="modal-close">
+                <X size={18} />
               </button>
-              <button onClick={() => action(selected.id, 'reject')}
-                className="flex-1 btn btn-danger flex items-center justify-center gap-2">
-                <XCircle size={15} /> Reject
+            </div>
+
+            <div className="modal-body space-y-4">
+              <div>
+                <h3 className="font-bold text-base text-[var(--text)]">{selected.title}</h3>
+                <p className="text-xs text-[var(--text-secondary)] mt-0.5">{selected.business_name} · {selected.city}</p>
+              </div>
+
+              {selected.tagline && (
+                <div className="bg-[var(--surface-2)] border border-[var(--border)] p-3 rounded-xl">
+                  <span className="text-[10px] uppercase tracking-wider font-bold text-[var(--text-secondary)] block mb-1">Tagline</span>
+                  <p className="text-xs italic text-[var(--text)]">"{selected.tagline}"</p>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {selected.video_url && (
+                  <a
+                    href={selected.video_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 bg-[var(--primary)]/5 border border-[var(--primary)]/20 px-3 py-2 rounded-xl text-[var(--primary)] text-xs font-semibold hover:bg-[var(--primary)]/10 transition-colors"
+                  >
+                    <Play size={14} fill="currentColor" /> Watch Spotlight Video
+                  </a>
+                )}
+                {selected.offer_title && (
+                  <div className="bg-[var(--surface-2)] border border-[var(--border)] px-3 py-2 rounded-xl flex flex-col justify-center">
+                    <span className="text-[9px] uppercase tracking-wider font-bold text-[var(--text-secondary)]">Associated Offer</span>
+                    <span className="text-xs text-[var(--text)] truncate font-semibold">
+                      {selected.offer_title} ({selected.discount_percent}% off)
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="modal-label">Review Note (Optional)</label>
+                <textarea
+                  className="input w-full resize-none rounded-xl"
+                  rows={3}
+                  placeholder="Type any reason or feedback for the vendor..."
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="modal-footer flex-col sm:flex-row sm:justify-between gap-3">
+              <button
+                onClick={() => { setSelected(null); setNote(''); }}
+                className="btn btn-secondary w-full sm:w-auto px-5 py-2.5"
+              >
+                Cancel
               </button>
-              <button onClick={() => { setSelected(null); setNote(''); }}
-                className="btn btn-secondary">Cancel</button>
+              <div className="flex gap-2 w-full sm:w-auto">
+                <button
+                  onClick={() => action(selected.id, 'reject')}
+                  className="btn btn-danger flex-1 sm:flex-initial px-5 py-2.5 flex items-center justify-center gap-1.5 hover:scale-[1.02] active:scale-[0.98] transition-transform"
+                >
+                  <XCircle size={15} /> Reject
+                </button>
+                <button
+                  onClick={() => action(selected.id, 'approve')}
+                  className="btn btn-primary flex-1 sm:flex-initial px-5 py-2.5 flex items-center justify-center gap-1.5 hover:scale-[1.02] active:scale-[0.98] transition-transform"
+                >
+                  <CheckCircle size={15} /> Approve
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

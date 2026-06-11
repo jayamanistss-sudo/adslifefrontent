@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import {
   LogOut, Store, ChevronRight, X, CheckCircle,
   MapPin, Search, LocateFixed, Upload, ImagePlus,
@@ -125,7 +126,7 @@ function Step1({ form, update, categories }: {
   return (
     <div className="space-y-4">
       <div>
-        <label className="text-sm font-medium text-gray-700 mb-1 block">Business Name *</label>
+        <label className="modal-label">Business Name *</label>
         <input
           type="text"
           value={form.business_name}
@@ -136,7 +137,7 @@ function Step1({ form, update, categories }: {
       </div>
 
       <div>
-        <label className="text-sm font-medium text-gray-700 mb-2 block">Category *</label>
+        <label className="modal-label">Category *</label>
         {categories.length === 0 ? (
           <div className="grid grid-cols-3 gap-2">
             {[1,2,3,4,5,6].map((i) => <div key={i} className="skeleton h-10 rounded-xl" />)}
@@ -148,10 +149,10 @@ function Step1({ form, update, categories }: {
                 key={c.slug}
                 type="button"
                 onClick={() => update('category', c.slug)}
-                className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border text-sm font-medium transition-all ${
+                className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border text-sm font-medium transition-all cursor-pointer ${
                   form.category === c.slug
-                    ? 'bg-primary border-primary text-white shadow-sm'
-                    : 'border-gray-200 text-gray-600 hover:border-primary hover:text-primary bg-white'
+                    ? 'bg-[var(--primary)] border-[var(--primary)] text-white shadow-sm'
+                    : 'border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] bg-[var(--surface)]'
                 }`}
               >
                 <CategoryIcon name={c.icon} size={15} />
@@ -163,7 +164,7 @@ function Step1({ form, update, categories }: {
       </div>
 
       <div>
-        <label className="text-sm font-medium text-gray-700 mb-1 block">Description</label>
+        <label className="modal-label">Description</label>
         <textarea
           rows={3}
           value={form.description}
@@ -266,10 +267,10 @@ function Step2({ form, update, updateLatLng }: {
     <div className="space-y-4">
       {/* Search bar */}
       <div>
-        <label className="text-sm font-medium text-gray-700 mb-1 block">Search your shop location</label>
+        <label className="modal-label">Search your shop location</label>
         <div className="flex gap-2">
           <div className="relative flex-1">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none" />
             <input
               type="text"
               value={query}
@@ -283,14 +284,14 @@ function Step2({ form, update, updateLatLng }: {
             type="button"
             onClick={searchAddress}
             disabled={searching}
-            className="px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary-dark transition-colors disabled:opacity-60 flex-shrink-0"
+            className="px-4 py-2.5 bg-[var(--primary)] hover:bg-[var(--primary-dark)] text-white rounded-xl text-sm font-semibold transition-colors disabled:opacity-60 flex-shrink-0 cursor-pointer"
           >
             {searching ? '...' : 'Search'}
           </button>
           <button
             type="button"
             onClick={useMyLocation}
-            className="p-2.5 border border-gray-200 rounded-xl text-gray-500 hover:border-primary hover:text-primary transition-colors flex-shrink-0"
+            className="p-2.5 border border-[var(--border)] rounded-xl text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] bg-[var(--surface)] transition-colors flex-shrink-0 cursor-pointer"
             title="Use my location"
           >
             <LocateFixed size={16} />
@@ -299,27 +300,27 @@ function Step2({ form, update, updateLatLng }: {
       </div>
 
       {/* Map */}
-      <div className="relative rounded-xl overflow-hidden border border-gray-200">
+      <div className="relative rounded-xl overflow-hidden border border-[var(--border)]">
         <div ref={mapRef} className="h-60 w-full" />
-        <div className="absolute bottom-2 left-2 bg-white/90 backdrop-blur-sm rounded-lg px-3 py-1.5 text-xs text-gray-600 shadow pointer-events-none">
+        <div className="absolute bottom-2 left-2 bg-[var(--surface)]/90 backdrop-blur-sm rounded-lg px-3 py-1.5 text-xs text-[var(--text-secondary)] border border-[var(--border)] shadow pointer-events-none">
           Click on the map to pin your exact location
         </div>
       </div>
 
       {/* Coordinates display */}
       {form.lat && form.lng && (
-        <div className="flex items-center gap-2 bg-accent/5 border border-accent/20 rounded-xl px-3 py-2">
-          <MapPin size={14} className="text-accent flex-shrink-0" />
-          <span className="text-xs text-gray-600 font-mono">
+        <div className="flex items-center gap-2 bg-[var(--accent)]/5 border border-[var(--accent)]/20 rounded-xl px-3 py-2">
+          <MapPin size={14} className="text-[var(--accent)] flex-shrink-0" />
+          <span className="text-xs text-[var(--text-secondary)] font-mono">
             {form.lat.toFixed(6)}, {form.lng.toFixed(6)}
           </span>
-          <CheckCircle size={14} className="text-accent ml-auto flex-shrink-0" />
+          <CheckCircle size={14} className="text-[var(--accent)] ml-auto flex-shrink-0" />
         </div>
       )}
 
       {/* Address */}
       <div>
-        <label className="text-sm font-medium text-gray-700 mb-1 block">Shop Address</label>
+        <label className="modal-label">Shop Address</label>
         <input
           type="text"
           value={form.address}
@@ -330,7 +331,7 @@ function Step2({ form, update, updateLatLng }: {
       </div>
 
       <div>
-        <label className="text-sm font-medium text-gray-700 mb-1 block">City</label>
+        <label className="modal-label">City</label>
         <input
           type="text"
           value={form.city}
@@ -376,16 +377,16 @@ function Step3({ form, update }: {
     <div className="space-y-4">
       {/* Business photo */}
       <div>
-        <label className="text-sm font-medium text-gray-700 mb-2 block">Business Photo / Logo</label>
+        <label className="modal-label">Business Photo / Logo</label>
         <div className="flex items-center gap-4">
           <div
-            className="w-24 h-24 rounded-2xl border-2 border-dashed border-gray-200 flex items-center justify-center overflow-hidden bg-gray-50 cursor-pointer hover:border-primary transition-colors flex-shrink-0"
+            className="w-24 h-24 rounded-2xl border-2 border-dashed border-[var(--border)] flex items-center justify-center overflow-hidden bg-[var(--surface-2)] cursor-pointer hover:border-[var(--primary)] transition-colors flex-shrink-0 shadow-sm"
             onClick={() => fileRef.current?.click()}
           >
             {form.logo_url ? (
               <img src={form.logo_url} alt="Logo" className="w-full h-full object-cover" />
             ) : (
-              <div className="flex flex-col items-center gap-1 text-gray-400">
+              <div className="flex flex-col items-center gap-1 text-[var(--text-muted)]">
                 <ImagePlus size={22} />
                 <span className="text-[10px]">Add Photo</span>
               </div>
@@ -396,12 +397,12 @@ function Step3({ form, update }: {
               type="button"
               onClick={() => fileRef.current?.click()}
               disabled={uploading}
-              className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:border-primary hover:text-primary transition-colors disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2.5 border border-[var(--border)] rounded-xl text-sm font-medium text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] hover:bg-[var(--surface-2)] transition-colors disabled:opacity-50 cursor-pointer"
             >
               {uploading ? <Upload size={15} className="animate-bounce" /> : <Camera size={15} />}
               {uploading ? 'Uploading...' : 'Choose Photo'}
             </button>
-            <p className="text-xs text-gray-400 mt-1.5">JPG, PNG or WebP · Max 5 MB</p>
+            <p className="text-xs text-[var(--text-muted)] mt-1.5">JPG, PNG or WebP · Max 5 MB</p>
           </div>
           <input
             ref={fileRef}
@@ -413,13 +414,13 @@ function Step3({ form, update }: {
         </div>
       </div>
 
-      <hr className="border-gray-100" />
+      <hr className="border-[var(--border)]" />
 
       {/* GST Number */}
       <div>
-        <label className="text-sm font-medium text-gray-700 mb-1 block">
+        <label className="modal-label">
           GST Number
-          <span className="text-gray-400 font-normal ml-1 text-xs">(optional)</span>
+          <span className="text-[var(--text-muted)] font-normal ml-1 text-xs">(optional)</span>
         </label>
         <input
           type="text"
@@ -429,12 +430,12 @@ function Step3({ form, update }: {
           maxLength={15}
           className="search-input font-mono tracking-wider uppercase"
         />
-        <p className="text-xs text-gray-400 mt-1">15-character GSTIN — adds a verified badge to your shop</p>
+        <p className="text-xs text-[var(--text-muted)] mt-1">15-character GSTIN — adds a verified badge to your shop</p>
       </div>
 
       {/* Phone */}
       <div>
-        <label className="text-sm font-medium text-gray-700 mb-1 block">Phone Number *</label>
+        <label className="modal-label">Phone Number *</label>
         <input
           type="tel"
           value={form.phone}
@@ -446,9 +447,9 @@ function Step3({ form, update }: {
 
       {/* Website */}
       <div>
-        <label className="text-sm font-medium text-gray-700 mb-1 block">
+        <label className="modal-label">
           Website
-          <span className="text-gray-400 font-normal ml-1 text-xs">(optional)</span>
+          <span className="text-[var(--text-muted)] font-normal ml-1 text-xs">(optional)</span>
         </label>
         <input
           type="url"
@@ -460,8 +461,8 @@ function Step3({ form, update }: {
       </div>
 
       {/* Trust notice */}
-      <div className="bg-primary/5 border border-primary/20 rounded-xl p-3 flex gap-2.5 text-xs text-gray-600">
-        <CheckCircle size={14} className="text-primary flex-shrink-0 mt-0.5" />
+      <div className="bg-[var(--primary)]/5 border border-[var(--primary)]/20 rounded-xl p-3 flex gap-2.5 text-xs text-[var(--text-secondary)]">
+        <CheckCircle size={14} className="text-[var(--primary)] flex-shrink-0 mt-0.5" />
         <span>
           Your application is reviewed by our admin team. You'll receive a notification once approved.
           You can start adding offers immediately after submission.
@@ -574,44 +575,44 @@ function BecomeVendorModal({ onClose, onSuccess }: {
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[92vh]">
+  return createPortal(
+    <div className="modal-overlay">
+      <div className="modal-content max-w-lg max-h-[92vh]">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
+        <div className="modal-header">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
-              <Store size={18} className="text-primary" />
+            <div className="w-10 h-10 rounded-xl bg-[var(--primary)]/10 flex items-center justify-center flex-shrink-0">
+              <Store size={20} className="text-[var(--primary)]" />
             </div>
             <div>
-              <h2 className="font-heading font-bold text-gray-900 text-base">Become a Vendor</h2>
-              <p className="text-xs text-gray-400">Step {step + 1} of {STEPS.length} — {STEPS[step].label}</p>
+              <h2 className="modal-title">Become a Vendor</h2>
+              <p className="text-xs text-[var(--text-secondary)]">Step {step + 1} of {STEPS.length} — {STEPS[step].label}</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 rounded-xl hover:bg-gray-100 transition-colors">
+          <button onClick={onClose} className="modal-close">
             <X size={18} />
           </button>
         </div>
 
         {/* Step indicator */}
-        <div className="flex items-center gap-0 px-5 py-3 border-b border-gray-50 flex-shrink-0">
+        <div className="flex items-center gap-0 px-5 py-3 border-b border-[var(--border)] bg-[var(--surface)] flex-shrink-0">
           {STEPS.map((s, i) => {
             const Icon = s.icon;
             return (
               <div key={s.label} className="flex items-center flex-1">
-                <div className={`flex items-center gap-1.5 ${i <= step ? 'text-primary' : 'text-gray-300'}`}>
+                <div className={`flex items-center gap-1.5 ${i <= step ? 'text-[var(--primary)]' : 'text-[var(--text-muted)]'}`}>
                   <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
-                    i < step  ? 'bg-primary text-white' :
-                    i === step ? 'bg-primary/10 text-primary ring-2 ring-primary/30' :
-                    'bg-gray-100 text-gray-400'
+                    i < step  ? 'bg-[var(--primary)] text-white' :
+                    i === step ? 'bg-[var(--primary)]/10 text-[var(--primary)] ring-2 ring-[var(--primary)]/30' :
+                    'bg-[var(--surface-2)] text-[var(--text-muted)]'
                   }`}>
-                    {i < step ? '✓' : <Icon size={13} />}
+                    {i < step ? '✓' : <Icon size={12} />}
                   </div>
-                  <span className={`text-xs font-medium hidden sm:block ${i <= step ? 'text-gray-700' : 'text-gray-400'}`}>{s.label}</span>
+                  <span className={`text-xs font-semibold hidden sm:block ${i <= step ? 'text-[var(--text)]' : 'text-[var(--text-secondary)]'}`}>{s.label}</span>
                 </div>
                 {i < STEPS.length - 1 && (
-                  <div className={`flex-1 h-0.5 mx-2 rounded-full transition-all ${i < step ? 'bg-primary' : 'bg-gray-100'}`} />
+                  <div className={`flex-1 h-[2px] mx-2 rounded-full transition-all ${i < step ? 'bg-[var(--primary)]' : 'bg-[var(--surface-2)]'}`} />
                 )}
               </div>
             );
@@ -619,7 +620,7 @@ function BecomeVendorModal({ onClose, onSuccess }: {
         </div>
 
         {/* Step content */}
-        <div className="flex-1 overflow-y-auto p-5">
+        <div className="flex-1 overflow-y-auto p-5 bg-[var(--surface)]">
           {step === 0 && <Step1 form={form} update={update} categories={categories} />}
           {step === 1 && <Step2 form={form} update={update} updateLatLng={updateLatLng} />}
           {step === 2 && <Step3 form={form} update={update} />}
@@ -634,12 +635,12 @@ function BecomeVendorModal({ onClose, onSuccess }: {
         </div>
 
         {/* Footer buttons */}
-        <div className="flex gap-3 px-5 py-4 border-t border-gray-100 flex-shrink-0">
+        <div className="modal-footer">
           {step > 0 && (
             <button
               type="button"
               onClick={() => setStep((s) => s - 1)}
-              className="flex items-center gap-1.5 px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+              className="btn btn-secondary py-2.5 px-4 cursor-pointer"
             >
               <ChevronLeft size={15} /> Back
             </button>
@@ -649,7 +650,7 @@ function BecomeVendorModal({ onClose, onSuccess }: {
               type="button"
               onClick={() => setStep((s) => s + 1)}
               disabled={!canNext()}
-              className="flex-1 flex items-center justify-center gap-1.5 bg-primary hover:bg-primary-dark text-white font-semibold py-2.5 rounded-xl transition-colors disabled:opacity-50"
+              className="btn btn-primary flex-1 py-2.5 hover:scale-[1.02] active:scale-[0.98] transition-transform"
             >
               Next <ChevronRight size={15} />
             </button>
@@ -658,14 +659,15 @@ function BecomeVendorModal({ onClose, onSuccess }: {
               type="button"
               onClick={handleSubmit}
               disabled={loading || !canNext()}
-              className="flex-1 flex items-center justify-center gap-2 bg-primary hover:bg-primary-dark text-white font-semibold py-2.5 rounded-xl transition-colors disabled:opacity-50"
+              className="btn btn-primary flex-1 py-2.5 hover:scale-[1.02] active:scale-[0.98] transition-transform"
             >
               {loading ? 'Submitting...' : selectedPlan && selectedPlan.price > 0 ? 'Pay & Submit' : 'Submit Application'}
             </button>
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

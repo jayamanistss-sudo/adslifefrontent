@@ -1,8 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Search, Eye, MousePointer, Bookmark, Trash2, Star, ToggleLeft, ToggleRight } from 'lucide-react';
 import BackButton from '../../components/BackButton';
 import { api, endpoints } from '../../utils/api';
 import toast from 'react-hot-toast';
+import { DataTable, Pagination } from "../../components";
+import { type ColDef } from "ag-grid-community";
 
 interface Category { slug: string; name: string; }
 
@@ -23,8 +26,8 @@ export default function AdminOffers() {
   const [category, setCategory] = useState('');
   const [status, setStatus]   = useState('');
   const [offset, setOffset]   = useState(0);
+  const [limit, setLimit]     = useState(30);
   const [categories, setCategories] = useState<Category[]>([]);
-  const LIMIT = 30;
 
   useEffect(() => {
     api.get(endpoints.categoriesList(true)).then((r) => {
@@ -36,25 +39,191 @@ export default function AdminOffers() {
 
   const load = useCallback(() => {
     setLoading(true);
-    api.get(endpoints.adminOffers(search, category, status, LIMIT, offset))
+    api.get(endpoints.adminOffers(search, category, status, limit, offset))
       .then((r) => {
-        if (r.data.success) { setOffers(r.data.data.offers ?? []); setTotal(r.data.data.total ?? 0); }
+        if (r.data.success) {
+          setOffers(r.data.data.offers ?? []);
+          setTotal(r.data.data.total ?? 0);
+        }
       })
       .catch(() => toast.error('Failed to load offers'))
       .finally(() => setLoading(false));
-  }, [search, category, status, offset]);
+  }, [search, category, status, limit, offset]);
 
   useEffect(() => { setOffset(0); }, [search, category, status]);
   useEffect(() => { load(); }, [load]);
 
-  const action = async (offerId: number, act: string, extra?: Record<string, unknown>) => {
-    if (act === 'delete' && !window.confirm('Delete this offer permanently?')) return;
-    try {
-      const res = await api.put(endpoints.adminOfferAction(offerId), { action: act, ...extra });
-      toast.success(res.data.message);
-      load();
-    } catch { toast.error('Action failed'); }
-  };
+  const action = useCallback(
+    async (offerId: number, act: string, extra?: Record<string, unknown>) => {
+      if (act === 'delete' && !window.confirm('Delete this offer permanently?')) return;
+      try {
+        const res = await api.put(endpoints.adminOfferAction(offerId), { action: act, ...extra });
+        toast.success(res.data.message);
+        load();
+      } catch {
+        toast.error('Action failed');
+      }
+    },
+    [load]
+  );
+
+  const columnDefs = useMemo<ColDef<OfferRow>[]>(
+    () => [
+      {
+        headerName: "Offer",
+        field: "title",
+        flex: 1.5,
+        cellRenderer: (params: any) => {
+          const o = params.data;
+          if (!o) return null;
+          return (
+            <div className="flex flex-col justify-center leading-tight py-1 h-full">
+              <p className="font-medium text-[var(--text)] truncate max-w-40" title={o.title}>
+                {o.title}
+              </p>
+              <p className="text-xs text-[var(--text-muted)]">ID #{o.id}</p>
+            </div>
+          );
+        },
+      },
+      {
+        headerName: "Vendor",
+        field: "business_name",
+        flex: 1.5,
+        cellRenderer: (params: any) => {
+          const o = params.data;
+          if (!o) return null;
+          return (
+            <div className="flex flex-col justify-center leading-tight py-1 h-full">
+              <p className="text-[var(--text)] truncate max-w-32" title={o.business_name}>
+                {o.business_name}
+              </p>
+              <p className="text-xs text-[var(--text-muted)] truncate max-w-32" title={o.vendor_email}>
+                {o.vendor_email}
+              </p>
+            </div>
+          );
+        },
+      },
+      {
+        headerName: "Category",
+        field: "category",
+        flex: 1,
+        cellRenderer: (params: any) => {
+          const o = params.data;
+          if (!o) return null;
+          return <span className="text-[var(--text-muted)] capitalize">{o.category}</span>;
+        },
+      },
+      {
+        headerName: "Discount",
+        field: "discount_percent",
+        flex: 1,
+        cellRenderer: (params: any) => {
+          const o = params.data;
+          if (!o) return null;
+          return (
+            <div className="flex flex-col justify-center leading-tight py-1 h-full">
+              <span className="font-semibold text-primary">{o.discount_percent}%</span>
+              <p className="text-xs text-[var(--text-muted)]">₹{o.offer_price}</p>
+            </div>
+          );
+        },
+      },
+      {
+        headerName: "Stats",
+        field: "views",
+        flex: 1.2,
+        cellRenderer: (params: any) => {
+          const o = params.data;
+          if (!o) return null;
+          return (
+            <div className="flex items-center gap-2 text-xs text-[var(--text-muted)] h-full">
+              <span className="flex items-center gap-0.5" title="Views">
+                <Eye size={11} /> {o.views}
+              </span>
+              <span className="flex items-center gap-0.5" title="Clicks">
+                <MousePointer size={11} /> {o.clicks}
+              </span>
+              <span className="flex items-center gap-0.5" title="Saves">
+                <Bookmark size={11} /> {o.saves}
+              </span>
+            </div>
+          );
+        },
+      },
+      {
+        headerName: "Valid Until",
+        field: "valid_until",
+        flex: 1,
+        cellRenderer: (params: any) => {
+          const o = params.data;
+          if (!o) return null;
+          return (
+            <span className="text-xs text-[var(--text-muted)] whitespace-nowrap">
+              {o.valid_until ? o.valid_until.slice(0, 10) : '∞'}
+            </span>
+          );
+        },
+      },
+      {
+        headerName: "Status",
+        field: "is_active",
+        flex: 1,
+        cellRenderer: (params: any) => {
+          const o = params.data;
+          if (!o) return null;
+          return (
+            <div className="flex items-center h-full py-1">
+              <span
+                className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                  o.is_active ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-100 text-gray-500'
+                }`}
+              >
+                {o.is_active ? 'Active' : 'Off'}
+              </span>
+            </div>
+          );
+        },
+      },
+      {
+        headerName: "Actions",
+        field: "id",
+        flex: 1.5,
+        minWidth: 120,
+        cellRenderer: (params: any) => {
+          const o = params.data;
+          if (!o) return null;
+          return (
+            <div className="flex items-center gap-1 h-full py-1">
+              <button
+                onClick={() => action(o.id, o.is_active ? 'deactivate' : 'activate')}
+                title={o.is_active ? 'Deactivate' : 'Activate'}
+                className="p-1.5 rounded-lg hover:bg-gray-100 text-[var(--text-muted)] transition-colors"
+              >
+                {o.is_active ? <ToggleRight size={15} className="text-emerald-500" /> : <ToggleLeft size={15} />}
+              </button>
+              <button
+                onClick={() => action(o.id, 'feature', { featured: o.is_active ? 0 : 1 })}
+                title="Feature/Unfeature"
+                className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-500 transition-colors"
+              >
+                <Star size={14} />
+              </button>
+              <button
+                onClick={() => action(o.id, 'delete')}
+                title="Delete"
+                className="p-1.5 rounded-lg hover:bg-red-50 text-red-500 transition-colors"
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
+          );
+        },
+      },
+    ],
+    [action]
+  );
 
   return (
     <div className="pb-8">
@@ -66,106 +235,99 @@ export default function AdminOffers() {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-3 mb-5">
-        <div className="relative flex-1 min-w-48">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input className="input pl-8 w-full" placeholder="Search title, coupon, vendor…"
-            value={search} onChange={(e) => setSearch(e.target.value)} />
-        </div>
-        <select className="input w-36" value={category} onChange={(e) => setCategory(e.target.value)}>
-          <option value="">All categories</option>
-          {categories.map((c) => <option key={c.slug} value={c.slug}>{c.name}</option>)}
-        </select>
-        <select className="input w-32" value={status} onChange={(e) => setStatus(e.target.value)}>
-          <option value="">All status</option>
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
-          <option value="expired">Expired</option>
-        </select>
-      </div>
-
-      <div className="card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-[var(--border)] bg-gray-50/50">
-                {['Offer', 'Vendor', 'Category', 'Discount', 'Stats', 'Valid Until', 'Status', 'Actions'].map((h) => (
-                  <th key={h} className="text-left py-3 px-4 text-xs font-semibold text-[var(--text-muted)] whitespace-nowrap">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                Array.from({ length: 5 }).map((_, i) => (
-                  <tr key={i} className="border-b border-[var(--border)]">
-                    {Array.from({ length: 8 }).map((__, j) => (
-                      <td key={j} className="py-3 px-4"><div className="skeleton h-4 w-20 rounded" /></td>
-                    ))}
-                  </tr>
-                ))
-              ) : offers.map((o) => (
-                <tr key={o.id} className="border-b border-[var(--border)] hover:bg-gray-50/50 transition-colors">
-                  <td className="py-3 px-4">
-                    <p className="font-medium text-[var(--text)] truncate max-w-40">{o.title}</p>
-                    <p className="text-xs text-[var(--text-muted)]">ID #{o.id}</p>
-                  </td>
-                  <td className="py-3 px-4">
-                    <p className="text-[var(--text)] truncate max-w-32">{o.business_name}</p>
-                    <p className="text-xs text-[var(--text-muted)] truncate max-w-32">{o.vendor_email}</p>
-                  </td>
-                  <td className="py-3 px-4 capitalize text-[var(--text-muted)]">{o.category}</td>
-                  <td className="py-3 px-4">
-                    <span className="font-semibold text-primary">{o.discount_percent}%</span>
-                    <p className="text-xs text-[var(--text-muted)]">₹{o.offer_price}</p>
-                  </td>
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
-                      <span className="flex items-center gap-0.5"><Eye size={11} /> {o.views}</span>
-                      <span className="flex items-center gap-0.5"><MousePointer size={11} /> {o.clicks}</span>
-                      <span className="flex items-center gap-0.5"><Bookmark size={11} /> {o.saves}</span>
-                    </div>
-                  </td>
-                  <td className="py-3 px-4 text-xs text-[var(--text-muted)] whitespace-nowrap">
-                    {o.valid_until ? o.valid_until.slice(0, 10) : '∞'}
-                  </td>
-                  <td className="py-3 px-4">
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${o.is_active ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-100 text-gray-500'}`}>
-                      {o.is_active ? 'Active' : 'Off'}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-1">
-                      <button onClick={() => action(o.id, o.is_active ? 'deactivate' : 'activate')}
-                        title={o.is_active ? 'Deactivate' : 'Activate'}
-                        className="p-1.5 rounded-lg hover:bg-gray-100 text-[var(--text-muted)] transition-colors">
-                        {o.is_active ? <ToggleRight size={15} className="text-emerald-500" /> : <ToggleLeft size={15} />}
-                      </button>
-                      <button onClick={() => action(o.id, 'feature', { featured: o.is_active ? 0 : 1 })}
-                        title="Feature/Unfeature"
-                        className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-500 transition-colors">
-                        <Star size={14} />
-                      </button>
-                      <button onClick={() => action(o.id, 'delete')}
-                        title="Delete"
-                        className="p-1.5 rounded-lg hover:bg-red-50 text-red-500 transition-colors">
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
+      {/* Filters */}
+      <div className="flex flex-col gap-4 mb-6">
+        {/* Search & Category Dropdown */}
+        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+          <div className="relative flex-1 min-w-[240px] max-w-md">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]" />
+            <input
+              className="input pl-8 w-full"
+              placeholder="Search title, coupon, vendor…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          
+          {/* Category filter (custom styled select) */}
+          <div className="relative w-full sm:w-48">
+            <select
+              className="input pr-10 w-full appearance-none cursor-pointer bg-[var(--surface)] text-[var(--text)] border-[1.5px] border-[var(--border)] rounded-xl"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+            >
+              <option value="">All categories</option>
+              {categories.map((c) => (
+                <option key={c.slug} value={c.slug}>
+                  {c.name}
+                </option>
               ))}
-            </tbody>
-          </table>
-        </div>
-        {total > LIMIT && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-[var(--border)]">
-            <span className="text-xs text-[var(--text-muted)]">Showing {offset + 1}–{Math.min(offset + LIMIT, total)} of {total}</span>
-            <div className="flex gap-2">
-              <button disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - LIMIT))} className="btn btn-secondary btn-sm">Prev</button>
-              <button disabled={offset + LIMIT >= total} onClick={() => setOffset(offset + LIMIT)} className="btn btn-secondary btn-sm">Next</button>
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-[var(--text-secondary)]">
+              <svg className="h-4 w-4 fill-current" viewBox="0 0 20 20">
+                <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+              </svg>
             </div>
           </div>
-        )}
+        </div>
+
+        {/* Status filter (segmented tab bar) */}
+        <div className="flex items-center gap-1 bg-[var(--surface-2)] p-1 rounded-xl border border-[var(--border)] overflow-x-auto scrollbar-none max-w-full">
+          {[
+            { value: "", label: "All Status" },
+            { value: "active", label: "Active" },
+            { value: "inactive", label: "Inactive" },
+            { value: "expired", label: "Expired" },
+          ].map((tab) => (
+            <button
+              key={tab.value}
+              onClick={() => setStatus(tab.value)}
+              className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 whitespace-nowrap ${
+                status === tab.value
+                  ? "bg-[var(--surface)] text-[var(--text)] shadow-sm border border-[var(--border)]"
+                  : "text-[var(--text-secondary)] hover:text-[var(--text)] border border-transparent"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Pagination & Count info */}
+      <div className="flex justify-between items-center mb-4 flex-wrap gap-3">
+        <div className="text-xs text-[var(--text-muted)]">
+          Showing {total === 0 ? 0 : offset + 1}–{Math.min(offset + limit, total)} of {total}
+        </div>
+
+        <Pagination
+          page={Math.floor(offset / limit) + 1}
+          totalPages={Math.ceil(total / limit) || 1}
+          currentPageSize={limit}
+          pageSizeOptions={[
+            { value: "10", label: "10" },
+            { value: "30", label: "30" },
+            { value: "50", label: "50" },
+            { value: "100", label: "100" },
+          ]}
+          onPageChange={(p) => setOffset((p - 1) * limit)}
+          onPageSizeChanged={(sz) => {
+            setLimit(Number(sz));
+            setOffset(0);
+          }}
+        />
+      </div>
+
+      {/* Table */}
+      <div className="card overflow-hidden">
+        <DataTable
+          rowData={offers}
+          columnDefs={columnDefs}
+          domLayout="autoHeight"
+          rowHeight={56}
+          headerHeight={44}
+          loading={loading}
+        />
       </div>
     </div>
   );

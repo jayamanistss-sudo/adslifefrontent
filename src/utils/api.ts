@@ -181,8 +181,8 @@ export const endpoints = {
 
   // Admin
   adminStats: "/admin/stats",
-  adminUsers: (search = "", role = "", status = "", limit = 30, offset = 0) =>
-    `/admin/users?search=${encodeURIComponent(search)}&role=${role}&status=${status}&limit=${limit}&offset=${offset}`,
+  adminUsers: (search = "", status = "", limit = 30, offset = 0) =>
+    `/admin/users?search=${encodeURIComponent(search)}&status=${status}&limit=${limit}&offset=${offset}`,
   adminUserAction: (id: number) => `/admin/users/${id}`,
   adminOffers: (search = "", category = "", status = "", limit = 30, offset = 0) =>
     `/admin/offers?search=${encodeURIComponent(search)}&category=${category}&status=${status}&limit=${limit}&offset=${offset}`,
