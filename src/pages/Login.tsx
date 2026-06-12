@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import { api, endpoints } from '../utils/api';
@@ -6,355 +6,300 @@ import { useUserStore } from '../store/useUserStore';
 import GoogleAuthButton from '../components/GoogleAuthButton';
 import toast from 'react-hot-toast';
 
-const SLIDES = [
-  {
-    url: 'https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?w=1200&q=60&fm=webp&fit=crop',
-    label: 'Fashion & Style',
-  },
-  {
-    url: 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=1200&q=60&fm=webp&fit=crop',
-    label: 'Shopping Mall Deals',
-  },
-  {
-    url: 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=1200&q=60&fm=webp&fit=crop',
-    label: 'Exclusive Offers',
-  },
-  {
-    url: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1200&q=60&fm=webp&fit=crop',
-    label: 'Top Brands Near You',
-  },
-  {
-    url: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=1200&q=60&fm=webp&fit=crop',
-    label: 'Flash Sales Today',
-  },
+/* ─── Left panel ─────────────────────────────────────────── */
+const AD_FLOATERS = [
+  { emoji: '🏷️', label: '50% OFF',    sub: 'Flash Sale',    x: 8,  y: 15, delay: 0,   dur: 9  },
+  { emoji: '🪙', label: '+20 Coins',  sub: 'Reward earned', x: 68, y: 10, delay: 1.5, dur: 11 },
+  { emoji: '📍', label: 'Near You',   sub: 'Chennai deals', x: 75, y: 55, delay: 3,   dur: 8  },
+  { emoji: '🔥', label: 'Trending',   sub: '1.2k views',    x: 12, y: 85, delay: 2,   dur: 13 },
+  { emoji: '🎯', label: 'For You',    sub: 'Personalised',  x: 70, y: 80, delay: 0.5, dur: 10 },
+  { emoji: '💸', label: '₹200 off',   sub: 'Min ₹999',      x: 43, y: 90, delay: 4,   dur: 12 },
+  { emoji: '⚡', label: '2 hrs left', sub: 'Limited deal',  x: 58, y: 32, delay: 2.5, dur: 7  },
+  { emoji: '🛍️', label: 'New Offer',  sub: 'Just added',    x: 38, y: 5,  delay: 1,   dur: 14 },
+];
+const ORBS = [
+  { w: 340, h: 340, x: -8,  y: -10, opacity: 0.18, delay: 0,  dur: 20 },
+  { w: 260, h: 260, x: 55,  y: 60,  opacity: 0.14, delay: 4,  dur: 16 },
+  { w: 180, h: 180, x: 70,  y: -5,  opacity: 0.12, delay: 8,  dur: 22 },
+  { w: 140, h: 140, x: 20,  y: 75,  opacity: 0.10, delay: 2,  dur: 18 },
 ];
 
-const INTERVAL = 4000;
+function LeftPanel() {
+  return (
+    <div className="hidden lg:flex relative flex-col justify-between overflow-hidden h-full"
+      style={{ background: 'linear-gradient(145deg,#FF7420 0%,#C84E00 50%,#8B3200 100%)' }}>
+      <style>{`
+        @keyframes adFloat {
+          0%   { transform:translateY(0px) rotate(0deg);   opacity:0.92; }
+          33%  { transform:translateY(-14px) rotate(1deg); opacity:1;    }
+          66%  { transform:translateY(-6px) rotate(-1deg); opacity:0.95; }
+          100% { transform:translateY(0px) rotate(0deg);   opacity:0.92; }
+        }
+        @keyframes orbPulse {
+          0%,100%{ transform:scale(1);    opacity:var(--op); }
+          50%    { transform:scale(1.08); opacity:calc(var(--op)*1.4); }
+        }
+        @keyframes shimmerL {
+          0%  { background-position:-200% center; }
+          100%{ background-position: 200% center; }
+        }
+        .ad-floater{ animation:adFloat var(--dur) ease-in-out infinite; animation-delay:var(--delay); }
+        .lp-orb    { animation:orbPulse var(--dur) ease-in-out infinite; animation-delay:var(--delay); }
+        .shimmer-bar{
+          background:linear-gradient(90deg,rgba(255,255,255,.05) 0%,rgba(255,255,255,.18) 50%,rgba(255,255,255,.05) 100%);
+          background-size:200% auto;
+          animation:shimmerL 3s linear infinite;
+        }
+      `}</style>
 
+      {ORBS.map((o,i)=>(
+        <div key={i} className="lp-orb absolute rounded-full" style={{
+          width:o.w,height:o.h,left:`${o.x}%`,top:`${o.y}%`,
+          background:'radial-gradient(circle,rgba(255,255,255,.22) 0%,rgba(255,255,255,0) 70%)',
+          ['--op' as string]:o.opacity,['--dur' as string]:`${o.dur}s`,['--delay' as string]:`${o.delay}s`,
+        }}/>
+      ))}
+      <div className="shimmer-bar absolute inset-0 pointer-events-none"
+        style={{transform:'rotate(-12deg) scaleX(2)',transformOrigin:'center'}}/>
+
+      {AD_FLOATERS.map((f,i)=>(
+        <div key={i} className="ad-floater absolute z-10"
+          style={{left:`${f.x}%`,top:`${f.y}%`,['--dur' as string]:`${f.dur}s`,['--delay' as string]:`${f.delay}s`}}>
+          <div style={{
+            background:'rgba(255,255,255,.15)',backdropFilter:'blur(10px)',
+            border:'1px solid rgba(255,255,255,.28)',borderRadius:14,
+            padding:'8px 13px',display:'flex',alignItems:'center',gap:8,
+            boxShadow:'0 4px 20px rgba(0,0,0,.15)',minWidth:110,
+          }}>
+            <span style={{fontSize:18,lineHeight:1}}>{f.emoji}</span>
+            <div>
+              <div style={{color:'#fff',fontSize:12,fontWeight:700,lineHeight:1.2}}>{f.label}</div>
+              <div style={{color:'rgba(255,255,255,.65)',fontSize:10,lineHeight:1.3}}>{f.sub}</div>
+            </div>
+          </div>
+        </div>
+      ))}
+
+      <div className="relative z-20 flex flex-col justify-between h-full p-8 xl:p-10">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center text-white font-bold text-lg border border-white/30 shadow-lg">A</div>
+          <span className="text-white font-bold text-xl tracking-tight drop-shadow">AdsLife</span>
+        </div>
+        <div className="space-y-5 my-auto py-8">
+          <span className="inline-block bg-white/15 border border-white/30 text-white text-[10px] font-bold px-3 py-1.5 rounded-full tracking-widest uppercase shadow">
+            Local Deals · Rewards · Discovery
+          </span>
+          <h2 className="text-white font-black text-4xl xl:text-5xl leading-[1.1] drop-shadow-md">
+            Discover deals<br/>in your city.
+          </h2>
+          <p className="text-white/75 text-sm leading-relaxed max-w-xs">
+            Join thousands earning coins while exploring the best local offers around them.
+          </p>
+          <div className="flex flex-wrap gap-2 pt-1">
+            {['🎯 Personalised','🪙 Earn Coins','📍 Local First','🔥 Streaks'].map(f=>(
+              <span key={f} className="bg-white/12 border border-white/22 text-white/90 text-xs px-3 py-1.5 rounded-full backdrop-blur-sm shadow-sm">{f}</span>
+            ))}
+          </div>
+          <div className="flex gap-7 pt-2">
+            {[['50K+','Users'],['200+','Cities'],['1M+','Coins Earned']].map(([n,l])=>(
+              <div key={l}>
+                <p className="text-white font-black text-2xl drop-shadow">{n}</p>
+                <p className="text-white/60 text-xs mt-0.5">{l}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Main ───────────────────────────────────────────────── */
 export default function Login() {
-  const { setUser } = useUserStore();
-  const navigate    = useNavigate();
+  const { setUser }           = useUserStore();
+  const navigate              = useNavigate();
+  const [form,setForm]        = useState({email:'',password:''});
+  const [showPw,setShowPw]    = useState(false);
+  const [loading,setLoading]  = useState(false);
 
-  const [form, setForm]       = useState({ email: '', password: '' });
-  const [showPw, setShowPw]   = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [current, setCurrent] = useState(0);
-  const [prev, setPrev]       = useState<number | null>(null);
-  const [transitioning, setTransitioning] = useState(false);
-
-  /* Preload slide images to prevent transition flashes */
-  useEffect(() => {
-    SLIDES.forEach((slide) => {
-      const img = new Image();
-      img.src = slide.url;
-    });
-  }, []);
-
-  /* Auto-advance slides */
-  useEffect(() => {
-    const id = setInterval(() => {
-      setPrev(current);
-      setTransitioning(true);
-      setCurrent(c => (c + 1) % SLIDES.length);
-      setTimeout(() => { setPrev(null); setTransitioning(false); }, 900);
-    }, INTERVAL);
-    return () => clearInterval(id);
-  }, [current]);
-
-  const goTo = (i: number) => {
-    if (i === current || transitioning) return;
-    setPrev(current);
-    setTransitioning(true);
-    setCurrent(i);
-    setTimeout(() => { setPrev(null); setTransitioning(false); }, 900);
-  };
-
-  const handleSubmit = async (e: { preventDefault: () => void }) => {
+  const handleSubmit = async (e:{preventDefault:()=>void}) => {
     e.preventDefault();
     setLoading(true);
     try {
       const res = await api.post(endpoints.login, form);
       if (res.data.success) {
-        const { user, token } = res.data.data;
+        const {user,token} = res.data.data;
         setUser({
-          id: user.id, name: user.name, email: user.email,
-          streakDays: Number.parseInt(user.streak_days) || 0,
-          role: user.role, city: user.city,
-          lat: parseFloat(user.lat) || undefined,
-          lng: parseFloat(user.lng) || undefined,
-        }, token);
+          id:user.id,name:user.name,email:user.email,
+          streakDays:Number.parseInt(user.streak_days)||0,
+          role:user.role,city:user.city,
+          lat:parseFloat(user.lat)||undefined,
+          lng:parseFloat(user.lng)||undefined,
+        },token);
         toast.success(`Welcome back, ${user.name}!`);
         navigate('/feed');
       }
-    } catch (err: any) {
-      toast.error(err.response?.data?.error ?? 'Login failed');
-    } finally {
-      setLoading(false);
-    }
+    } catch(err: unknown){
+      const e = err as {response?:{data?:{error?:string}}};
+      toast.error(e.response?.data?.error ?? 'Login failed');
+    } finally { setLoading(false); }
   };
 
   return (
-    <>
+    <div className="h-screen w-screen overflow-hidden grid lg:grid-cols-[0.82fr_1.18fr]">
       <style>{`
-        @keyframes ken-burns {
-          0%   { transform: scale(1.0) translate(0, 0);       }
-          100% { transform: scale(1.12) translate(-2%, -1.5%); }
+        @keyframes rSlide {
+          from{opacity:0;transform:translateX(28px);}
+          to  {opacity:1;transform:translateX(0);}
         }
-        @keyframes fade-in {
-          from { opacity: 0; }
-          to   { opacity: 1; }
+        @keyframes rUp {
+          from{opacity:0;transform:translateY(14px);}
+          to  {opacity:1;transform:translateY(0);}
         }
-        @keyframes fade-out {
-          from { opacity: 1; }
-          to   { opacity: 0; }
+        @keyframes orbFloat {
+          0%,100%{transform:translate(0,0) scale(1);}
+          50%    {transform:translate(14px,-12px) scale(1.06);}
         }
-        @keyframes card-in {
-          from { opacity: 0; transform: translateY(28px) scale(0.97); }
-          to   { opacity: 1; transform: translateY(0)    scale(1);    }
+        @keyframes orbFloat2 {
+          0%,100%{transform:translate(0,0) scale(1);}
+          50%    {transform:translate(-12px,10px) scale(1.05);}
         }
-        @keyframes label-slide {
-          from { opacity: 0; transform: translateY(10px); }
-          to   { opacity: 1; transform: translateY(0); }
+        @keyframes accentShimmer {
+          0%  {background-position:-200% center;}
+          100%{background-position: 200% center;}
         }
-        @keyframes orb-drift {
-          0%,100% { transform: translate(0, 0); }
-          50%      { transform: translate(40px, -30px); }
+        .r-enter{animation:rSlide .6s cubic-bezier(.22,1,.36,1) both;}
+        .r-f1{animation:rUp .5s cubic-bezier(.22,1,.36,1) .08s both;}
+        .r-f2{animation:rUp .5s cubic-bezier(.22,1,.36,1) .16s both;}
+        .r-f3{animation:rUp .5s cubic-bezier(.22,1,.36,1) .22s both;}
+        .r-f4{animation:rUp .5s cubic-bezier(.22,1,.36,1) .28s both;}
+        .r-f5{animation:rUp .5s cubic-bezier(.22,1,.36,1) .34s both;}
+        .r-f6{animation:rUp .5s cubic-bezier(.22,1,.36,1) .40s both;}
+        .ro1{animation:orbFloat  10s ease-in-out infinite;}
+        .ro2{animation:orbFloat2 13s ease-in-out infinite;}
+        .accent-bar{
+          background:linear-gradient(90deg,#FF7420,#FFB347,#FF7420);
+          background-size:200% auto;
+          animation:accentShimmer 3s linear infinite;
         }
-        @keyframes blink {
-          0%,100% { opacity: 1; } 50% { opacity: 0.2; }
+        .inp-field{
+          width:100%;background:transparent;font-size:14px;
+          padding:9px 38px;outline:none;color:inherit;
         }
-        @keyframes progress {
-          from { width: 0%; }
-          to   { width: 100%; }
+        .inp-field::placeholder{color:rgba(0,0,0,.35);}
+        .inp-wrap{
+          position:relative;border-radius:12px;
+          border:1.5px solid #e8e4e0;
+          background:#fff;
+          transition:border-color .2s,box-shadow .2s;
         }
-        .ken-burns  { animation: ken-burns ${INTERVAL}ms linear forwards; }
-        .fade-in    { animation: fade-in 0.9s ease forwards; }
-        .fade-out   { animation: fade-out 0.9s ease forwards; }
-        .card-in    { animation: card-in 0.65s cubic-bezier(0.22,1,0.36,1) both; }
-        .label-in   { animation: label-slide 0.5s cubic-bezier(0.22,1,0.36,1) both; }
-        .orb-drift  { animation: orb-drift 14s ease-in-out infinite alternate; }
-        .live-blink { animation: blink 2s ease-in-out infinite; }
-        .progress-bar { animation: progress ${INTERVAL}ms linear forwards; }
-
-        input[type='email']:focus,
-        input[type='password']:focus,
-        input[type='text']:focus {
-          border-color: rgba(255,98,0,0.75) !important;
-          box-shadow: 0 0 0 3px rgba(255,98,0,0.18) !important;
-          outline: none;
+        .inp-wrap:focus-within{
+          border-color:#FF7420;
+          box-shadow:0 0 0 3px rgba(255,116,32,.12);
         }
+        .btn-go{transition:transform .18s ease,box-shadow .18s ease;}
+        .btn-go:not(:disabled):hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(255,116,32,.28);}
+        .btn-go:not(:disabled):active{transform:translateY(0);}
       `}</style>
 
-      <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-[#0B1120]">
+      <LeftPanel/>
 
-        {/* ── Background slideshow ── */}
-        <div className="absolute inset-0">
+      {/* RIGHT */}
+      <div className="relative flex flex-col justify-center overflow-hidden h-full px-8 py-6 xl:px-14"
+        style={{background:'linear-gradient(150deg,#fff 0%,#fffcf8 45%,#fff4e6 100%)'}}>
 
-          {/* Previous slide fading out */}
-          {prev !== null && (
-            <img
-              key={`prev-${prev}`}
-              src={SLIDES[prev].url}
-              alt=""
-              aria-hidden
-              className="fade-out absolute inset-0 w-full h-full object-cover"
-              style={{ filter: 'brightness(0.30) saturate(1.25)' }}
-            />
-          )}
-
-          {/* Current slide with Ken Burns */}
-          <img
-            key={`curr-${current}`}
-            src={SLIDES[current].url}
-            alt=""
-            aria-hidden
-            className="ken-burns fade-in absolute inset-0 w-full h-full object-cover"
-            style={{ filter: 'brightness(0.30) saturate(1.25)' }}
-          />
-        </div>
-
-        {/* Gradient overlay */}
-        <div className="absolute inset-0 pointer-events-none" style={{
-          background: [
-            'radial-gradient(ellipse 65% 65% at 20% 55%, rgba(176,60,0,0.55), transparent)',
-            'radial-gradient(ellipse 55% 65% at 80% 45%, rgba(200,75,0,0.38), transparent)',
-            'linear-gradient(to bottom, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.15) 50%, rgba(0,0,0,0.55) 100%)',
-          ].join(','),
-        }} />
+        {/* Dot texture */}
+        <div className="absolute inset-0 pointer-events-none"
+          style={{backgroundImage:'radial-gradient(rgba(255,116,32,.065) 1px,transparent 1px)',backgroundSize:'22px 22px'}}/>
 
         {/* Ambient orbs */}
-        <div className="orb-drift absolute w-[500px] h-[500px] rounded-full pointer-events-none"
-          style={{ background: 'radial-gradient(circle,rgba(255,98,0,0.18),transparent 65%)', top: '-130px', left: '-120px' }} />
-        <div className="orb-drift absolute w-[380px] h-[380px] rounded-full pointer-events-none"
-          style={{ background: 'radial-gradient(circle,rgba(255,140,40,0.15),transparent 65%)', bottom: '-100px', right: '-90px', animationDelay: '7s', animationDirection: 'alternate-reverse' }} />
+        <div className="ro1 absolute pointer-events-none rounded-full"
+          style={{width:280,height:280,top:-70,right:-60,
+            background:'radial-gradient(circle,rgba(255,116,32,.09) 0%,transparent 65%)'}}/>
+        <div className="ro2 absolute pointer-events-none rounded-full"
+          style={{width:200,height:200,bottom:-50,left:-40,
+            background:'radial-gradient(circle,rgba(255,150,50,.07) 0%,transparent 65%)'}}/>
 
-        {/* ── Slide label — bottom left ── */}
-        <div className="absolute bottom-16 left-8 z-10 pointer-events-none">
-          <p key={current} className="label-in text-xs font-semibold tracking-widest uppercase"
-            style={{ color: 'rgba(255,255,255,0.38)' }}>
-            {SLIDES[current].label}
-          </p>
-        </div>
+        {/* Accent line at top */}
+        <div className="accent-bar absolute top-0 left-0 right-0 h-[3px] pointer-events-none"/>
 
-        {/* ── Dot indicators + progress bar ── */}
-        <div className="absolute bottom-7 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2">
-          <div className="flex items-center gap-2">
-            {SLIDES.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => goTo(i)}
-                className="relative overflow-hidden rounded-full transition-all duration-300"
-                style={{
-                  width: i === current ? 28 : 8,
-                  height: 8,
-                  background: i === current ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.28)',
-                }}
-              >
-                {i === current && (
-                  <span
-                    key={current}
-                    className="progress-bar absolute left-0 top-0 bottom-0 rounded-full"
-                    style={{ background: '#FF6200' }}
-                  />
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
+        {/* Content — no card wrapper */}
+        <div className="r-enter relative z-10 w-full max-w-[400px] mx-auto">
 
-        {/* ── Centred form card ── */}
-        <div className="card-in relative z-10 w-full mx-4" style={{
-          maxWidth: 400,
-          background: 'rgba(8, 5, 2, 0.70)',
-          backdropFilter: 'blur(22px)',
-          WebkitBackdropFilter: 'blur(22px)',
-          border: '1px solid rgba(255,255,255,0.11)',
-          borderRadius: 22,
-          boxShadow: '0 28px 70px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08)',
-          padding: '38px 34px 34px',
-        }}>
-
-          {/* Top highlight line */}
-          <div className="absolute top-0 left-8 right-8 h-[1px] rounded-full"
-            style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent)' }} />
-
-          {/* Logo */}
-          <div className="flex flex-col items-center mb-7">
-            <div className="w-12 h-12 rounded-[14px] flex items-center justify-center font-bold text-xl text-white mb-3"
-              style={{
-                background: 'linear-gradient(135deg, #FF6200 0%, #C04800 100%)',
-                boxShadow: '0 0 24px rgba(255,98,0,0.5), 0 4px 12px rgba(0,0,0,0.4)',
-              }}>
-              A
-            </div>
-            <span className="font-bold text-lg text-white tracking-wide">AdsLife</span>
-            <div className="flex items-center gap-1.5 mt-1">
-              <span className="live-blink w-1.5 h-1.5 rounded-full" style={{ background: '#4ade80' }} />
-              <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.38)' }}>Live deals near you</span>
-            </div>
+          {/* Brand mark */}
+          <div className="r-f1 flex items-center gap-2.5 mb-5">
+            <div className="w-9 h-9 bg-gradient-to-br from-[#FF7420] to-[#C84E00] rounded-[11px] flex items-center justify-center text-white font-bold text-sm shadow-md">A</div>
+            <span className="font-bold text-gray-800 text-[15px] tracking-tight">AdsLife</span>
           </div>
 
           {/* Heading */}
-          <div className="text-center mb-7">
-            <h2 className="font-bold text-[1.5rem] text-white">Welcome back</h2>
-            <p className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.42)' }}>
-              Sign in to continue to your account
-            </p>
+          <div className="r-f1 mb-6">
+            <p className="text-[11px] font-semibold text-[#FF7420] uppercase tracking-widest mb-1">Sign in</p>
+            <h1 className="font-heading font-black text-[28px] text-gray-900 leading-tight">Welcome back</h1>
+            <p className="text-gray-500 text-sm mt-1">Sign in to continue to your account</p>
           </div>
 
           {/* Google */}
-          <GoogleAuthButton label="Continue with Google" />
+          <div className="r-f2">
+            <GoogleAuthButton label="Continue with Google"/>
+          </div>
 
           {/* Divider */}
-          <div className="flex items-center gap-3 my-5">
-            <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.1)' }} />
-            <span className="text-xs" style={{ color: 'rgba(255,255,255,0.28)' }}>or</span>
-            <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.1)' }} />
+          <div className="r-f3 flex items-center gap-3 my-5">
+            <div className="flex-1 h-px bg-gray-200"/>
+            <span className="text-[10px] text-gray-400 font-semibold tracking-widest uppercase">or</span>
+            <div className="flex-1 h-px bg-gray-200"/>
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
-
-            <div>
-              <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider"
-                style={{ color: 'rgba(255,255,255,0.5)' }}>Email</label>
-              <div className="relative">
-                <Mail size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
-                  style={{ color: 'rgba(255,255,255,0.32)' }} />
-                <input
-                  type="email"
-                  required
-                  autoComplete="email"
-                  placeholder="you@example.com"
-                  value={form.email}
-                  onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-                  style={{
-                    width: '100%', boxSizing: 'border-box',
-                    padding: '10px 14px 10px 40px',
-                    borderRadius: 10,
-                    border: '1px solid rgba(255,255,255,0.13)',
-                    background: 'rgba(255,255,255,0.06)',
-                    color: '#fff', fontSize: 14,
-                    transition: 'border-color 0.2s, box-shadow 0.2s',
-                  }}
-                />
+          <form onSubmit={handleSubmit} noValidate className="space-y-4">
+            <div className="r-f3">
+              <label className="block text-[10px] font-bold text-gray-500 mb-1.5 tracking-widest uppercase">Email</label>
+              <div className="inp-wrap">
+                <Mail size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"/>
+                <input id="login-email" type="email" required autoComplete="email"
+                  className="inp-field" placeholder="you@example.com"
+                  value={form.email} onChange={e=>setForm(f=>({...f,email:e.target.value}))}/>
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider"
-                style={{ color: 'rgba(255,255,255,0.5)' }}>Password</label>
-              <div className="relative">
-                <Lock size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
-                  style={{ color: 'rgba(255,255,255,0.32)' }} />
-                <input
-                  type={showPw ? 'text' : 'password'}
-                  required
-                  autoComplete="current-password"
-                  placeholder="Enter your password"
-                  value={form.password}
-                  onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-                  style={{
-                    width: '100%', boxSizing: 'border-box',
-                    padding: '10px 44px 10px 40px',
-                    borderRadius: 10,
-                    border: '1px solid rgba(255,255,255,0.13)',
-                    background: 'rgba(255,255,255,0.06)',
-                    color: '#fff', fontSize: 14,
-                    transition: 'border-color 0.2s, box-shadow 0.2s',
-                  }}
-                />
-                <button type="button" onClick={() => setShowPw(v => !v)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2"
-                  style={{ color: 'rgba(255,255,255,0.32)' }}>
-                  {showPw ? <EyeOff size={14} /> : <Eye size={14} />}
+            <div className="r-f4">
+              <label className="block text-[10px] font-bold text-gray-500 mb-1.5 tracking-widest uppercase">Password</label>
+              <div className="inp-wrap">
+                <Lock size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"/>
+                <input id="login-password" type={showPw?'text':'password'} required autoComplete="current-password"
+                  className="inp-field" style={{paddingRight:42}} placeholder="Enter your password"
+                  value={form.password} onChange={e=>setForm(f=>({...f,password:e.target.value}))}/>
+                <button type="button" onClick={()=>setShowPw(!showPw)} tabIndex={-1}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
+                  {showPw ? <EyeOff size={14}/> : <Eye size={14}/>}
                 </button>
               </div>
             </div>
 
-            <button type="submit" disabled={loading} className="btn btn-primary btn-lg w-full" style={{ marginTop: 20 }}>
-              {loading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Signing in…
-                </span>
-              ) : 'Sign in'}
-            </button>
+            <div className="r-f5">
+              <button type="submit" disabled={loading}
+                className="btn-go btn btn-primary btn-lg w-full flex items-center justify-center gap-2"
+                style={{marginTop:4}}>
+                {loading
+                  ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"/>Signing in…</>
+                  : <>Sign in <span className="text-white/70 text-base ml-1">→</span></>
+                }
+              </button>
+            </div>
           </form>
 
-          <p className="text-center text-sm mt-5" style={{ color: 'rgba(255,255,255,0.36)' }}>
+          <p className="r-f6 text-center text-sm text-gray-500 mt-6">
             Don't have an account?{' '}
-            <Link to="/register" className="font-semibold hover:underline" style={{ color: '#FF7420' }}>
-              Create one free
-            </Link>
+            <Link to="/register" className="text-[#FF7420] font-semibold hover:underline underline-offset-2">Create one free</Link>
+          </p>
+          <p className="text-center text-[10px] text-gray-400 mt-2">
+            By signing in you agree to our{' '}
+            <a href="/terms" className="underline underline-offset-2">Terms</a>{' & '}
+            <a href="/privacy" className="underline underline-offset-2">Privacy Policy</a>
           </p>
         </div>
-
-        {/* Copyright */}
-        <p className="absolute bottom-[6px] text-[10px] z-10" style={{ color: 'rgba(255,255,255,0.18)' }}>
-          © 2025 AdsLife
-        </p>
       </div>
-    </>
+    </div>
   );
 }
