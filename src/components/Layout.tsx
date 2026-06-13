@@ -126,7 +126,7 @@ export default function Layout({ children }: Props) {
         {/* Sidebar header */}
         <div className={`flex items-center h-[var(--navbar-h)] border-b border-[var(--border)] flex-shrink-0 ${sidebarOpen ? 'px-4 gap-3' : 'justify-center'}`}>
           {sidebarOpen && (
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#FF7420] to-[#B04200] flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-sm overflow-hidden">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#FF7420] to-[#B04200] flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-[0_4px_12px_rgba(255,98,0,0.45)] overflow-hidden">
               {site.site_logo_url
                 ? <img src={site.site_logo_url} alt={site.site_name} className="w-full h-full object-contain p-0.5" />
                 : (site.site_name?.[0] ?? 'A')}
@@ -184,14 +184,14 @@ export default function Layout({ children }: Props) {
         className="hidden md:flex flex-col flex-1 transition-all duration-250 ease-out"
       >
         {/* ── Navbar ── */}
-        <header className="sticky top-0 z-40 h-[var(--navbar-h)] bg-[var(--surface)]/90 backdrop-blur-md border-b border-[var(--border)] flex items-center gap-3 px-5">
+        <header className="sticky top-0 z-40 h-[var(--navbar-h)] bg-[var(--surface)] border-b border-[var(--border)] shadow-[0_1px_0_var(--border),0_4px_20px_rgba(0,0,0,0.04)] flex items-center gap-3 px-5">
 
           {/* Search */}
-          <form onSubmit={handleSearch} className="flex-1 max-w-md relative">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none" />
+          <form onSubmit={handleSearch} className="flex-1 max-w-lg relative">
+            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none" />
             <input
               type="text"
-              className="input pl-9 h-9 text-[0.8125rem] bg-[var(--surface-2)] border-transparent focus:border-[var(--primary)] focus:bg-[var(--surface)]"
+              className="w-full h-10 pl-10 pr-4 rounded-xl bg-[var(--surface-2)] border-1.5 border-[var(--border)] text-[0.8125rem] text-[var(--text)] placeholder-[var(--text-muted)] outline-none transition-all duration-200 focus:bg-[var(--surface)] focus:border-[var(--primary)] focus:shadow-[0_0_0_3px_rgba(255,98,0,0.1)] font-[Inter]"
               placeholder="Search offers, shops..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}

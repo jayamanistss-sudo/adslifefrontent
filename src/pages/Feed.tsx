@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { TrendingUp, Zap, Clock, SlidersHorizontal, WifiOff, LogIn, ChevronLeft, ChevronRight } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { TrendingUp, Zap, Clock, SlidersHorizontal, WifiOff, LogIn, ChevronLeft, ChevronRight, X, LayoutGrid } from 'lucide-react';
 import NearbyDropdown from '../components/NearbyDropdown';
 import SpotlightHero from '../components/SpotlightHero';
 import OfferCard from '../components/OfferCard';
@@ -11,6 +11,21 @@ import { useGeolocation } from '../hooks/useGeolocation';
 import { useOffers, useCategories, type Category } from '../powersync/queries';
 import { api, endpoints } from '../utils/api';
 import type { Offer } from '../types';
+
+const EXPLORE_CATEGORIES = [
+  { name: 'Electronics',   slug: 'electronics', gradient: 'from-blue-400 to-indigo-600',   emoji: '📱', image: './../assets/categories/electronics.png' },
+  { name: 'Fashion',       slug: 'fashion',     gradient: 'from-pink-400 to-rose-500',      emoji: '👗', image: './../assets/categories/fashion.png' },
+  { name: 'Luxury',        slug: 'luxury',      gradient: 'from-amber-400 to-yellow-600',   emoji: '💎', image: './../assets/categories/luxury.png' },
+  { name: 'Home Decor',    slug: 'home',        gradient: 'from-emerald-400 to-teal-600',   emoji: '🏡', image: './../assets/categories/home.png' },
+  { name: 'Beauty',        slug: 'beauty',      gradient: 'from-purple-400 to-violet-600',  emoji: '💄', image: './../assets/categories/beauty.png' },
+  { name: 'Groceries',     slug: 'grocery',     gradient: 'from-green-400 to-lime-500',     emoji: '🛒', image: './../assets/categories/grocery.png' },
+  { name: 'Sports',        slug: 'fitness',     gradient: 'from-orange-400 to-red-500',     emoji: '⚽', image: './../assets/categories/fitness.png' },
+  { name: 'Food & Dining', slug: 'food',        gradient: 'from-yellow-400 to-orange-500',  emoji: '🍽️', image: './../assets/categories/food.png' },
+  { name: 'Travel',        slug: 'travel',      gradient: 'from-sky-400 to-cyan-600',       emoji: '✈️', image: './../assets/categories/travel.png' },
+  { name: 'Education',     slug: 'education',   gradient: 'from-slate-400 to-slate-600',    emoji: '🎓', image: './../assets/categories/education.png' },
+];
+
+const EXPLORE_SLUG_SET = new Set(EXPLORE_CATEGORIES.map(c => c.slug));
 
 const PER_PAGE_OPTIONS = [10, 20, 50, 100];
 
@@ -43,17 +58,21 @@ export default function Feed() {
   const [searchParams] = useSearchParams();
   const urlQuery = searchParams.get('q') ?? '';
 
-  const [isOnline, setIsOnline]             = useState(globalThis.navigator.onLine);
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const [activeFilter, setActiveFilter]     = useState('all');
-  const [nearbyRadius, setNearbyRadius]     = useState(0);
-  const [search, setSearch]                 = useState(urlQuery);
-  const [perPage, setPerPage]               = useState(20);
-  const [page, setPage]                     = useState(1);
-  const [loading, setLoading]               = useState(false);
-  const [error, setError]                   = useState<string | null>(null);
-  const [apiOffers, setApiOffers]           = useState<Offer[]>([]);
-  const [apiCategories, setApiCategories]   = useState<Category[]>([]);
+  const [isOnline, setIsOnline]               = useState(globalThis.navigator.onLine);
+  const [activeCategory, setActiveCategory]   = useState<string | null>(null);
+  const [activeFilter, setActiveFilter]       = useState('all');
+  const [nearbyRadius, setNearbyRadius]       = useState(0);
+  const [search, setSearch]                   = useState(urlQuery);
+  const [perPage, setPerPage]                 = useState(20);
+  const [page, setPage]                       = useState(1);
+  const [loading, setLoading]                 = useState(false);
+  const [error, setError]                     = useState<string | null>(null);
+  const [apiOffers, setApiOffers]             = useState<Offer[]>([]);
+  const [apiCategories, setApiCategories]     = useState<Category[]>([]);
+  const [showAllCategories, setShowAllCategories] = useState(false);
+  const [imgErrors, setImgErrors]             = useState<Record<string, boolean>>({});
+
+  const handleImgError = (slug: string) => setImgErrors(prev => ({ ...prev, [slug]: true }));
 
   const psOffers     = useOffers(activeCategory);
   const psCategories = useCategories();
@@ -181,31 +200,178 @@ export default function Feed() {
       {/* Hero — spotlight video carousel */}
       <SpotlightHero onExplore={() => setActiveFilter('trending')} />
 
-      {/* Browse Categories */}
-      <div className="mb-6">
-        <h2 className="font-heading font-bold text-[var(--text)] text-lg mb-4">Browse Categories</h2>
-        <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-12 gap-2">
-          {categories.map((cat: Category) => (
-            <button
+      {/* Explore Popular Categories - horizontal scroll carousel */}
+      <div className="mb-8 mt-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-heading font-bold text-[var(--text)] text-lg">Explore Popular Categories</h2>
+          <button
+            onClick={() => setShowAllCategories(true)}
+            className="flex items-center gap-1.5 text-sm font-semibold text-[var(--primary)] hover:opacity-75 transition-opacity"
+          >
+            <LayoutGrid size={14} /> View All <ChevronRight size={14} />
+          </button>
+        </div>
+        <div className="flex gap-6 overflow-x-auto pt-2 pb-3 scrollbar-hide -mx-1 px-1">
+          {EXPLORE_CATEGORIES.map((cat, i) => (
+            <motion.button
               key={cat.slug}
               onClick={() => { setActiveCategory(activeCategory === cat.slug ? null : cat.slug); setPage(1); }}
-              className={`category-chip ${activeCategory === cat.slug ? 'active' : ''}`}
+              className="explore-cat-item"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.045, type: 'spring', stiffness: 300, damping: 24 }}
             >
-              <CategoryIcon name={cat.icon} size={22} />
-              <span className="text-[10px] font-medium text-[var(--text-secondary)] text-center leading-tight">{cat.name}</span>
-            </button>
+              <div className={`explore-cat-circle bg-gradient-to-br ${cat.gradient} ${activeCategory === cat.slug ? 'scale-110' : ''}`}>
+                {!imgErrors[cat.slug] ? (
+                  <img
+                    src={cat.image}
+                    alt={cat.name}
+                    className="w-full h-full object-cover rounded-full"
+                    onError={() => handleImgError(cat.slug)}
+                  />
+                ) : (
+                  <span className="text-3xl select-none drop-shadow-sm">{cat.emoji}</span>
+                )}
+                {activeCategory === cat.slug && (
+                  <div className="absolute inset-0 rounded-full ring-[3px] ring-[var(--primary)] ring-offset-2 pointer-events-none" />
+                )}
+              </div>
+              <span className={`text-[11px] font-medium text-center whitespace-nowrap transition-colors ${activeCategory === cat.slug ? 'text-[var(--primary)] font-semibold' : 'text-[var(--text-secondary)]'}`}>
+                {cat.name}
+              </span>
+            </motion.button>
           ))}
         </div>
       </div>
 
+      {/* All Categories Modal */}
+      <AnimatePresence>
+        {showAllCategories && (() => {
+          const extraCats = categories.filter((c: Category) => !EXPLORE_SLUG_SET.has(c.slug));
+          const allCats = [
+            ...EXPLORE_CATEGORIES,
+            ...extraCats.map((c: Category) => ({ name: c.name, slug: c.slug, gradient: 'from-gray-300 to-slate-400', emoji: '🏷️', image: '' })),
+          ];
+          return (
+            <motion.div
+              className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowAllCategories(false)}
+            >
+              {/* Backdrop */}
+              <div className="absolute inset-0 bg-black/45 backdrop-blur-[6px]" />
+
+              {/* Sheet */}
+              <motion.div
+                className="relative w-full sm:max-w-2xl bg-[var(--surface)] rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden"
+                initial={{ y: 80, opacity: 0, scale: 0.97 }}
+                animate={{ y: 0, opacity: 1, scale: 1 }}
+                exit={{ y: 80, opacity: 0, scale: 0.97 }}
+                transition={{ type: 'spring', stiffness: 340, damping: 28 }}
+                onClick={e => e.stopPropagation()}
+              >
+                {/* Drag handle (mobile) */}
+                <div className="sm:hidden flex justify-center pt-3 pb-1">
+                  <div className="w-10 h-1 rounded-full bg-[var(--border-strong)]" />
+                </div>
+
+                {/* Header */}
+                <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border)]">
+                  <div>
+                    <h3 className="font-heading font-bold text-[var(--text)] text-lg leading-none">All Categories</h3>
+                    <p className="text-xs text-[var(--text-muted)] mt-0.5">{allCats.length} categories available</p>
+                  </div>
+                  <button
+                    onClick={() => setShowAllCategories(false)}
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)] transition-all"
+                  >
+                    <X size={17} />
+                  </button>
+                </div>
+
+                {/* Active category hint */}
+                {activeCategory && (
+                  <div className="px-6 pt-3 flex items-center gap-2">
+                    <span className="text-xs text-[var(--text-muted)]">Active filter:</span>
+                    <span className="badge badge-primary capitalize">{activeCategory}</span>
+                    <button
+                      onClick={() => { setActiveCategory(null); setPage(1); setShowAllCategories(false); }}
+                      className="text-xs text-[var(--text-muted)] hover:text-red-500 underline transition-colors"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                )}
+
+                {/* Categories grid */}
+                <div className="px-6 py-5 grid grid-cols-4 sm:grid-cols-5 gap-4 max-h-[55vh] overflow-y-auto scrollbar-hide">
+                  {allCats.map((cat, i) => {
+                    const isActive = activeCategory === cat.slug;
+                    return (
+                      <motion.button
+                        key={cat.slug}
+                        onClick={() => {
+                          setActiveCategory(isActive ? null : cat.slug);
+                          setPage(1);
+                          setShowAllCategories(false);
+                        }}
+                        className="flex flex-col items-center gap-2 group"
+                        initial={{ opacity: 0, scale: 0.85 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: i * 0.025, type: 'spring', stiffness: 320, damping: 22 }}
+                        whileHover={{ y: -3 }}
+                        whileTap={{ scale: 0.93 }}
+                      >
+                        <div className={`w-16 h-16 rounded-full bg-gradient-to-br ${cat.gradient} flex items-center justify-center shadow-md overflow-hidden transition-all duration-200 ${isActive ? 'ring-[3px] ring-[var(--primary)] ring-offset-2 scale-110 shadow-[0_6px_20px_rgba(255,98,0,0.35)]' : 'group-hover:shadow-lg group-hover:scale-105'}`}>
+                          {cat.image && !imgErrors[cat.slug] ? (
+                            <img
+                              src={cat.image}
+                              alt={cat.name}
+                              className="w-full h-full object-cover"
+                              onError={() => handleImgError(cat.slug)}
+                            />
+                          ) : cat.image === '' ? (
+                            <CategoryIcon name={cat.slug} size={28} className="text-white/90" />
+                          ) : (
+                            <span className="text-2xl">{cat.emoji}</span>
+                          )}
+                        </div>
+                        <span className={`text-[11px] font-medium text-center leading-tight transition-colors ${isActive ? 'text-[var(--primary)] font-semibold' : 'text-[var(--text-secondary)] group-hover:text-[var(--text)]'}`}>
+                          {cat.name}
+                        </span>
+                      </motion.button>
+                    );
+                  })}
+                </div>
+
+                {/* Footer */}
+                <div className="px-6 py-4 border-t border-[var(--border)] flex items-center justify-between bg-[var(--surface-2)]">
+                  <span className="text-xs text-[var(--text-muted)]">
+                    {activeCategory ? `Showing offers in "${activeCategory}"` : 'Showing all offers'}
+                  </span>
+                  <button
+                    onClick={() => setShowAllCategories(false)}
+                    className="btn btn-primary btn-sm"
+                  >
+                    Done
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          );
+        })()}
+      </AnimatePresence>
+
       {/* Filter tabs + sort */}
       <div className="flex items-center justify-between mb-5 gap-3 flex-wrap">
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap p-1 bg-[var(--surface-2)] rounded-2xl border border-[var(--border)]">
           {FILTER_TABS.map(({ key, label, icon: Icon }) => (
             <button
               key={key}
               onClick={() => setActiveFilter(key)}
-              className={`filter-tab ${activeFilter === key ? 'active' : ''}`}
+              className={`filter-tab text-[0.8rem] ${activeFilter === key ? 'active' : 'border-transparent bg-transparent'}`}
             >
               {Icon && <Icon size={13} />}
               {label}
