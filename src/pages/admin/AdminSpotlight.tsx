@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { CheckCircle, XCircle, Star, Play } from 'lucide-react';
+import { CheckCircle, XCircle, Star, Play, X } from 'lucide-react';
 import BackButton from '../../components/BackButton';
 import { api, endpoints } from '../../utils/api';
 import toast from 'react-hot-toast';
