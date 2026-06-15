@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { motion } from 'framer-motion';
+import type { Variants } from 'framer-motion';
 import { api, endpoints } from '../../utils/api';
 import toast from 'react-hot-toast';
 
@@ -21,7 +22,7 @@ interface Stats {
 
 const MotionLink = motion(Link);
 
-const containerVariants = {
+const containerVariants: Variants = {
   hidden: { opacity: 0 },
   show: {
     opacity: 1,
@@ -31,7 +32,7 @@ const containerVariants = {
   }
 };
 
-const cardVariants = {
+const cardVariants: Variants = {
   hidden: { opacity: 0, y: 15 },
   show: {
     opacity: 1,
