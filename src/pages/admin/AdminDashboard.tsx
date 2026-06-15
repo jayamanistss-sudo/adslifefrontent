@@ -6,6 +6,7 @@ import {
   Activity, DollarSign, Star,
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { motion } from 'framer-motion';
 import { api, endpoints } from '../../utils/api';
 import toast from 'react-hot-toast';
 
@@ -18,10 +19,43 @@ interface Stats {
   recent_vendors: Array<{ id: number; business_name: string; status: string; subscription_plan: string; email: string }>;
 }
 
+const MotionLink = motion(Link);
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05
+    }
+  }
+};
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 15 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { type: 'spring', stiffness: 280, damping: 22 }
+  }
+};
+
 function TrendChip({ v }: { v: number }) {
-  if (v > 0) return <span className="flex items-center gap-0.5 text-xs font-semibold text-emerald-600"><ArrowUpRight size={12} />+{v}%</span>;
-  if (v < 0) return <span className="flex items-center gap-0.5 text-xs font-semibold text-red-500"><ArrowDownRight size={12} />{v}%</span>;
-  return <span className="flex items-center gap-0.5 text-xs font-semibold text-gray-400"><Minus size={12} />0%</span>;
+  if (v > 0) return (
+    <span className="flex items-center gap-1 text-xs font-semibold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20 px-2.5 py-1 rounded-full border border-emerald-200/50 dark:border-emerald-900/30">
+      <ArrowUpRight size={12} />+{v}%
+    </span>
+  );
+  if (v < 0) return (
+    <span className="flex items-center gap-1 text-xs font-semibold text-red-500 bg-red-50 dark:bg-red-950/20 px-2.5 py-1 rounded-full border border-red-200/50 dark:border-red-900/30">
+      <ArrowDownRight size={12} />{v}%
+    </span>
+  );
+  return (
+    <span className="flex items-center gap-1 text-xs font-semibold text-gray-400 bg-gray-50 dark:bg-gray-800/30 px-2.5 py-1 rounded-full border border-gray-200/50 dark:border-gray-700/30">
+      <Minus size={12} />0%
+    </span>
+  );
 }
 
 export default function AdminDashboard() {
@@ -50,209 +84,434 @@ export default function AdminDashboard() {
   const signupData = (stats?.daily_signups ?? []).map((d) => ({ day: d.d.slice(5), users: Number(d.cnt) }));
 
   const pendingAlerts = stats ? [
-    { label: 'Vendor Requests', count: stats.pending.vendors,    to: '/admin/vendor-requests', color: 'bg-amber-50 text-amber-700',   icon: Store },
-    { label: 'Support Tickets', count: stats.pending.tickets,    to: '/admin/support-tickets', color: 'bg-blue-50 text-blue-700',     icon: LifeBuoy },
-    { label: 'Banner Ads',      count: stats.pending.banners,    to: '/admin/banner-ads',      color: 'bg-violet-50 text-violet-700', icon: Image },
-    { label: 'Spotlights',      count: stats.pending.spotlights, to: '/admin/spotlight',       color: 'bg-pink-50 text-pink-700',     icon: Star },
-    { label: 'Fraud Flags',     count: stats.pending.fraud,      to: '/admin/fraud',           color: 'bg-red-50 text-red-700',       icon: ShieldAlert },
+    { label: 'Vendor Requests', count: stats.pending.vendors,    to: '/admin/vendor-requests', gradient: 'from-amber-400 to-orange-500',   icon: Store },
+    { label: 'Support Tickets', count: stats.pending.tickets,    to: '/admin/support-tickets', gradient: 'from-sky-400 to-blue-500',       icon: LifeBuoy },
+    { label: 'Banner Ads',      count: stats.pending.banners,    to: '/admin/banner-ads',      gradient: 'from-violet-400 to-purple-600',  icon: Image },
+    { label: 'Spotlights',      count: stats.pending.spotlights, to: '/admin/spotlight',       gradient: 'from-pink-400 to-rose-500',      icon: Star },
+    { label: 'Fraud Flags',     count: stats.pending.fraud,      to: '/admin/fraud',           gradient: 'from-red-500 to-rose-600',       icon: ShieldAlert },
   ] : [];
 
   return (
-    <div className="max-w-6xxl pb-8">
-      <div className="page-header mb-6">
+    <motion.div 
+      initial="hidden"
+      animate="show"
+      variants={containerVariants}
+      className="max-w-7xl mx-auto pb-12 px-4 sm:px-6"
+    >
+      {/* Page header */}
+      <div className="page-header mb-8 mt-2 flex justify-between items-end">
         <div>
-          <h1 className="page-title">Super Admin Panel</h1>
-          <p className="page-subtitle">Platform overview · AdsLife</p>
+          <h1 className="page-title text-3xl font-extrabold tracking-tight">
+            Super <span className="gradient-text">Admin Dashboard</span>
+          </h1>
+          <p className="page-subtitle text-sm text-[var(--text-secondary)] mt-1">Platform overview & operations management · AdsLife</p>
         </div>
         {stats && (
-          <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
-            <Activity size={13} className="text-emerald-500" />
-            <span>{stats.users.today_active} interactions today</span>
+          <div className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200/50 dark:border-emerald-900/30 px-3.5 py-2 rounded-full text-xs font-semibold text-emerald-600 dark:text-emerald-400 shadow-sm flex-shrink-0">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>{stats.users.today_active.toLocaleString()} interactions today</span>
           </div>
         )}
       </div>
 
       {/* KPI cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+      <motion.div variants={containerVariants} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
         {[
-          { label: 'Total Users',   value: stats?.totals.users,        icon: Users,      color: 'bg-blue-50 text-blue-600' },
-          { label: 'Vendors',       value: stats?.totals.vendors,      icon: Store,      color: 'bg-emerald-50 text-emerald-600' },
-          { label: 'Active Offers', value: stats?.totals.offers,       icon: Tag,        color: 'bg-amber-50 text-amber-600' },
-          { label: 'Interactions',  value: stats?.totals.interactions, icon: Activity,   color: 'bg-violet-50 text-violet-600' },
-          { label: 'Revenue',       value: stats ? `₹${stats.totals.revenue.toLocaleString()}` : '–', icon: DollarSign, color: 'bg-green-50 text-green-600' },
-          { label: 'New Users/mo',  value: stats?.users.this_month,    icon: TrendingUp, color: 'bg-cyan-50 text-cyan-600' },
-        ].map(({ label, value, icon: Icon, color }) => (
-          <div key={label} className="card p-4">
-            <div className={`w-8 h-8 rounded-xl flex items-center justify-center mb-2 ${color}`}><Icon size={15} /></div>
-            <div className="font-heading font-bold text-xl text-[var(--text)]">
-              {loading ? '…' : typeof value === 'number' ? value.toLocaleString() : (value ?? '–')}
+          { label: 'Total Users',   value: stats?.totals.users,        icon: Users,      gradient: 'from-blue-500 to-indigo-600' },
+          { label: 'Vendors',       value: stats?.totals.vendors,      icon: Store,      gradient: 'from-emerald-400 to-teal-600' },
+          { label: 'Active Offers', value: stats?.totals.offers,       icon: Tag,        gradient: 'from-amber-400 to-orange-500' },
+          { label: 'Interactions',  value: stats?.totals.interactions, icon: Activity,   gradient: 'from-purple-500 to-indigo-500' },
+          { label: 'Revenue',       value: stats ? `₹${stats.totals.revenue.toLocaleString()}` : '–', icon: DollarSign, gradient: 'from-orange-500 to-red-600' },
+          { label: 'New Users/mo',  value: stats?.users.this_month,    icon: TrendingUp, gradient: 'from-cyan-400 to-blue-500' },
+        ].map(({ label, value, icon: Icon, gradient }) => (
+          <motion.div
+            key={label}
+            variants={cardVariants}
+            className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-5 shadow-sm flex flex-col justify-between"
+            style={{ boxShadow: '0 4px 20px -2px rgba(0,0,0,0.03)' }}
+            whileHover={{ 
+              y: -5, 
+              boxShadow: '0 15px 35px -10px rgba(255,98,0,0.12), 0 4px 12px -5px rgba(255,98,0,0.05)',
+              borderColor: 'rgba(255,98,0,0.25)' 
+            }}
+          >
+            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center mb-3 bg-gradient-to-br ${gradient} text-white shadow-md`}>
+              <Icon size={18} />
             </div>
-            <div className="text-xs text-[var(--text-muted)] mt-0.5">{label}</div>
-          </div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        {/* Signups chart */}
-        <div className="card p-5 lg:col-span-2">
-          <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="font-heading font-semibold text-[var(--text)]">User Signups</h3>
-              <p className="text-xs text-[var(--text-muted)]">Last 7 days</p>
+              <div className="font-heading font-extrabold text-2xl text-[var(--text)] tracking-tight">
+                {loading ? (
+                  <div className="h-6 w-16 skeleton my-1" />
+                ) : typeof value === 'number' ? (
+                  value.toLocaleString()
+                ) : (
+                  value ?? '–'
+                )}
+              </div>
+              <div className="text-[11px] font-bold tracking-wider text-[var(--text-secondary)] uppercase mt-1">
+                {label}
+              </div>
+            </div>
+          </motion.div>
+        ))}
+      </motion.div>
+
+      {/* Main Charts & Demographics Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        {/* Signups chart */}
+        <motion.div variants={cardVariants} className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 lg:col-span-2 shadow-sm">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="font-heading font-bold text-base text-[var(--text)]">User Registration</h3>
+              <p className="text-xs text-[var(--text-muted)] mt-0.5">Platform growth over the last 7 days</p>
             </div>
             {stats && <TrendChip v={stats.users.growth_pct} />}
           </div>
-          <ResponsiveContainer width="100%" height={140}>
-            <AreaChart data={signupData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-              <defs>
-                <linearGradient id="signupGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="#FF6200" stopOpacity={0.18} />
-                  <stop offset="95%" stopColor="#FF6200" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-              <XAxis dataKey="day" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} allowDecimals={false} />
-              <Tooltip contentStyle={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '0.75rem', fontSize: '0.75rem' }} />
-              <Area type="monotone" dataKey="users" stroke="#FF6200" fill="url(#signupGrad)" strokeWidth={2} dot={false} name="Signups" />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
+          <div className="h-[160px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={signupData} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="signupGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%"  stopColor="var(--primary)" stopOpacity={0.25} />
+                    <stop offset="95%" stopColor="var(--primary)" stopOpacity={0.01} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} opacity={0.6} />
+                <XAxis 
+                  dataKey="day" 
+                  tick={{ fontSize: 10, fill: 'var(--text-secondary)', fontWeight: 500 }} 
+                  axisLine={false} 
+                  tickLine={false} 
+                />
+                <YAxis 
+                  tick={{ fontSize: 10, fill: 'var(--text-secondary)', fontWeight: 500 }} 
+                  axisLine={false} 
+                  tickLine={false} 
+                  allowDecimals={false} 
+                />
+                <Tooltip 
+                  contentStyle={{ 
+                    background: 'var(--surface)', 
+                    border: '1px solid var(--border)', 
+                    borderRadius: '1rem', 
+                    boxShadow: '0 10px 30px -5px rgba(0,0,0,0.1)', 
+                    fontSize: '0.75rem',
+                    color: 'var(--text)'
+                  }} 
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="users" 
+                  stroke="var(--primary)" 
+                  fill="url(#signupGrad)" 
+                  strokeWidth={2.5} 
+                  dot={{ r: 4, stroke: 'var(--primary)', strokeWidth: 1.5, fill: 'var(--surface)' }} 
+                  activeDot={{ r: 6, stroke: 'var(--primary)', strokeWidth: 2, fill: 'var(--surface)' }}
+                  name="New Users" 
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </motion.div>
 
         {/* Role breakdown */}
-        <div className="card p-5">
-          <h3 className="font-heading font-semibold text-[var(--text)] mb-4">User Roles</h3>
-          {stats ? (
-            <div className="space-y-3">
-              {Object.entries(stats.users.role_breakdown).map(([role, cnt]) => {
-                const pct = Math.round(cnt / (stats.totals.users || 1) * 100);
-                const bar: Record<string, string> = { user: 'bg-blue-500', vendor: 'bg-emerald-500', admin: 'bg-red-500' };
+        <motion.div variants={cardVariants} className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 shadow-sm flex flex-col justify-between">
+          <div>
+            <h3 className="font-heading font-bold text-base text-[var(--text)] mb-1">User Demographics</h3>
+            <p className="text-xs text-[var(--text-muted)] mb-6">User role distribution analysis</p>
+            {stats ? (
+              <div className="space-y-4">
+                {Object.entries(stats.users.role_breakdown).map(([role, cnt]) => {
+                  const pct = Math.round(cnt / (stats.totals.users || 1) * 100);
+                  const barGradient: Record<string, string> = { 
+                    user: 'from-blue-400 to-indigo-500', 
+                    vendor: 'from-emerald-400 to-teal-500', 
+                    admin: 'from-rose-400 to-red-600' 
+                  };
+                  const bulletColor: Record<string, string> = {
+                    user: 'bg-blue-500',
+                    vendor: 'bg-emerald-500',
+                    admin: 'bg-red-500'
+                  };
+                  return (
+                    <div key={role} className="group">
+                      <div className="flex justify-between text-xs mb-1.5">
+                        <span className="capitalize font-semibold text-[var(--text)] flex items-center gap-1.5">
+                          <span className={`w-2 h-2 rounded-full ${bulletColor[role] ?? 'bg-gray-400'}`}></span>
+                          {role}s
+                        </span>
+                        <span className="text-[var(--text-secondary)] font-medium">{cnt} ({pct}%)</span>
+                      </div>
+                      <div className="h-2.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                        <motion.div 
+                          className={`h-full rounded-full bg-gradient-to-r ${barGradient[role] ?? 'from-gray-400 to-gray-500'}`} 
+                          initial={{ width: 0 }}
+                          animate={{ width: `${pct}%` }}
+                          transition={{ duration: 0.8, ease: 'easeOut' }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="space-y-4 py-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="space-y-2">
+                    <div className="flex justify-between">
+                      <div className="h-3 w-16 skeleton" />
+                      <div className="h-3 w-10 skeleton" />
+                    </div>
+                    <div className="h-2 w-full skeleton" />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </motion.div>
+      </div>
+
+      {/* Pending actions section */}
+      <h2 className="font-heading font-bold text-[var(--text)] text-base mb-4 flex items-center gap-2">
+        <Activity size={18} className="text-[var(--primary)]" /> Pending Tasks & Reviews
+      </h2>
+      <motion.div variants={containerVariants} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+        {pendingAlerts.map(({ label, count, to, gradient, icon: Icon }) => {
+          const hasActions = count > 0;
+          return (
+            <MotionLink 
+              key={to} 
+              to={to} 
+              variants={cardVariants}
+              className={`relative bg-[var(--surface)] border rounded-3xl p-5 shadow-sm overflow-hidden flex flex-col justify-between transition-all duration-300 ${
+                hasActions 
+                  ? 'border-red-200/60 dark:border-red-900/30' 
+                  : 'border-[var(--border)]'
+              }`}
+              style={{ boxShadow: '0 4px 20px -2px rgba(0,0,0,0.03)' }}
+              whileHover={{ 
+                y: -5, 
+                boxShadow: hasActions 
+                  ? '0 15px 35px -10px rgba(239,68,68,0.15), 0 4px 12px -5px rgba(239,68,68,0.08)'
+                  : '0 15px 35px -10px rgba(0,0,0,0.08), 0 4px 12px -5px rgba(0,0,0,0.03)',
+                borderColor: hasActions ? 'rgba(239,68,68,0.3)' : 'rgba(255,98,0,0.25)'
+              }}
+            >
+              {hasActions && (
+                <span className="absolute top-0 right-0 w-3.5 h-3.5 bg-red-500 rounded-bl-xl border-l border-b border-[var(--surface)]" />
+              )}
+              <div className="flex items-center justify-between mb-4">
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center bg-gradient-to-br ${gradient} text-white shadow-md`}>
+                  <Icon size={16} />
+                </div>
+                {hasActions ? (
+                  <span className="badge badge-danger badge-shine animate-pulse">{count} pending</span>
+                ) : (
+                  <span className="badge badge-neutral text-[10px]">0</span>
+                )}
+              </div>
+              <div>
+                <div className="font-heading font-extrabold text-2xl text-[var(--text)] tracking-tight">
+                  {count}
+                </div>
+                <div className="text-xs font-bold text-[var(--text-secondary)] mt-1 truncate">
+                  {label}
+                </div>
+              </div>
+            </MotionLink>
+          );
+        })}
+      </motion.div>
+
+      {/* Recents row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        {/* Recent users */}
+        <motion.div variants={cardVariants} className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="font-heading font-bold text-base text-[var(--text)]">Newly Joined Users</h3>
+              <p className="text-xs text-[var(--text-muted)] mt-0.5">Most recent platform signups</p>
+            </div>
+            <Link to="/admin/users" className="text-xs text-[var(--primary)] font-semibold flex items-center gap-1 hover:opacity-80 transition-opacity">
+              View all <ArrowUpRight size={13} />
+            </Link>
+          </div>
+          <div className="divide-y divide-[var(--border)]/60">
+            {stats ? (
+              (stats.recent_users ?? []).map((u) => {
+                const roleBadge: Record<string, string> = {
+                  admin: 'badge-danger',
+                  vendor: 'badge-accent',
+                  user: 'badge-primary'
+                };
+                const initialBg: Record<string, string> = {
+                  admin: 'from-red-400 to-rose-500',
+                  vendor: 'from-emerald-400 to-teal-500',
+                  user: 'from-blue-400 to-indigo-500'
+                };
                 return (
-                  <div key={role}>
-                    <div className="flex justify-between text-xs mb-1">
-                      <span className="capitalize font-medium text-[var(--text)]">{role}s</span>
-                      <span className="text-[var(--text-muted)]">{cnt} ({pct}%)</span>
+                  <div key={u.id} className="flex items-center gap-3 py-3.5 first:pt-0 last:pb-0 transition-colors hover:bg-gray-50/40 dark:hover:bg-gray-800/10 rounded-2xl px-2 -mx-2">
+                    <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${initialBg[u.role] ?? 'from-gray-400 to-gray-500'} flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-sm`}>
+                      {u.name[0]?.toUpperCase() ?? 'U'}
                     </div>
-                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                      <div className={`h-full rounded-full ${bar[role] ?? 'bg-gray-400'}`} style={{ width: `${pct}%` }} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-[var(--text)] truncate">{u.name}</p>
+                      <p className="text-xs text-[var(--text-muted)] truncate mt-0.5">{u.email}</p>
                     </div>
+                    <span className={`badge ${roleBadge[u.role] ?? 'badge-neutral'} capitalize`}>
+                      {u.role}
+                    </span>
                   </div>
                 );
-              })}
-            </div>
-          ) : <div className="text-center py-8 text-gray-400 text-sm">Loading…</div>}
-        </div>
-      </div>
-
-      {/* Pending alerts */}
-      <h2 className="font-heading font-semibold text-[var(--text)] text-base mb-3">Pending Actions</h2>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
-        {pendingAlerts.map(({ label, count, to, color, icon: Icon }) => (
-          <Link key={to} to={to} className="card card-hover p-4 flex items-center gap-3">
-            <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${color}`}><Icon size={16} /></div>
-            <div>
-              <div className="font-heading font-bold text-xl text-[var(--text)]">{count}</div>
-              <div className="text-xs text-[var(--text-muted)]">{label}</div>
-            </div>
-          </Link>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Recent users */}
-        <div className="card p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-heading font-semibold text-[var(--text)]">Recent Users</h3>
-            <Link to="/admin/users" className="text-xs text-primary font-medium hover:underline">View all</Link>
-          </div>
-          <div className="space-y-2">
-            {(stats?.recent_users ?? []).map((u) => (
-              <div key={u.id} className="flex items-center gap-3 py-1.5 border-b border-[var(--border)] last:border-0">
-                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm flex-shrink-0">
-                  {u.name[0]?.toUpperCase()}
+              })
+            ) : (
+              [1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="flex items-center gap-3 py-3.5 border-b border-[var(--border)]/60 last:border-0">
+                  <div className="w-9 h-9 rounded-full skeleton flex-shrink-0" />
+                  <div className="flex-1 space-y-1.5">
+                    <div className="h-3.5 w-1/3 skeleton" />
+                    <div className="h-2.5 w-1/2 skeleton" />
+                  </div>
+                  <div className="h-5 w-12 rounded-full skeleton" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-[var(--text)] truncate">{u.name}</p>
-                  <p className="text-xs text-[var(--text-muted)] truncate">{u.email}</p>
-                </div>
-                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full capitalize ${
-                  u.role === 'admin' ? 'bg-red-50 text-red-600' : u.role === 'vendor' ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'
-                }`}>{u.role}</span>
-              </div>
-            ))}
+              ))
+            )}
           </div>
-        </div>
+        </motion.div>
 
         {/* Recent vendors */}
-        <div className="card p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-heading font-semibold text-[var(--text)]">Recent Vendors</h3>
-            <Link to="/admin/vendors" className="text-xs text-primary font-medium hover:underline">View all</Link>
+        <motion.div variants={cardVariants} className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="font-heading font-bold text-base text-[var(--text)]">Recently Onboarded Vendors</h3>
+              <p className="text-xs text-[var(--text-muted)] mt-0.5">Businesses awaiting review or newly active</p>
+            </div>
+            <Link to="/admin/vendors" className="text-xs text-[var(--primary)] font-semibold flex items-center gap-1 hover:opacity-80 transition-opacity">
+              View all <ArrowUpRight size={13} />
+            </Link>
           </div>
-          <div className="space-y-2">
-            {(stats?.recent_vendors ?? []).map((v) => (
-              <div key={v.id} className="flex items-center gap-3 py-1.5 border-b border-[var(--border)] last:border-0">
-                <div className="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 font-bold text-sm flex-shrink-0">
-                  {v.business_name[0]?.toUpperCase()}
+          <div className="divide-y divide-[var(--border)]/60">
+            {stats ? (
+              (stats.recent_vendors ?? []).map((v) => {
+                const statusBadge: Record<string, string> = {
+                  approved: 'badge-accent',
+                  pending_review: 'badge-warning animate-pulse',
+                  rejected: 'badge-danger'
+                };
+                return (
+                  <div key={v.id} className="flex items-center gap-3 py-3.5 first:pt-0 last:pb-0 transition-colors hover:bg-gray-50/40 dark:hover:bg-gray-800/10 rounded-2xl px-2 -mx-2">
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-sm">
+                      {v.business_name[0]?.toUpperCase() ?? 'V'}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-[var(--text)] truncate">{v.business_name}</p>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className="text-xs text-[var(--text-muted)] truncate max-w-[150px] sm:max-w-none">{v.email}</span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0" />
+                        <span className="text-[10px] font-bold text-[var(--primary)] bg-orange-50 dark:bg-orange-950/20 px-1.5 py-0.5 rounded uppercase tracking-wider flex-shrink-0">{v.subscription_plan}</span>
+                      </div>
+                    </div>
+                    <span className={`badge ${statusBadge[v.status] ?? 'badge-neutral'}`}>
+                      {v.status.replace('_', ' ')}
+                    </span>
+                  </div>
+                );
+              })
+            ) : (
+              [1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="flex items-center gap-3 py-3.5 border-b border-[var(--border)]/60 last:border-0">
+                  <div className="w-9 h-9 rounded-full skeleton flex-shrink-0" />
+                  <div className="flex-1 space-y-1.5">
+                    <div className="h-3.5 w-1/3 skeleton" />
+                    <div className="h-2.5 w-1/2 skeleton" />
+                  </div>
+                  <div className="h-5 w-16 rounded-full skeleton" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-[var(--text)] truncate">{v.business_name}</p>
-                  <p className="text-xs text-[var(--text-muted)]">{v.subscription_plan}</p>
-                </div>
-                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                  v.status === 'approved' ? 'bg-emerald-50 text-emerald-600' :
-                  v.status === 'pending_review' ? 'bg-amber-50 text-amber-600' : 'bg-red-50 text-red-500'
-                }`}>{v.status.replace('_', ' ')}</span>
-              </div>
-            ))}
+              ))
+            )}
           </div>
-        </div>
+        </motion.div>
       </div>
 
-      {/* Broadcast */}
-      <div className="card p-5 mb-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Bell size={16} className="text-primary" />
-          <h3 className="font-heading font-semibold text-[var(--text)]">Broadcast Notification</h3>
+      {/* Broadcast Section */}
+      <motion.div variants={cardVariants} className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 shadow-sm mb-8">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-gradient-to-br from-orange-400 to-red-500 text-white shadow-md">
+            <Bell size={16} />
+          </div>
+          <div>
+            <h3 className="font-heading font-bold text-base text-[var(--text)]">Broadcast System Notification</h3>
+            <p className="text-xs text-[var(--text-muted)] mt-0.5">Send a real-time push broadcast to users</p>
+          </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
-          <input className="input" placeholder="Title" value={broadcast.title}
-            onChange={(e) => setBroadcast((b) => ({ ...b, title: e.target.value }))} />
-          <select className="input" value={broadcast.target}
-            onChange={(e) => setBroadcast((b) => ({ ...b, target: e.target.value }))}>
-            <option value="all">All Users</option>
-            <option value="user">Consumers only</option>
-            <option value="vendor">Vendors only</option>
-            <option value="admin">Admins only</option>
-          </select>
-          <button onClick={handleBroadcast} disabled={sending} className="btn btn-primary">
-            {sending ? 'Sending…' : 'Send Broadcast'}
-          </button>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[11px] font-bold text-[var(--text-secondary)] uppercase tracking-wider">Campaign Title</label>
+            <input className="input" placeholder="Enter notification title..." value={broadcast.title}
+              onChange={(e) => setBroadcast((b) => ({ ...b, title: e.target.value }))} />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[11px] font-bold text-[var(--text-secondary)] uppercase tracking-wider">Target Audience</label>
+            <select className="input" value={broadcast.target}
+              onChange={(e) => setBroadcast((b) => ({ ...b, target: e.target.value }))}>
+              <option value="all">All Registered Users</option>
+              <option value="user">Consumers Only</option>
+              <option value="vendor">Vendors Only</option>
+              <option value="admin">Platform Admins Only</option>
+            </select>
+          </div>
+          <div className="flex flex-col gap-1.5 justify-end">
+            <button 
+              onClick={handleBroadcast} 
+              disabled={sending} 
+              className="btn btn-primary w-full bg-gradient-to-r from-orange-500 to-[#FF6200] hover:from-orange-600 hover:to-[#E55800] text-white shadow-[0_4px_14px_rgba(255,98,0,0.3)] font-semibold transition-all duration-300"
+            >
+              {sending ? 'Processing...' : 'Dispatch Broadcast'}
+            </button>
+          </div>
         </div>
-        <textarea className="input w-full resize-none" rows={2} placeholder="Message body…"
-          value={broadcast.message}
-          onChange={(e) => setBroadcast((b) => ({ ...b, message: e.target.value }))} />
-      </div>
+        <div className="flex flex-col gap-1.5">
+          <label className="text-[11px] font-bold text-[var(--text-secondary)] uppercase tracking-wider">Message Content</label>
+          <textarea className="input w-full resize-none min-h-[80px]" rows={3} placeholder="Compose message body. Keep it concise for better visibility..."
+            value={broadcast.message}
+            onChange={(e) => setBroadcast((b) => ({ ...b, message: e.target.value }))} />
+        </div>
+      </motion.div>
 
-      {/* Quick nav */}
-      <h2 className="font-heading font-semibold text-[var(--text)] text-base mb-3">Management</h2>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      {/* Quick Nav Section */}
+      <h2 className="font-heading font-bold text-[var(--text)] text-base mb-4 flex items-center gap-2">
+        <Store size={18} className="text-[var(--primary)]" /> Platform Management Tools
+      </h2>
+      <motion.div variants={containerVariants} className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { to: '/admin/users',           icon: Users,       label: 'Users',           color: 'bg-blue-50 text-blue-700' },
-          { to: '/admin/vendors',         icon: Store,       label: 'Vendors',         color: 'bg-emerald-50 text-emerald-700' },
-          { to: '/admin/all-offers',      icon: Tag,         label: 'All Offers',      color: 'bg-amber-50 text-amber-700' },
-          { to: '/admin/spotlight',       icon: Star,        label: 'Spotlight',       color: 'bg-pink-50 text-pink-700' },
-          { to: '/admin/vendor-requests', icon: Store,       label: 'Vendor Requests', color: 'bg-orange-50 text-orange-700' },
-          { to: '/admin/support-tickets', icon: LifeBuoy,    label: 'Support',         color: 'bg-sky-50 text-sky-700' },
-          { to: '/admin/banner-ads',      icon: Image,       label: 'Banner Ads',      color: 'bg-violet-50 text-violet-700' },
-          { to: '/admin/fraud',           icon: ShieldAlert, label: 'Fraud Center',    color: 'bg-red-50 text-red-700' },
-        ].map(({ to, icon: Icon, label, color }) => (
-          <Link key={to} to={to} className="card card-hover p-4 flex items-center gap-3">
-            <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${color} flex-shrink-0`}><Icon size={16} /></div>
-            <span className="font-medium text-sm text-[var(--text)]">{label}</span>
-          </Link>
+          { to: '/admin/users',           icon: Users,       label: 'User Directory',       gradient: 'from-blue-500 to-indigo-600' },
+          { to: '/admin/vendors',         icon: Store,       label: 'Vendor Registry',      gradient: 'from-emerald-400 to-teal-600' },
+          { to: '/admin/all-offers',      icon: Tag,         label: 'Offer Management',     gradient: 'from-amber-400 to-orange-500' },
+          { to: '/admin/spotlight',       icon: Star,        label: 'Spotlight Content',    gradient: 'from-pink-400 to-rose-500' },
+          { to: '/admin/vendor-requests', icon: Store,       label: 'Vendor Applications',  gradient: 'from-orange-400 to-red-500' },
+          { to: '/admin/support-tickets', icon: LifeBuoy,    label: 'Help Desk Tickets',    gradient: 'from-sky-400 to-blue-500' },
+          { to: '/admin/banner-ads',      icon: Image,       label: 'Billboard Banners',    gradient: 'from-violet-400 to-purple-600' },
+          { to: '/admin/fraud',           icon: ShieldAlert, label: 'Risk & Fraud Center',  gradient: 'from-red-500 to-rose-600' },
+        ].map(({ to, icon: Icon, label, gradient }) => (
+          <MotionLink 
+            key={to} 
+            to={to} 
+            variants={cardVariants}
+            className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-5 shadow-sm flex items-center gap-4 group"
+            style={{ boxShadow: '0 4px 20px -2px rgba(0,0,0,0.03)' }}
+            whileHover={{ 
+              y: -5, 
+              boxShadow: '0 15px 35px -10px rgba(255,98,0,0.12), 0 4px 12px -5px rgba(255,98,0,0.05)',
+              borderColor: 'rgba(255,98,0,0.25)' 
+            }}
+          >
+            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center bg-gradient-to-br ${gradient} text-white shadow-md flex-shrink-0`}>
+              <Icon size={18} />
+            </div>
+            <span className="font-bold text-sm text-[var(--text)] leading-snug group-hover:text-[var(--primary)] transition-colors duration-200">{label}</span>
+          </MotionLink>
         ))}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
