@@ -13,6 +13,7 @@ import { useUserStore } from '../store/useUserStore';
 import { api, endpoints } from '../utils/api';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import type { Variants } from 'framer-motion';
 import toast from 'react-hot-toast';
 
 type Tab = 'overview' | 'saved' | 'subscribed';
@@ -54,7 +55,7 @@ const PLAN_BADGES: Record<string, string> = {
   growth: 'Popular', professional: 'Best Value',
 };
 
-const containerVariants = {
+const containerVariants: Variants = {
   hidden: { opacity: 0 },
   show: {
     opacity: 1,
@@ -64,7 +65,7 @@ const containerVariants = {
   }
 };
 
-const itemVariants = {
+const itemVariants: Variants = {
   hidden: { opacity: 0, y: 15 },
   show: { 
     opacity: 1, 
