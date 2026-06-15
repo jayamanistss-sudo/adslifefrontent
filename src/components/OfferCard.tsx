@@ -77,7 +77,7 @@ export default function OfferCard({ offer, onSave }: Props) {
 
   return (
     <motion.div
-      className="relative bg-white rounded-3xl overflow-hidden cursor-pointer group"
+      className="relative bg-white rounded-3xl overflow-hidden cursor-pointer group h-full flex flex-col"
       style={{ boxShadow: '0 4px 28px rgba(0,0,0,0.09)' }}
       onClick={handleCardClick}
       onHoverStart={() => setIsHovered(true)}
@@ -199,14 +199,14 @@ export default function OfferCard({ offer, onSave }: Props) {
           <Bookmark size={15} fill={saved ? 'currentColor' : 'none'} />
         </button>
 
-        {/* Spacer — shrinks as arch disappears on hover */}
-        <div style={{ height: isHovered ? 6 : 22, transition: 'height 0.38s ease' }} />
+        {/* Spacer — constant height to prevent layout shift */}
+        <div style={{ height: 22 }} />
       </div>
 
       {/* ══════════════════════════════════════════
           BOTTOM — white content section
          ══════════════════════════════════════════ */}
-      <div className="bg-white px-4 pt-4 pb-5">
+      <div className="bg-white px-4 pt-4 pb-5 flex-grow flex flex-col">
 
         {/* Business row */}
         <div className="flex items-center justify-between gap-2 mb-3">
@@ -271,7 +271,7 @@ export default function OfferCard({ offer, onSave }: Props) {
         )}
 
         {/* Stats footer — 3 equal columns with dividers */}
-        <div className="flex items-stretch pt-3 border-t border-gray-100">
+        <div className="flex items-stretch pt-3 border-t border-gray-100 mt-auto">
 
           <div className="flex-1 flex flex-col items-center gap-0.5 py-0.5">
             <div className="flex items-center gap-1">
