@@ -5,6 +5,7 @@ import {
   ArrowLeft, MapPin, Phone, Globe, Clock, Tag, Bookmark,
   Navigation, Copy, CheckCheck, Play, Pause, Star, Share2,
   Calendar, Store, ExternalLink, Bell, BellOff, ZoomIn, X, MessageCircle,
+  Flag, MessageSquare,
 } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -12,8 +13,47 @@ import { api, endpoints } from '../utils/api';
 import { useUserStore } from '../store/useUserStore';
 import { useSavedStore } from '../store/useSavedStore';
 import { useOffer } from '../powersync/queries';
-import type { Offer } from '../types';
+import type { Offer, OfferReview } from '../types';
 import toast from 'react-hot-toast';
+
+const REPORT_REASONS = [
+  { value: 'fake_offer', label: 'Fake offer' },
+  { value: 'misleading', label: 'Misleading details' },
+  { value: 'expired',    label: 'Expired but still showing' },
+  { value: 'scam',       label: 'Looks like a scam' },
+  { value: 'other',      label: 'Other' },
+];
+
+function StarRow({ value, size = 14 }: { value: number; size?: number }) {
+  return (
+    <div className="flex items-center gap-0.5">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <Star
+          key={i}
+          size={size}
+          className={i <= Math.round(value) ? 'text-warning' : 'text-gray-200'}
+          fill={i <= Math.round(value) ? 'currentColor' : 'none'}
+        />
+      ))}
+    </div>
+  );
+}
+
+function StarPicker({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  return (
+    <div className="flex items-center gap-1">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <button key={i} type="button" onClick={() => onChange(i)} className="p-0.5">
+          <Star
+            size={26}
+            className={i <= value ? 'text-warning' : 'text-gray-200'}
+            fill={i <= value ? 'currentColor' : 'none'}
+          />
+        </button>
+      ))}
+    </div>
+  );
+}
 
 function timeLeft(until?: string): string {
   if (!until) return '';
@@ -44,6 +84,18 @@ export default function OfferDetail() {
   const [following, setFollowing] = useState(false);
   const [followersCount, setFollowersCount] = useState(0);
   const [followLoading, setFollowLoading] = useState(false);
+
+  const [reviews, setReviews] = useState<OfferReview[]>([]);
+  const [avgRating, setAvgRating] = useState<number | null>(null);
+  const [reviewCount, setReviewCount] = useState(0);
+  const [myRating, setMyRating] = useState(0);
+  const [myComment, setMyComment] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
+
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState(REPORT_REASONS[0].value);
+  const [reportDetails, setReportDetails] = useState('');
+  const [submittingReport, setSubmittingReport] = useState(false);
 
   const mapRef        = useRef<HTMLDivElement>(null);
   const mapInst       = useRef<L.Map | null>(null);
@@ -78,6 +130,60 @@ export default function OfferDetail() {
     viewRecorded.current = numId;
     api.post(endpoints.offerView(numId)).catch(() => {});
   }, [id, offer]);
+
+  // Ratings & reviews are always fetched live — never short-circuited by the
+  // PowerSync local offer cache (psOffer), since average/count/myReview are
+  // server-computed and can't exist in the offline-synced offers table.
+  useEffect(() => {
+    if (!id) return;
+    api.get(endpoints.offerReviews(Number(id)))
+      .then((res) => {
+        if (!res.data.success) return;
+        setReviews(res.data.data as OfferReview[]);
+        setAvgRating(res.data.avgRating ?? null);
+        setReviewCount(res.data.reviewCount ?? 0);
+        if (res.data.myReview) {
+          setMyRating(res.data.myReview.rating);
+          setMyComment(res.data.myReview.comment ?? '');
+        }
+      })
+      .catch(() => {});
+  }, [id]);
+
+  const handleSubmitReview = async () => {
+    if (!user) { toast.error('Sign in to leave a rating'); navigate('/login'); return; }
+    if (!offer || myRating < 1) { toast.error('Pick a star rating first'); return; }
+    setSubmittingReview(true);
+    try {
+      const res = await api.post(endpoints.offerReviews(offer.id), { rating: myRating, comment: myComment || undefined });
+      toast.success('Thanks for your feedback!');
+      if (res.data.success) {
+        setReviews(res.data.data as OfferReview[]);
+        setAvgRating(res.data.avgRating ?? null);
+        setReviewCount(res.data.reviewCount ?? 0);
+      }
+    } catch {
+      toast.error('Could not submit your review');
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
+
+  const handleSubmitReport = async () => {
+    if (!user) { toast.error('Sign in to report an offer'); navigate('/login'); return; }
+    if (!offer) return;
+    setSubmittingReport(true);
+    try {
+      await api.post(endpoints.offerReport(offer.id), { reason: reportReason, details: reportDetails || undefined });
+      toast.success("Thanks, we'll review this");
+      setReportOpen(false);
+      setReportDetails('');
+    } catch {
+      toast.error('Could not submit your report');
+    } finally {
+      setSubmittingReport(false);
+    }
+  };
 
   // Load follow status when vendor changes — runs once per vendor, not on every sync
   useEffect(() => {
@@ -347,6 +453,13 @@ export default function OfferDetail() {
           >
             <Bookmark size={18} fill={saved ? 'currentColor' : 'none'} />
           </button>
+          <button
+            onClick={() => setReportOpen(true)}
+            title="Report this offer"
+            className="p-2.5 rounded-xl border border-gray-200 text-gray-500 hover:text-danger hover:border-danger transition-colors"
+          >
+            <Flag size={18} />
+          </button>
         </div>
       </div>
 
@@ -491,6 +604,75 @@ export default function OfferDetail() {
         </div>
       </motion.div>
 
+      {/* Ratings & Feedback */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.12 }}
+        className="bg-white rounded-2xl p-4 mb-4 shadow-sm border border-gray-100"
+      >
+        <h2 className="font-heading font-semibold text-gray-900 text-sm mb-3 flex items-center gap-2">
+          <MessageSquare size={15} className="text-primary" /> Ratings & Feedback
+        </h2>
+
+        <div className="flex items-center gap-3 mb-4">
+          <span className="font-heading font-bold text-gray-900 text-2xl">
+            {avgRating ? avgRating.toFixed(1) : '—'}
+          </span>
+          <div>
+            <StarRow value={avgRating ?? 0} />
+            <p className="text-xs text-gray-400 mt-0.5">
+              {reviewCount ? `${reviewCount} review${reviewCount > 1 ? 's' : ''}` : 'No reviews yet'}
+            </p>
+          </div>
+        </div>
+
+        {/* Leave / edit a rating */}
+        <div className="bg-gray-50 rounded-xl p-3 mb-4">
+          <p className="text-xs font-semibold text-gray-600 mb-2">
+            {myRating > 0 ? 'Your rating' : 'Rate this offer'}
+          </p>
+          <StarPicker value={myRating} onChange={setMyRating} />
+          <textarea
+            value={myComment}
+            onChange={(e) => setMyComment(e.target.value)}
+            placeholder="Share your experience (optional)"
+            rows={2}
+            className="w-full mt-2 text-sm bg-white border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-primary resize-none"
+          />
+          <button
+            onClick={handleSubmitReview}
+            disabled={submittingReview || myRating < 1}
+            className="mt-2 text-xs font-semibold bg-primary text-white px-4 py-2 rounded-lg disabled:opacity-50 hover:bg-primary-dark transition-colors"
+          >
+            {submittingReview ? 'Submitting…' : myRating > 0 ? 'Update Rating' : 'Submit Rating'}
+          </button>
+        </div>
+
+        {/* Review list */}
+        {reviews.length > 0 && (
+          <div className="space-y-3">
+            {reviews.map((r) => (
+              <div key={r.id} className="flex gap-3 pt-3 border-t border-gray-100 first:border-t-0 first:pt-0">
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 text-xs font-bold text-primary">
+                  {r.userAvatar
+                    ? <img src={r.userAvatar} alt="" className="w-8 h-8 rounded-full object-cover" />
+                    : r.userName?.[0]?.toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-gray-900">{r.userName}</span>
+                    <StarRow value={r.rating} size={11} />
+                  </div>
+                  {r.comment && <p className="text-xs text-gray-500 mt-1 leading-relaxed">{r.comment}</p>}
+                  <p className="text-[11px] text-gray-300 mt-1">{formatDate(r.createdAt)}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </motion.div>
+
       {/* Map */}
       {offer.vendorLat && offer.vendorLng && (
         <motion.div
@@ -576,6 +758,56 @@ export default function OfferDetail() {
             className="max-w-full max-h-[90vh] object-contain rounded-xl shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           />
+        </div>
+      )}
+
+      {/* Report modal */}
+      {reportOpen && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4"
+          onClick={() => setReportOpen(false)}
+        >
+          <div
+            className="bg-white rounded-2xl p-5 w-full max-w-sm shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-heading font-semibold text-gray-900 text-sm flex items-center gap-2">
+                <Flag size={15} className="text-danger" /> Report this offer
+              </h3>
+              <button onClick={() => setReportOpen(false)} className="text-gray-400 hover:text-gray-600">
+                <X size={18} />
+              </button>
+            </div>
+
+            <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Reason</label>
+            <select
+              value={reportReason}
+              onChange={(e) => setReportReason(e.target.value)}
+              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 mb-3 focus:outline-none focus:border-primary"
+            >
+              {REPORT_REASONS.map((r) => (
+                <option key={r.value} value={r.value}>{r.label}</option>
+              ))}
+            </select>
+
+            <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Details (optional)</label>
+            <textarea
+              value={reportDetails}
+              onChange={(e) => setReportDetails(e.target.value)}
+              placeholder="Tell us more…"
+              rows={3}
+              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 mb-4 focus:outline-none focus:border-primary resize-none"
+            />
+
+            <button
+              onClick={handleSubmitReport}
+              disabled={submittingReport}
+              className="w-full bg-danger text-white font-semibold text-sm py-2.5 rounded-xl disabled:opacity-50 hover:opacity-90 transition-opacity"
+            >
+              {submittingReport ? 'Submitting…' : 'Submit Report'}
+            </button>
+          </div>
         </div>
       )}
 

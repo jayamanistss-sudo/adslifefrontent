@@ -196,7 +196,7 @@ export default function Register() {
   const blur  = (key:Field) => setTouched(t=>({...t,[key]:true}));
   const isErr = (key:Field) => !!touched[key]&&!validators[key](form[key]);
   const allValid =
-    (['name','email','password'] as Field[]).every(k=>validators[k](form[k]))&&
+    (['name','email','password','phone','city'] as Field[]).every(k=>validators[k](form[k]))&&
     validators.phone(form.phone)&&validators.city(form.city);
 
   const handleSubmit = async (e:{preventDefault:()=>void}) => {

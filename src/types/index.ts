@@ -70,6 +70,18 @@ export interface Offer {
   vendorDescription?: string;
   distance?: number;
   score?: number;
+  avgRating?: number | null;
+  reviewCount?: number;
+  myReview?: { rating: number; comment: string | null } | null;
+}
+
+export interface OfferReview {
+  id: number;
+  rating: number;
+  comment: string | null;
+  createdAt: string;
+  userName: string;
+  userAvatar?: string | null;
 }
 
 export interface Badge {

@@ -78,6 +78,8 @@ export const endpoints = {
   offerCreate: "/offers",
   offerUpdate: (id: number) => `/offers/${id}`,
   offerDelete: (id: number) => `/offers/${id}`,
+  offerReviews: (id: number, page = 1) => `/offers/${id}/reviews?page=${page}`,
+  offerReport: (id: number) => `/offers/${id}/report`,
 
   // Vendor
   vendorDashboard: "/vendor/dashboard",

@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useQuery } from '@powersync/react';
 import type { Offer } from '../types';
 
@@ -59,7 +60,10 @@ export function useOffers(category?: string | null) {
        WHERE o.is_active = 1 ORDER BY o.created_at DESC`;
   const params = category ? [category] : [];
   const { data } = useQuery(sql, params);
-  return (data ?? []).map(mapOffer);
+  // Memoize on `data` (stable per PowerSync's internal query-diffing) — mapOffer()
+  // builds a fresh object each call, which would otherwise create a new array
+  // reference every render and break effects/memos downstream that depend on it.
+  return useMemo(() => (data ?? []).map(mapOffer), [data]);
 }
 
 // Single offer by id with vendor info
@@ -68,7 +72,7 @@ export function useOffer(id: number) {
     `SELECT o.*, ${VENDOR_COLS} FROM offers o ${VENDOR_JOIN} WHERE o.id = ?`,
     [id],
   );
-  return data?.[0] ? mapOffer(data[0]) : null;
+  return useMemo(() => (data?.[0] ? mapOffer(data[0]) : null), [data]);
 }
 
 // Featured offers with vendor info
@@ -77,7 +81,7 @@ export function useFeaturedOffers() {
     `SELECT o.*, ${VENDOR_COLS} FROM offers o ${VENDOR_JOIN}
      WHERE o.is_active = 1 AND o.is_featured = 1 ORDER BY o.created_at DESC`,
   );
-  return (data ?? []).map(mapOffer);
+  return useMemo(() => (data ?? []).map(mapOffer), [data]);
 }
 
 export interface Category { id: number; name: string; slug: string; icon: string; sort_order: number; }
