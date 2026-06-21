@@ -94,6 +94,23 @@ const vendors = new Table(
   { indexes: { by_status: ['status'] } },
 );
 
-export const AppSchema = new Schema({ offers, notifications, saved_offers, categories, vendors });
+const users = new Table(
+  {
+    name:           column.text,
+    email:          column.text,
+    phone:          column.text,
+    role:           column.text,
+    city:           column.text,
+    is_active:      column.integer,
+    login_count:    column.integer,
+    coins:          column.integer,
+    referral_code:  column.text,
+    created_at:     column.text,
+    last_login:     column.text,
+  },
+  { indexes: { by_role: ['role'], by_created: ['created_at'] } },
+);
+
+export const AppSchema = new Schema({ offers, notifications, saved_offers, categories, vendors, users });
 
 export type Database = (typeof AppSchema)['types'];

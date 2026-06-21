@@ -10,3 +10,5 @@ export const db = new PowerSyncDatabase({
   database: { dbFilename: 'adslife.db' },
   flags: { disableSSRWarning: true },
 });
+
+(globalThis as any).__psdb = db;

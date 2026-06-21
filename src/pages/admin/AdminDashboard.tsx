@@ -75,7 +75,7 @@ export default function AdminDashboard() {
     if (!broadcast.title || !broadcast.message) { toast.error('Title and message required'); return; }
     setSending(true);
     try {
-      const res = await api.post(endpoints.adminBroadcast, broadcast);
+      const res = await api.post(endpoints.adminBroadcast, { title: broadcast.title, body: broadcast.message });
       toast.success(res.data.message);
       setBroadcast({ title: '', message: '', target: 'all' });
     } catch { toast.error('Failed to send broadcast'); }
@@ -97,7 +97,7 @@ export default function AdminDashboard() {
       initial="hidden"
       animate="show"
       variants={containerVariants}
-      className="max-w-7xl mx-auto pb-12 px-4 sm:px-6"
+      className="max-w-7xxl mx-auto pb-12 px-4 sm:px-6"
     >
       {/* Page header */}
       <div className="page-header mb-8 mt-2 flex justify-between items-end">

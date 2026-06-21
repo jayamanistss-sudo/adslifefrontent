@@ -1,16 +1,17 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Eye, EyeOff, Mail, Lock, User, Phone, MapPin, Gift, CheckCircle2, XCircle } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, Phone, MapPin, Gift, CheckCircle2, XCircle, LocateFixed } from 'lucide-react';
 import { api, endpoints } from '../utils/api';
 import GoogleAuthButton from '../components/GoogleAuthButton';
+import { useGeolocation } from '../hooks/useGeolocation';
 import toast from 'react-hot-toast';
 
 /* ─── Validation ─────────────────────────────────────────── */
 const validators = {
   name:     (v:string) => /^[A-Za-z\s]{2,}$/.test(v.trim()),
   email:    (v:string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v),
-  phone:    (v:string) => v===''||/^\d{10}$/.test(v),
-  city:     (v:string) => v===''||/^[A-Za-z\s]{2,}$/.test(v.trim()),
+  phone:    (v:string) => /^\d{10}$/.test(v),
+  city:     (v:string) => /^[A-Za-z\s]{2,}$/.test(v.trim()),
   password: (v:string) => /^(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{6,}$/.test(v),
 };
 const messages = {
@@ -187,8 +188,27 @@ export default function Register() {
   const [touched,setTouched] = useState<Partial<Record<Field,boolean>>>({});
   const [showPw,setShowPw]   = useState(false);
   const [loading,setLoading] = useState(false);
+  const [detectingCity,setDetectingCity] = useState(false);
+  const cityEditedByUser = useRef(false);
+
+  const { lat, lng, loading: geoLoading, error: geoError } = useGeolocation();
+
+  // Auto-fill city from the browser's current location — only while the
+  // user hasn't typed their own city, so it never clobbers manual input.
+  useEffect(() => {
+    if (geoLoading || geoError || cityEditedByUser.current || form.city) return;
+    setDetectingCity(true);
+    api.get(endpoints.targetingResolve(String(lat), String(lng)))
+      .then((r) => {
+        const city = r.data?.data?.city;
+        if (city && !cityEditedByUser.current) setForm((f) => ({ ...f, city }));
+      })
+      .catch(() => {})
+      .finally(() => setDetectingCity(false));
+  }, [geoLoading, geoError, lat, lng]);
 
   const field = (key:Field,value:string) => {
+    if (key === 'city') cityEditedByUser.current = true;
     if(key==='phone') value=value.replace(/\D/g,'').slice(0,10);
     if(key==='name'||key==='city') value=value.replace(/[^A-Za-z\s]/g,'');
     setForm(f=>({...f,[key]:value}));
@@ -344,13 +364,17 @@ export default function Register() {
 
             <div className="r-f5 grid grid-cols-2 gap-3">
               <InputField id="phone" label="Phone" icon={Phone} error={isErr('phone')} touched={!!touched.phone}>
-                <input id="reg-phone" type="tel" inputMode="numeric" maxLength={10}
+                <input id="reg-phone" type="tel" inputMode="numeric" maxLength={10} required
                   className={inp} placeholder="10-digit number"
                   value={form.phone} onChange={e=>field('phone',e.target.value)} onBlur={()=>blur('phone')}/>
               </InputField>
               <InputField id="city" label="City" icon={MapPin} error={isErr('city')} touched={!!touched.city}>
-                <input id="reg-city" type="text" className={inp} placeholder="Your city"
+                <input id="reg-city" type="text" required className={inp} style={{paddingRight:28}}
+                  placeholder={detectingCity?'Detecting…':'Your city'}
                   value={form.city} onChange={e=>field('city',e.target.value)} onBlur={()=>blur('city')}/>
+                {detectingCity && (
+                  <LocateFixed size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 animate-pulse"/>
+                )}
               </InputField>
             </div>
 

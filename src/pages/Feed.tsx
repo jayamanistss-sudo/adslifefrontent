@@ -12,20 +12,21 @@ import { useOffers, useCategories, type Category } from '../powersync/queries';
 import { api, endpoints } from '../utils/api';
 import type { Offer } from '../types';
 
-const EXPLORE_CATEGORIES = [
-  { name: 'Electronics',   slug: 'electronics', gradient: 'from-blue-400 to-indigo-600',   emoji: '📱', image: './../assets/categories/electronics.png' },
-  { name: 'Fashion',       slug: 'fashion',     gradient: 'from-pink-400 to-rose-500',      emoji: '👗', image: './../assets/categories/fashion.png' },
-  { name: 'Luxury',        slug: 'luxury',      gradient: 'from-amber-400 to-yellow-600',   emoji: '💎', image: './../assets/categories/luxury.png' },
-  { name: 'Home Decor',    slug: 'home',        gradient: 'from-emerald-400 to-teal-600',   emoji: '🏡', image: './../assets/categories/home.png' },
-  { name: 'Beauty',        slug: 'beauty',      gradient: 'from-purple-400 to-violet-600',  emoji: '💄', image: './../assets/categories/beauty.png' },
-  { name: 'Groceries',     slug: 'grocery',     gradient: 'from-green-400 to-lime-500',     emoji: '🛒', image: './../assets/categories/grocery.png' },
-  { name: 'Sports',        slug: 'fitness',     gradient: 'from-orange-400 to-red-500',     emoji: '⚽', image: './../assets/categories/fitness.png' },
-  { name: 'Food & Dining', slug: 'food',        gradient: 'from-yellow-400 to-orange-500',  emoji: '🍽️', image: './../assets/categories/food.png' },
-  { name: 'Travel',        slug: 'travel',      gradient: 'from-sky-400 to-cyan-600',       emoji: '✈️', image: './../assets/categories/travel.png' },
-  { name: 'Education',     slug: 'education',   gradient: 'from-slate-400 to-slate-600',    emoji: '🎓', image: './../assets/categories/education.png' },
+// Categories themselves come live from the API/PowerSync (respecting is_active) —
+// this is just a visual palette cycled by index since the DB has no color column.
+const CATEGORY_GRADIENTS = [
+  'from-blue-400 to-indigo-600',
+  'from-pink-400 to-rose-500',
+  'from-amber-400 to-yellow-600',
+  'from-emerald-400 to-teal-600',
+  'from-purple-400 to-violet-600',
+  'from-green-400 to-lime-500',
+  'from-orange-400 to-red-500',
+  'from-yellow-400 to-orange-500',
+  'from-sky-400 to-cyan-600',
+  'from-slate-400 to-slate-600',
 ];
-
-const EXPLORE_SLUG_SET = new Set(EXPLORE_CATEGORIES.map(c => c.slug));
+const gradientFor = (i: number) => CATEGORY_GRADIENTS[i % CATEGORY_GRADIENTS.length];
 
 const PER_PAGE_OPTIONS = [10, 20, 50, 100];
 
@@ -70,9 +71,6 @@ export default function Feed() {
   const [apiOffers, setApiOffers]             = useState<Offer[]>([]);
   const [apiCategories, setApiCategories]     = useState<Category[]>([]);
   const [showAllCategories, setShowAllCategories] = useState(false);
-  const [imgErrors, setImgErrors]             = useState<Record<string, boolean>>({});
-
-  const handleImgError = (slug: string) => setImgErrors(prev => ({ ...prev, [slug]: true }));
 
   const psOffers     = useOffers(activeCategory);
   const psCategories = useCategories();
@@ -212,7 +210,7 @@ export default function Feed() {
           </button>
         </div>
         <div className="flex gap-6 overflow-x-auto pt-2 pb-3 scrollbar-hide -mx-1 px-1">
-          {EXPLORE_CATEGORIES.map((cat, i) => (
+          {categories.map((cat, i) => (
             <motion.button
               key={cat.slug}
               onClick={() => { setActiveCategory(activeCategory === cat.slug ? null : cat.slug); setPage(1); }}
@@ -221,17 +219,8 @@ export default function Feed() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.045, type: 'spring', stiffness: 300, damping: 24 }}
             >
-              <div className={`explore-cat-circle bg-gradient-to-br ${cat.gradient} ${activeCategory === cat.slug ? 'scale-110' : ''}`}>
-                {!imgErrors[cat.slug] ? (
-                  <img
-                    src={cat.image}
-                    alt={cat.name}
-                    className="w-full h-full object-cover rounded-full"
-                    onError={() => handleImgError(cat.slug)}
-                  />
-                ) : (
-                  <span className="text-3xl select-none drop-shadow-sm">{cat.emoji}</span>
-                )}
+              <div className={`explore-cat-circle bg-gradient-to-br ${gradientFor(i)} ${activeCategory === cat.slug ? 'scale-110' : ''}`}>
+                <CategoryIcon name={cat.icon} size={28} className="text-white/90" />
                 {activeCategory === cat.slug && (
                   <div className="absolute inset-0 rounded-full ring-[3px] ring-[var(--primary)] ring-offset-2 pointer-events-none" />
                 )}
@@ -247,11 +236,6 @@ export default function Feed() {
       {/* All Categories Modal */}
       <AnimatePresence>
         {showAllCategories && (() => {
-          const extraCats = categories.filter((c: Category) => !EXPLORE_SLUG_SET.has(c.slug));
-          const allCats = [
-            ...EXPLORE_CATEGORIES,
-            ...extraCats.map((c: Category) => ({ name: c.name, slug: c.slug, gradient: 'from-gray-300 to-slate-400', emoji: '🏷️', image: '' })),
-          ];
           return (
             <motion.div
               className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center"
@@ -281,7 +265,7 @@ export default function Feed() {
                 <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border)]">
                   <div>
                     <h3 className="font-heading font-bold text-[var(--text)] text-lg leading-none">All Categories</h3>
-                    <p className="text-xs text-[var(--text-muted)] mt-0.5">{allCats.length} categories available</p>
+                    <p className="text-xs text-[var(--text-muted)] mt-0.5">{categories.length} categories available</p>
                   </div>
                   <button
                     onClick={() => setShowAllCategories(false)}
@@ -307,7 +291,7 @@ export default function Feed() {
 
                 {/* Categories grid */}
                 <div className="px-6 py-5 grid grid-cols-4 sm:grid-cols-5 gap-4 max-h-[55vh] overflow-y-auto scrollbar-hide">
-                  {allCats.map((cat, i) => {
+                  {categories.map((cat, i) => {
                     const isActive = activeCategory === cat.slug;
                     return (
                       <motion.button
@@ -324,19 +308,8 @@ export default function Feed() {
                         whileHover={{ y: -3 }}
                         whileTap={{ scale: 0.93 }}
                       >
-                        <div className={`w-16 h-16 rounded-full bg-gradient-to-br ${cat.gradient} flex items-center justify-center shadow-md overflow-hidden transition-all duration-200 ${isActive ? 'ring-[3px] ring-[var(--primary)] ring-offset-2 scale-110 shadow-[0_6px_20px_rgba(255,98,0,0.35)]' : 'group-hover:shadow-lg group-hover:scale-105'}`}>
-                          {cat.image && !imgErrors[cat.slug] ? (
-                            <img
-                              src={cat.image}
-                              alt={cat.name}
-                              className="w-full h-full object-cover"
-                              onError={() => handleImgError(cat.slug)}
-                            />
-                          ) : cat.image === '' ? (
-                            <CategoryIcon name={cat.slug} size={28} className="text-white/90" />
-                          ) : (
-                            <span className="text-2xl">{cat.emoji}</span>
-                          )}
+                        <div className={`w-16 h-16 rounded-full bg-gradient-to-br ${gradientFor(i)} flex items-center justify-center shadow-md overflow-hidden transition-all duration-200 ${isActive ? 'ring-[3px] ring-[var(--primary)] ring-offset-2 scale-110 shadow-[0_6px_20px_rgba(255,98,0,0.35)]' : 'group-hover:shadow-lg group-hover:scale-105'}`}>
+                          <CategoryIcon name={cat.icon} size={28} className="text-white/90" />
                         </div>
                         <span className={`text-[11px] font-medium text-center leading-tight transition-colors ${isActive ? 'text-[var(--primary)] font-semibold' : 'text-[var(--text-secondary)] group-hover:text-[var(--text)]'}`}>
                           {cat.name}

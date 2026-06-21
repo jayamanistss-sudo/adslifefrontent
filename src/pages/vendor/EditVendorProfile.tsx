@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Store, Upload, X, MapPin, Search, LocateFixed } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import BackButton from '../../components/BackButton';
 import { api, endpoints } from '../../utils/api';
 import toast from 'react-hot-toast';
@@ -19,6 +20,7 @@ interface VendorProfile {
 export default function EditVendorProfile() {
   const [profile, setProfile]   = useState<VendorProfile | null>(null);
   const [loading, setLoading]   = useState(true);
+  const [error, setError]       = useState<string | null>(null);
   const [saving, setSaving]     = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -53,6 +55,8 @@ export default function EditVendorProfile() {
           lng:           p.lng != null   ? String(p.lng) : '',
         });
       }
+    }).catch((err) => {
+      setError(err?.response?.data?.error ?? 'Failed to load profile');
     }).finally(() => setLoading(false));
   }, []);
 
@@ -157,6 +161,33 @@ export default function EditVendorProfile() {
       <div className="max-w-2xxl pb-6">
         <BackButton to="/vendor/dashboard" />
         <div className="space-y-3">{[1,2,3].map((i) => <div key={i} className="skeleton h-16 rounded-xl" />)}</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    const isNoVendor = error.toLowerCase().includes('not found') || error.toLowerCase().includes('profile');
+    return (
+      <div className="max-w-2xxl pb-6">
+        <BackButton to="/vendor/dashboard" />
+        <div className="card p-10 text-center text-gray-500 space-y-4">
+          <div className="text-5xl">{isNoVendor ? '🏪' : '⚠️'}</div>
+          <p className="font-semibold text-gray-700 text-lg">
+            {isNoVendor ? "You don't have a vendor account yet" : error}
+          </p>
+          {isNoVendor && (
+            <div className="flex items-center justify-center gap-3 pt-2">
+              <Link to="/become-vendor"
+                className="inline-flex items-center gap-2 bg-primary text-white px-5 py-2.5 rounded-xl font-semibold hover:opacity-90 text-sm">
+                <Store size={16} /> Apply as Vendor
+              </Link>
+              <Link to="/feed"
+                className="inline-flex items-center gap-2 border border-gray-200 text-gray-600 px-5 py-2.5 rounded-xl font-semibold hover:bg-gray-50 text-sm">
+                Back to Feed
+              </Link>
+            </div>
+          )}
+        </div>
       </div>
     );
   }

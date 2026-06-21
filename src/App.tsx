@@ -39,6 +39,8 @@ import { useUserStore } from "./store/useUserStore";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import BecomeVendor from "./pages/BecomeVendor";
+import Terms from "./pages/Terms";
+import Privacy from "./pages/Privacy";
 import Feed from "./pages/Feed";
 import Leaderboard from "./pages/Leaderboard";
 import Profile from "./pages/Profile";
@@ -120,6 +122,8 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/become-vendor" element={<BecomeVendor />} />
+          <Route path="/terms" element={<Terms />} />
+          <Route path="/privacy" element={<Privacy />} />
 
           {/* Public routes — no login needed */}
           <Route

@@ -178,6 +178,9 @@ export const endpoints = {
   // Upload
   uploadImage: "/upload/image",
 
+  // Push notifications
+  saveToken: "/notifications/save-token",
+
   // Site settings
   siteSettings: "/admin/site-settings",
 

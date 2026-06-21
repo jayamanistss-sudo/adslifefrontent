@@ -52,9 +52,9 @@ export default function AdminSiteSettings() {
     if (!file) return;
     setUploading(true);
     const fd = new FormData();
-    fd.append("file", file);
+    fd.append("image", file);
     try {
-      const res = await api.post("/upload/image.php", fd, { headers: { "Content-Type": "multipart/form-data" } });
+      const res = await api.post(endpoints.uploadImage, fd, { headers: { "Content-Type": "multipart/form-data" } });
       if (res.data.success) {
         set("site_logo_url", res.data.data.url);
         toast.success("Logo uploaded");
