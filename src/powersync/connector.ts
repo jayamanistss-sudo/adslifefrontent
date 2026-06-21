@@ -55,7 +55,7 @@ export class AdslifeConnector implements PowerSyncBackendConnector {
         if (op.table === 'notifications') {
           const isMarkRead = op.opData?.is_read === 1;
           if (isMarkRead) {
-            await api.post(endpoints.notificationsMarkRead, { id: op.id });
+            await api.put(endpoints.notificationsMarkRead, { id: op.id });
           }
         }
         if (op.table === 'saved_offers') {

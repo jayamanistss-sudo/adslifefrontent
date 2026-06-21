@@ -93,7 +93,7 @@ export default function NotificationPanel() {
     if (!n.isRead) {
       markRead(n.id);
       try {
-        await api.post(endpoints.notificationsMarkRead, { id: n.id });
+        await api.put(endpoints.notificationsMarkRead, { id: n.id });
       } catch {
         // revert local state if DB update failed
         fetchUnread();
@@ -105,7 +105,7 @@ export default function NotificationPanel() {
   const handleMarkAllRead = async () => {
     markAllRead();
     try {
-      await api.post(endpoints.notificationsMarkRead, {});
+      await api.put(endpoints.notificationsMarkRead, {});
     } catch {
       fetchUnread();
     }
