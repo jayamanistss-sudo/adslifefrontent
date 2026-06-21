@@ -94,6 +94,7 @@ export const endpoints = {
 
   // Vendor apply
   vendorApplySubmit: "/vendor-apply/submit",
+  vendorApplyStatus: "/vendor-apply/status",
 
   // Analytics
   roi: (offerId: number, days = 30) => `/analytics/roi?offer_id=${offerId}&days=${days}`,

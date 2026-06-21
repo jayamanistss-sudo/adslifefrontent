@@ -770,13 +770,22 @@ export default function Profile() {
   const [followedLoading, setFollowedLoading] = useState(false);
   const [referral, setReferral] = useState<{ referral_code: string; coins: number; referral_count: number } | null>(null);
   const [refCopied, setRefCopied] = useState(false);
+  const [vendorApp, setVendorApp] = useState<{ status: string; business_name: string } | null>(null);
   const navigate = useNavigate();
+
+  const refreshVendorAppStatus = () => {
+    if (!user) return;
+    api.get(endpoints.vendorApplyStatus).then((r) => {
+      if (r.data.success) setVendorApp(r.data.data);
+    }).catch(() => {});
+  };
 
   useEffect(() => {
     if (user) {
       api.get(endpoints.referralMy).then((r) => {
         if (r.data.success) setReferral(r.data.data);
       }).catch(() => {});
+      refreshVendorAppStatus();
     }
     if (tab === 'saved' && user) {
       setSavedLoading(true);
@@ -803,6 +812,7 @@ export default function Profile() {
   const handleVendorSuccess = () => {
     setShowVendorModal(false);
     toast.success('Application submitted! We\'ll notify you once our team reviews it.');
+    refreshVendorAppStatus();
   };
 
   const copyReferralLink = () => {
@@ -836,8 +846,8 @@ export default function Profile() {
       variants={containerVariants}
       className="max-w-4xl mx-auto pb-20 sm:pb-6 px-4"
     >
-      {/* Become a Vendor CTA */}
-      {user.role === 'user' && (
+      {/* Become a Vendor CTA / Application Status */}
+      {user.role === 'user' && !vendorApp && (
         <motion.button
           onClick={() => setShowVendorModal(true)}
           variants={itemVariants}
@@ -855,6 +865,44 @@ export default function Profile() {
             </div>
           </div>
           <ChevronRight size={20} className="text-white/80" />
+        </motion.button>
+      )}
+
+      {user.role === 'user' && vendorApp?.status === 'pending' && (
+        <motion.div
+          variants={itemVariants}
+          className="w-full flex items-center gap-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-900/30 rounded-3xl p-5 mb-6"
+        >
+          <div className="w-11 h-11 rounded-2xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center flex-shrink-0">
+            <Store size={22} className="text-amber-600" />
+          </div>
+          <div className="text-left">
+            <p className="font-heading font-bold text-base text-[var(--text)]">Vendor Application Under Review</p>
+            <p className="text-[var(--text-secondary)] text-xs mt-0.5 font-medium">
+              {vendorApp.business_name} — our team will notify you once it's reviewed (24–48 hours).
+            </p>
+          </div>
+        </motion.div>
+      )}
+
+      {user.role === 'user' && vendorApp?.status === 'rejected' && (
+        <motion.button
+          onClick={() => setShowVendorModal(true)}
+          variants={itemVariants}
+          whileHover={{ y: -4 }}
+          whileTap={{ scale: 0.99 }}
+          className="w-full flex items-center justify-between bg-red-50 dark:bg-red-950/20 border border-red-200/60 dark:border-red-900/30 rounded-3xl p-5 mb-6 transition-all duration-300 cursor-pointer"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-11 h-11 rounded-2xl bg-red-100 dark:bg-red-900/40 flex items-center justify-center flex-shrink-0">
+              <Store size={22} className="text-red-500" />
+            </div>
+            <div className="text-left">
+              <p className="font-heading font-bold text-base text-[var(--text)]">Vendor Application Not Approved</p>
+              <p className="text-[var(--text-secondary)] text-xs mt-0.5 font-medium">{vendorApp.business_name} — tap to update details and reapply</p>
+            </div>
+          </div>
+          <ChevronRight size={20} className="text-[var(--text-secondary)]" />
         </motion.button>
       )}
 
