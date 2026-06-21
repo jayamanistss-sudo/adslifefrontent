@@ -4,7 +4,7 @@ import {
   LogOut, Store, ChevronRight, X, CheckCircle,
   MapPin, Search, LocateFixed, Upload, ImagePlus,
   ChevronLeft, Building2, FileText, Camera, Layers, Check,
-  Bookmark, Bell, BellOff, ExternalLink, Tag, Copy, Gift, MessageCircle,
+  Bookmark, Bell, BellOff, ExternalLink, Tag, Copy, Gift, MessageCircle, Info, Coins
 } from 'lucide-react';
 import CategoryIcon from '../components/CategoryIcon';
 import L from 'leaflet';
@@ -12,6 +12,8 @@ import 'leaflet/dist/leaflet.css';
 import { useUserStore } from '../store/useUserStore';
 import { api, endpoints } from '../utils/api';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import type { Variants } from 'framer-motion';
 import toast from 'react-hot-toast';
 
 type Tab = 'overview' | 'saved' | 'subscribed';
@@ -53,6 +55,25 @@ const PLAN_BADGES: Record<string, string> = {
   growth: 'Popular', professional: 'Best Value',
 };
 
+const containerVariants: Variants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.04
+    }
+  }
+};
+
+const itemVariants: Variants = {
+  hidden: { opacity: 0, y: 15 },
+  show: { 
+    opacity: 1, 
+    y: 0, 
+    transition: { type: 'spring', stiffness: 280, damping: 22 } 
+  }
+};
+
 function Step4({ selectedPlanId, onSelect, plans, loadingPlans }: {
   readonly selectedPlanId: number | null;
   readonly onSelect: (plan: Plan) => void;
@@ -60,39 +81,40 @@ function Step4({ selectedPlanId, onSelect, plans, loadingPlans }: {
   readonly loadingPlans: boolean;
 }) {
   if (loadingPlans) return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-      {[1,2,3,4].map((i) => <div key={i} className="skeleton h-40 rounded-xl" />)}
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {[1,2,3,4].map((i) => <div key={i} className="skeleton h-40 rounded-3xl" />)}
     </div>
   );
   return (
-    <div className="space-y-3">
-      <p className="text-sm text-[var(--text-secondary)]">Choose a plan for your vendor account. You can upgrade anytime.</p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+    <div className="space-y-4">
+      <p className="text-xs text-[var(--text-secondary)] font-medium">Choose an advertising plan to start listing your exclusive deals.</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {plans.map((plan) => (
           <button
             key={plan.id}
             type="button"
             onClick={() => onSelect(plan)}
-            className={`relative text-left p-4 rounded-xl border-2 transition-all ${PLAN_COLORS[plan.slug] ?? 'border-[var(--border)]'} ${
+            className={`relative text-left p-5 rounded-3xl border-2 transition-all duration-300 ${PLAN_COLORS[plan.slug] ?? 'border-[var(--border)]'} ${
               selectedPlanId === plan.id
-                ? 'ring-2 ring-[var(--primary)] bg-[var(--primary-light)]'
-                : 'bg-[var(--surface)] hover:bg-[var(--surface-2)]'
+                ? 'ring-2 ring-[var(--primary)] bg-[var(--primary-light)] border-[var(--primary)]'
+                : 'bg-[var(--surface)] hover:bg-[var(--surface-2)] border-[var(--border)] hover:border-gray-300'
             }`}
           >
             {PLAN_BADGES[plan.slug] && (
-              <span className="absolute -top-2.5 left-3 badge badge-primary text-[10px]">{PLAN_BADGES[plan.slug]}</span>
+              <span className="absolute -top-2.5 left-4 badge badge-primary text-[9px] uppercase tracking-wider font-extrabold px-2.5 py-1 shadow-sm">{PLAN_BADGES[plan.slug]}</span>
             )}
             <div className="flex items-start justify-between mb-2">
               <span className="font-heading font-bold text-[var(--text)] text-sm">{plan.name}</span>
-              {selectedPlanId === plan.id && <Check size={16} className="text-[var(--primary)]" />}
+              {selectedPlanId === plan.id && <Check size={16} className="text-[var(--primary)] flex-shrink-0" />}
             </div>
-            <div className="font-heading font-bold text-lg text-[var(--text)] mb-2">
+            <div className="font-heading font-extrabold text-2xl text-[var(--text)] mb-3">
               {plan.price === 0 ? 'Free' : `₹${plan.price.toLocaleString()}/mo`}
             </div>
-            <ul className="space-y-1">
+            <ul className="space-y-1.5">
               {plan.features.slice(0, 3).map((f) => (
-                <li key={f} className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)]">
-                  <Check size={10} className="text-emerald-500 flex-shrink-0" />{f}
+                <li key={f} className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
+                  <Check size={11} className="text-emerald-500 flex-shrink-0" />
+                  <span className="truncate">{f}</span>
                 </li>
               ))}
             </ul>
@@ -124,35 +146,35 @@ function Step1({ form, update, categories }: {
   readonly categories: VendorCategory[];
 }) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div>
-        <label className="modal-label">Business Name *</label>
+        <label className="modal-label font-bold text-[11px] uppercase tracking-wider text-[var(--text-secondary)]">Business Name *</label>
         <input
           type="text"
           value={form.business_name}
           onChange={(e) => update('business_name', e.target.value)}
           placeholder="e.g. Spice Garden Restaurant"
-          className="search-input"
+          className="input mt-1.5"
         />
       </div>
 
       <div>
-        <label className="modal-label">Category *</label>
+        <label className="modal-label font-bold text-[11px] uppercase tracking-wider text-[var(--text-secondary)]">Category *</label>
         {categories.length === 0 ? (
-          <div className="grid grid-cols-3 gap-2">
-            {[1,2,3,4,5,6].map((i) => <div key={i} className="skeleton h-10 rounded-xl" />)}
+          <div className="grid grid-cols-3 gap-2.5 mt-1.5">
+            {[1,2,3,4,5,6].map((i) => <div key={i} className="skeleton h-12 rounded-2xl" />)}
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-2.5 mt-1.5">
             {categories.map((c) => (
               <button
                 key={c.slug}
                 type="button"
                 onClick={() => update('category', c.slug)}
-                className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border text-sm font-medium transition-all cursor-pointer ${
+                className={`flex items-center justify-center gap-2 px-3 py-3 rounded-2xl border text-sm font-semibold transition-all duration-200 cursor-pointer ${
                   form.category === c.slug
-                    ? 'bg-[var(--primary)] border-[var(--primary)] text-white shadow-sm'
-                    : 'border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] bg-[var(--surface)]'
+                    ? 'bg-gradient-to-r from-[var(--primary)] to-orange-500 border-transparent text-white shadow-md shadow-primary/10'
+                    : 'border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] bg-[var(--surface)] hover:bg-[var(--surface-2)]'
                 }`}
               >
                 <CategoryIcon name={c.icon} size={15} />
@@ -164,13 +186,13 @@ function Step1({ form, update, categories }: {
       </div>
 
       <div>
-        <label className="modal-label">Description</label>
+        <label className="modal-label font-bold text-[11px] uppercase tracking-wider text-[var(--text-secondary)]">Description</label>
         <textarea
           rows={3}
           value={form.description}
           onChange={(e) => update('description', e.target.value)}
           placeholder="Tell customers what makes your shop special..."
-          className="search-input resize-none"
+          className="input mt-1.5 resize-none"
         />
       </div>
     </div>
@@ -191,10 +213,10 @@ function Step2({ form, update, updateLatLng }: {
 
   // Marker icon
   const pinIcon = L.divIcon({
-    html: `<div style="width:32px;height:32px;background:#FF6200;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3)"></div>`,
+    html: `<div style="width:28px;height:28px;background:#FF6200;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3)"></div>`,
     className: '',
-    iconSize:   [32, 32],
-    iconAnchor: [16, 32],
+    iconSize:   [28, 28],
+    iconAnchor: [14, 28],
   });
 
   const placeMarker = useCallback((lat: number, lng: number) => {
@@ -267,31 +289,31 @@ function Step2({ form, update, updateLatLng }: {
     <div className="space-y-4">
       {/* Search bar */}
       <div>
-        <label className="modal-label">Search your shop location</label>
-        <div className="flex gap-2">
+        <label className="modal-label font-bold text-[11px] uppercase tracking-wider text-[var(--text-secondary)]">Search your shop location</label>
+        <div className="flex gap-2 mt-1.5">
           <div className="relative flex-1">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none" />
+            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none" />
             <input
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); searchAddress(); } }}
               placeholder="Anna Salai, Chennai..."
-              className="search-input pl-9"
+              className="input pl-10"
             />
           </div>
           <button
             type="button"
             onClick={searchAddress}
             disabled={searching}
-            className="px-4 py-2.5 bg-[var(--primary)] hover:bg-[var(--primary-dark)] text-white rounded-xl text-sm font-semibold transition-colors disabled:opacity-60 flex-shrink-0 cursor-pointer"
+            className="px-4 py-2.5 bg-[var(--primary)] hover:bg-[var(--primary-dark)] text-white rounded-2xl text-xs font-bold transition-colors disabled:opacity-60 flex-shrink-0 cursor-pointer shadow-sm shadow-primary/10"
           >
             {searching ? '...' : 'Search'}
           </button>
           <button
             type="button"
             onClick={useMyLocation}
-            className="p-2.5 border border-[var(--border)] rounded-xl text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] bg-[var(--surface)] transition-colors flex-shrink-0 cursor-pointer"
+            className="p-2.5 border border-[var(--border)] rounded-2xl text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] bg-[var(--surface)] hover:bg-[var(--surface-2)] transition-colors flex-shrink-0 cursor-pointer"
             title="Use my location"
           >
             <LocateFixed size={16} />
@@ -300,45 +322,48 @@ function Step2({ form, update, updateLatLng }: {
       </div>
 
       {/* Map */}
-      <div className="relative rounded-xl overflow-hidden border border-[var(--border)]">
-        <div ref={mapRef} className="h-60 w-full" />
-        <div className="absolute bottom-2 left-2 bg-[var(--surface)]/90 backdrop-blur-sm rounded-lg px-3 py-1.5 text-xs text-[var(--text-secondary)] border border-[var(--border)] shadow pointer-events-none">
-          Click on the map to pin your exact location
+      <div className="relative rounded-3xl overflow-hidden border border-[var(--border)] shadow-sm">
+        <div ref={mapRef} className="h-56 w-full" />
+        <div className="absolute bottom-2.5 left-2.5 bg-[var(--surface)]/90 backdrop-blur-sm rounded-xl px-3 py-2 text-[10px] font-semibold text-[var(--text-secondary)] border border-[var(--border)] shadow-md pointer-events-none flex items-center gap-1.5">
+          <Info size={11} className="text-[var(--primary)]" />
+          <span>Click on the map to pin your exact location</span>
         </div>
       </div>
 
       {/* Coordinates display */}
       {form.lat && form.lng && (
-        <div className="flex items-center gap-2 bg-[var(--accent)]/5 border border-[var(--accent)]/20 rounded-xl px-3 py-2">
-          <MapPin size={14} className="text-[var(--accent)] flex-shrink-0" />
-          <span className="text-xs text-[var(--text-secondary)] font-mono">
+        <div className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200/50 dark:border-emerald-900/30 rounded-2xl px-4 py-2.5">
+          <MapPin size={14} className="text-emerald-500 flex-shrink-0" />
+          <span className="text-xs text-[var(--text-secondary)] font-mono font-semibold">
             {form.lat.toFixed(6)}, {form.lng.toFixed(6)}
           </span>
-          <CheckCircle size={14} className="text-[var(--accent)] ml-auto flex-shrink-0" />
+          <CheckCircle size={14} className="text-emerald-500 ml-auto flex-shrink-0" />
         </div>
       )}
 
       {/* Address */}
-      <div>
-        <label className="modal-label">Shop Address</label>
-        <input
-          type="text"
-          value={form.address}
-          onChange={(e) => update('address', e.target.value)}
-          placeholder="Full address shown on your profile"
-          className="search-input"
-        />
-      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label className="modal-label font-bold text-[11px] uppercase tracking-wider text-[var(--text-secondary)]">Shop Address</label>
+          <input
+            type="text"
+            value={form.address}
+            onChange={(e) => update('address', e.target.value)}
+            placeholder="Full address shown on your profile"
+            className="input mt-1.5"
+          />
+        </div>
 
-      <div>
-        <label className="modal-label">City</label>
-        <input
-          type="text"
-          value={form.city}
-          onChange={(e) => update('city', e.target.value)}
-          placeholder="e.g. Chennai"
-          className="search-input"
-        />
+        <div>
+          <label className="modal-label font-bold text-[11px] uppercase tracking-wider text-[var(--text-secondary)]">City</label>
+          <input
+            type="text"
+            value={form.city}
+            onChange={(e) => update('city', e.target.value)}
+            placeholder="e.g. Chennai"
+            className="input mt-1.5"
+          />
+        </div>
       </div>
     </div>
   );
@@ -374,21 +399,21 @@ function Step3({ form, update }: {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Business photo */}
       <div>
-        <label className="modal-label">Business Photo / Logo</label>
-        <div className="flex items-center gap-4">
+        <label className="modal-label font-bold text-[11px] uppercase tracking-wider text-[var(--text-secondary)]">Business Photo / Logo</label>
+        <div className="flex items-center gap-4 mt-2">
           <div
-            className="w-24 h-24 rounded-2xl border-2 border-dashed border-[var(--border)] flex items-center justify-center overflow-hidden bg-[var(--surface-2)] cursor-pointer hover:border-[var(--primary)] transition-colors flex-shrink-0 shadow-sm"
+            className="w-20 h-20 rounded-2xl border-2 border-dashed border-[var(--border)] flex items-center justify-center overflow-hidden bg-[var(--surface-2)] cursor-pointer hover:border-[var(--primary)] transition-all flex-shrink-0 shadow-sm"
             onClick={() => fileRef.current?.click()}
           >
             {form.logo_url ? (
               <img src={form.logo_url} alt="Logo" className="w-full h-full object-cover" />
             ) : (
               <div className="flex flex-col items-center gap-1 text-[var(--text-muted)]">
-                <ImagePlus size={22} />
-                <span className="text-[10px]">Add Photo</span>
+                <ImagePlus size={20} />
+                <span className="text-[9px] font-bold uppercase tracking-wider">Add Photo</span>
               </div>
             )}
           </div>
@@ -397,12 +422,12 @@ function Step3({ form, update }: {
               type="button"
               onClick={() => fileRef.current?.click()}
               disabled={uploading}
-              className="flex items-center gap-2 px-4 py-2.5 border border-[var(--border)] rounded-xl text-sm font-medium text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] hover:bg-[var(--surface-2)] transition-colors disabled:opacity-50 cursor-pointer"
+              className="flex items-center gap-2 px-3.5 py-2 border border-[var(--border)] rounded-2xl text-xs font-bold text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] hover:bg-[var(--surface-2)] transition-colors disabled:opacity-50 cursor-pointer"
             >
-              {uploading ? <Upload size={15} className="animate-bounce" /> : <Camera size={15} />}
+              {uploading ? <Upload size={14} className="animate-bounce" /> : <Camera size={14} />}
               {uploading ? 'Uploading...' : 'Choose Photo'}
             </button>
-            <p className="text-xs text-[var(--text-muted)] mt-1.5">JPG, PNG or WebP · Max 5 MB</p>
+            <p className="text-[10px] text-[var(--text-muted)] mt-1.5">JPG, PNG or WebP · Max 5 MB</p>
           </div>
           <input
             ref={fileRef}
@@ -414,13 +439,13 @@ function Step3({ form, update }: {
         </div>
       </div>
 
-      <hr className="border-[var(--border)]" />
+      <hr className="border-[var(--border)] opacity-60" />
 
       {/* GST Number */}
       <div>
-        <label className="modal-label">
+        <label className="modal-label font-bold text-[11px] uppercase tracking-wider text-[var(--text-secondary)]">
           GST Number
-          <span className="text-[var(--text-muted)] font-normal ml-1 text-xs">(optional)</span>
+          <span className="text-[var(--text-muted)] font-normal ml-1 text-xs lowercase">(optional)</span>
         </label>
         <input
           type="text"
@@ -428,41 +453,42 @@ function Step3({ form, update }: {
           onChange={(e) => update('gst_number', e.target.value.toUpperCase())}
           placeholder="22AAAAA0000A1Z5"
           maxLength={15}
-          className="search-input font-mono tracking-wider uppercase"
+          className="input mt-1.5 font-mono tracking-wider uppercase"
         />
-        <p className="text-xs text-[var(--text-muted)] mt-1">15-character GSTIN — adds a verified badge to your shop</p>
+        <p className="text-[10px] text-[var(--text-muted)] mt-1.5">15-character GSTIN — adds a verified badge to your shop</p>
       </div>
 
-      {/* Phone */}
-      <div>
-        <label className="modal-label">Phone Number *</label>
-        <input
-          type="tel"
-          value={form.phone}
-          onChange={(e) => update('phone', e.target.value)}
-          placeholder="9876543210"
-          className="search-input"
-        />
-      </div>
+      {/* Contact info grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label className="modal-label font-bold text-[11px] uppercase tracking-wider text-[var(--text-secondary)]">Phone Number *</label>
+          <input
+            type="tel"
+            value={form.phone}
+            onChange={(e) => update('phone', e.target.value)}
+            placeholder="9876543210"
+            className="input mt-1.5"
+          />
+        </div>
 
-      {/* Website */}
-      <div>
-        <label className="modal-label">
-          Website
-          <span className="text-[var(--text-muted)] font-normal ml-1 text-xs">(optional)</span>
-        </label>
-        <input
-          type="url"
-          value={form.website}
-          onChange={(e) => update('website', e.target.value)}
-          placeholder="https://yourshop.com"
-          className="search-input"
-        />
+        <div>
+          <label className="modal-label font-bold text-[11px] uppercase tracking-wider text-[var(--text-secondary)]">
+            Website
+            <span className="text-[var(--text-muted)] font-normal ml-1 text-xs lowercase">(optional)</span>
+          </label>
+          <input
+            type="url"
+            value={form.website}
+            onChange={(e) => update('website', e.target.value)}
+            placeholder="https://yourshop.com"
+            className="input mt-1.5"
+          />
+        </div>
       </div>
 
       {/* Trust notice */}
-      <div className="bg-[var(--primary)]/5 border border-[var(--primary)]/20 rounded-xl p-3 flex gap-2.5 text-xs text-[var(--text-secondary)]">
-        <CheckCircle size={14} className="text-[var(--primary)] flex-shrink-0 mt-0.5" />
+      <div className="bg-[var(--primary-light)] border border-[var(--primary)]/20 rounded-2xl p-4 flex gap-3 text-xs text-[var(--text-secondary)]">
+        <CheckCircle size={15} className="text-[var(--primary)] flex-shrink-0 mt-0.5" />
         <span>
           Your application is reviewed by our admin team. You'll receive a notification once approved.
           You can start adding offers immediately after submission.
@@ -493,7 +519,6 @@ function BecomeVendorModal({ onClose, onSuccess }: {
     setLoadingPlans(true);
     api.get(endpoints.plansList).then((r) => {
       if (r.data.success) {
-        // Coerce price to number — API returns it as a decimal string e.g. "499.00"
         setPlans((r.data.data as Plan[]).map((p) => ({ ...p, price: parseFloat(String(p.price)) })));
       }
     }).finally(() => setLoadingPlans(false));
@@ -547,7 +572,6 @@ function BecomeVendorModal({ onClose, onSuccess }: {
       if (!orderRes.data.success) { toast.error('Could not initiate payment'); return; }
       const { payment_session_id, order_id } = orderRes.data.data as { payment_session_id: string; order_id: string };
 
-      // Guard: free-plan edge case — backend returned {free:true} without order_id
       if (!order_id || !payment_session_id) {
         await submitApplication();
         return;
@@ -559,7 +583,6 @@ function BecomeVendorModal({ onClose, onSuccess }: {
       const interval = setInterval(async () => {
         try {
           const vRes = await api.get(endpoints.paymentVerify(order_id));
-          // Backend returns status as lowercase 'paid' / 'pending'
           if (vRes.data.success && vRes.data.data.status === 'paid') {
             clearInterval(interval);
             await submitApplication(order_id);
@@ -577,17 +600,17 @@ function BecomeVendorModal({ onClose, onSuccess }: {
 
   return createPortal(
     <div className="modal-overlay">
-      <div className="modal-content max-w-lg max-h-[92vh]">
+      <div className="modal-content max-w-lg max-h-[92vh] rounded-3xl shadow-2xl">
 
         {/* Header */}
-        <div className="modal-header">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[var(--primary)]/10 flex items-center justify-center flex-shrink-0">
-              <Store size={20} className="text-[var(--primary)]" />
+        <div className="modal-header px-6 py-4.5">
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-2xl bg-[var(--primary)]/10 flex items-center justify-center flex-shrink-0">
+              <Store size={18} className="text-[var(--primary)]" />
             </div>
             <div>
-              <h2 className="modal-title">Become a Vendor</h2>
-              <p className="text-xs text-[var(--text-secondary)]">Step {step + 1} of {STEPS.length} — {STEPS[step].label}</p>
+              <h2 className="modal-title text-base font-bold">Become a Vendor</h2>
+              <p className="text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-wider mt-0.5">Step {step + 1} of {STEPS.length} — {STEPS[step].label}</p>
             </div>
           </div>
           <button onClick={onClose} className="modal-close">
@@ -596,23 +619,23 @@ function BecomeVendorModal({ onClose, onSuccess }: {
         </div>
 
         {/* Step indicator */}
-        <div className="flex items-center gap-0 px-5 py-3 border-b border-[var(--border)] bg-[var(--surface)] flex-shrink-0">
+        <div className="flex items-center gap-0 px-6 py-3 border-b border-[var(--border)] bg-[var(--surface-2)]/30 overflow-x-auto scrollbar-hide flex-shrink-0">
           {STEPS.map((s, i) => {
             const Icon = s.icon;
             return (
-              <div key={s.label} className="flex items-center flex-1">
+              <div key={s.label} className="flex items-center flex-1 min-w-[70px] sm:min-w-0">
                 <div className={`flex items-center gap-1.5 ${i <= step ? 'text-[var(--primary)]' : 'text-[var(--text-muted)]'}`}>
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-extrabold transition-all duration-300 ${
                     i < step  ? 'bg-[var(--primary)] text-white' :
-                    i === step ? 'bg-[var(--primary)]/10 text-[var(--primary)] ring-2 ring-[var(--primary)]/30' :
-                    'bg-[var(--surface-2)] text-[var(--text-muted)]'
+                    i === step ? 'bg-[var(--primary)]/10 text-[var(--primary)] ring-2 ring-[var(--primary)]/30 border border-[var(--primary)]' :
+                    'bg-[var(--surface-2)] text-[var(--text-muted)] border border-[var(--border)]'
                   }`}>
                     {i < step ? '✓' : <Icon size={12} />}
                   </div>
-                  <span className={`text-xs font-semibold hidden sm:block ${i <= step ? 'text-[var(--text)]' : 'text-[var(--text-secondary)]'}`}>{s.label}</span>
+                  <span className={`text-[10px] font-extrabold tracking-wider uppercase hidden md:block ${i <= step ? 'text-[var(--text)]' : 'text-[var(--text-secondary)]'}`}>{s.label.split(' ')[0]}</span>
                 </div>
                 {i < STEPS.length - 1 && (
-                  <div className={`flex-1 h-[2px] mx-2 rounded-full transition-all ${i < step ? 'bg-[var(--primary)]' : 'bg-[var(--surface-2)]'}`} />
+                  <div className={`flex-1 h-[2px] mx-2.5 rounded-full transition-all duration-300 ${i < step ? 'bg-[var(--primary)]' : 'bg-[var(--border)]'}`} />
                 )}
               </div>
             );
@@ -620,7 +643,7 @@ function BecomeVendorModal({ onClose, onSuccess }: {
         </div>
 
         {/* Step content */}
-        <div className="flex-1 overflow-y-auto p-5 bg-[var(--surface)]">
+        <div className="flex-1 overflow-y-auto p-6 bg-[var(--surface)]">
           {step === 0 && <Step1 form={form} update={update} categories={categories} />}
           {step === 1 && <Step2 form={form} update={update} updateLatLng={updateLatLng} />}
           {step === 2 && <Step3 form={form} update={update} />}
@@ -635,7 +658,7 @@ function BecomeVendorModal({ onClose, onSuccess }: {
         </div>
 
         {/* Footer buttons */}
-        <div className="modal-footer">
+        <div className="modal-footer px-6 py-4">
           {step > 0 && (
             <button
               type="button"
@@ -650,7 +673,7 @@ function BecomeVendorModal({ onClose, onSuccess }: {
               type="button"
               onClick={() => setStep((s) => s + 1)}
               disabled={!canNext()}
-              className="btn btn-primary flex-1 py-2.5 hover:scale-[1.02] active:scale-[0.98] transition-transform"
+              className="btn btn-primary flex-1 py-2.5 cursor-pointer"
             >
               Next <ChevronRight size={15} />
             </button>
@@ -659,7 +682,7 @@ function BecomeVendorModal({ onClose, onSuccess }: {
               type="button"
               onClick={handleSubmit}
               disabled={loading || !canNext()}
-              className="btn btn-primary flex-1 py-2.5 hover:scale-[1.02] active:scale-[0.98] transition-transform"
+              className="btn btn-primary flex-1 py-2.5 cursor-pointer"
             >
               {loading ? 'Submitting...' : selectedPlan && selectedPlan.price > 0 ? 'Pay & Submit' : 'Submit Application'}
             </button>
@@ -742,242 +765,355 @@ export default function Profile() {
   if (!user) return null;
 
   return (
-    <div className="w-full pb-20 sm:pb-6">
-
+    <motion.div 
+      initial="hidden" 
+      animate="show" 
+      variants={containerVariants}
+      className="max-w-4xl mx-auto pb-20 sm:pb-6 px-4"
+    >
       {/* Become a Vendor CTA */}
       {user.role === 'user' && (
-        <button
+        <motion.button
           onClick={() => setShowVendorModal(true)}
-          className="w-full flex items-center justify-between bg-gradient-to-r from-primary to-orange-400 text-white rounded-2xl p-4 mb-5 shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-shadow"
+          variants={itemVariants}
+          whileHover={{ y: -4, boxShadow: '0 20px 30px rgba(255,98,0,0.15)' }}
+          whileTap={{ scale: 0.99 }}
+          className="w-full flex items-center justify-between bg-gradient-to-r from-[var(--primary)] to-orange-500 text-white rounded-3xl p-5 mb-6 shadow-md transition-all duration-300 cursor-pointer"
         >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-              <Store size={20} />
+          <div className="flex items-center gap-4">
+            <div className="w-11 h-11 rounded-2xl bg-white/20 flex items-center justify-center shadow-inner">
+              <Store size={22} className="text-white" />
             </div>
             <div className="text-left">
-              <p className="font-heading font-bold text-sm">Become a Vendor</p>
-              <p className="text-white/80 text-xs mt-0.5">List your shop &amp; reach more customers</p>
+              <p className="font-heading font-bold text-base">Become a Vendor Partner</p>
+              <p className="text-white/85 text-xs mt-0.5 font-medium">Advertise your business and connect with customers nearby</p>
             </div>
           </div>
-          <ChevronRight size={18} className="text-white/70" />
+          <ChevronRight size={20} className="text-white/80" />
+        </motion.button>
+      )}
+
+      {/* Profile Header */}
+      <motion.div 
+        variants={itemVariants} 
+        className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 shadow-sm mb-6 flex items-center gap-4 relative overflow-hidden"
+        style={{ boxShadow: '0 4px 20px -2px rgba(0,0,0,0.03)' }}
+      >
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[var(--primary)] to-accent flex items-center justify-center text-2xl font-extrabold text-white flex-shrink-0 shadow-md">
+          {user.name?.[0]?.toUpperCase()}
+        </div>
+        <div className="flex-1 min-w-0">
+          <h2 className="font-heading font-extrabold text-xl text-[var(--text)] leading-tight">{user.name}</h2>
+          <p className="text-xs text-[var(--text-secondary)] mt-0.5 font-medium">{user.email}</p>
+          <div className="flex items-center gap-2 mt-2 flex-wrap">
+            <span className="text-[10px] font-bold tracking-wider uppercase bg-[var(--primary-light)] text-[#9A3300] px-2.5 py-0.5 rounded-full border border-orange-200/50">
+              {user.role}
+            </span>
+            {user.city && (
+              <span className="text-xs text-[var(--text-secondary)] font-medium flex items-center gap-0.5">
+                📍 {user.city}
+              </span>
+            )}
+          </div>
+        </div>
+        <button 
+          onClick={handleLogout} 
+          className="p-2.5 text-[var(--text-secondary)] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-2xl transition-all flex-shrink-0 cursor-pointer border border-transparent hover:border-red-200/30"
+          title="Sign Out"
+        >
+          <LogOut size={18} />
         </button>
-      )}
+      </motion.div>
 
-      {/* Profile header */}
-      <div className="bg-white rounded-2xl shadow-sm p-6 mb-6">
-        <div className="flex items-center gap-4 mb-4">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-2xl font-bold text-white flex-shrink-0">
-            {user.name?.[0]?.toUpperCase()}
-          </div>
-          <div className="flex-1 min-w-0">
-            <h2 className="font-heading font-bold text-xl text-gray-900">{user.name}</h2>
-            <p className="text-sm text-gray-500">{user.email}</p>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full capitalize font-medium">{user.role}</span>
-              {user.city && <span className="text-xs text-gray-400">📍 {user.city}</span>}
-            </div>
-          </div>
-          <button onClick={handleLogout} className="p-2 text-gray-400 hover:text-danger transition-colors">
-            <LogOut size={18} />
-          </button>
-        </div>
+      {/* Tab Navigation */}
+      <motion.div 
+        variants={itemVariants}
+        className="flex gap-2 bg-[var(--surface-2)] p-1.5 rounded-2xl mb-6 border border-[var(--border)]"
+      >
+        {tabs.map((t) => {
+          const isActive = tab === t.key;
+          return (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={`flex-grow flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold font-heading transition-all duration-300 cursor-pointer ${
+                isActive
+                  ? 'bg-[var(--surface)] text-[var(--primary)] shadow-sm border border-[var(--border)]/50 font-extrabold'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--surface)]/30'
+              }`}
+            >
+              <span className="text-base leading-none">{t.icon}</span>
+              <span>{t.label}</span>
+            </button>
+          );
+        })}
+      </motion.div>
 
-      </div>
+      {/* Tab Contents */}
+      <AnimatePresence mode="wait">
+        {tab === 'overview' && (
+          <motion.div
+            key="overview"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            transition={{ duration: 0.25 }}
+            className="space-y-6"
+          >
+            {/* Coins & Referral Card */}
+            {referral && (
+              <div 
+                className="bg-gradient-to-br from-orange-500 via-orange-600 to-amber-500 rounded-3xl p-6 text-white shadow-lg relative overflow-hidden border border-white/10"
+                style={{ boxShadow: '0 10px 30px rgba(255,98,0,0.15)' }}
+              >
+                {/* Visual accents */}
+                <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-white/5 rounded-full blur-2xl pointer-events-none" />
+                <div className="absolute -left-10 -top-10 w-32 h-32 bg-amber-400/20 rounded-full blur-2xl pointer-events-none" />
 
-      {/* Tabs */}
-      <div className="flex gap-1 bg-gray-100 p-1 rounded-xl mb-6">
-        {tabs.map((t) => (
-          <button key={t.key} onClick={() => setTab(t.key)}
-            className={`flex-1 py-2 rounded-lg text-xs font-heading font-semibold transition-all ${tab === t.key ? 'bg-white shadow-sm text-primary' : 'text-gray-500'}`}>
-            {t.icon} {t.label}
-          </button>
-        ))}
-      </div>
-
-      {tab === 'overview' && (
-        <div className="space-y-4">
-          {/* Coins & Referral Card */}
-          {referral && (
-            <div className="bg-gradient-to-br from-orange-500 to-amber-400 rounded-2xl p-5 text-white shadow-lg shadow-orange-200">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <Gift size={20} />
-                  <span className="font-heading font-bold text-lg">Invite & Earn</span>
-                </div>
-                <div className="bg-white/20 rounded-xl px-3 py-1 flex items-center gap-1.5">
-                  <span className="text-lg">🪙</span>
-                  <span className="font-bold text-lg">{referral.coins}</span>
-                  <span className="text-xs opacity-80">coins</span>
-                </div>
-              </div>
-              <p className="text-sm opacity-90 mb-4">
-                Invite friends — you earn <strong>50 coins</strong>, they get <strong>20 coins</strong> free!
-              </p>
-              <div className="bg-white/20 rounded-xl px-3 py-2 flex items-center justify-between mb-3">
-                <span className="font-mono text-sm font-bold tracking-widest">{referral.referral_code}</span>
-                <button onClick={copyReferralLink} className="ml-2 p-1 hover:bg-white/20 rounded-lg transition-colors">
-                  {refCopied ? <Check size={16} /> : <Copy size={16} />}
-                </button>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={shareWhatsAppReferral}
-                  className="flex-1 flex items-center justify-center gap-2 bg-white/20 hover:bg-white/30 rounded-xl py-2.5 text-sm font-semibold transition-colors"
-                >
-                  <MessageCircle size={16} /> Share on WhatsApp
-                </button>
-              </div>
-              {referral.referral_count > 0 && (
-                <p className="text-xs opacity-70 mt-3 text-center">
-                  🎉 {referral.referral_count} friend{referral.referral_count > 1 ? 's' : ''} joined using your link
-                </p>
-              )}
-            </div>
-          )}
-
-          <div className="bg-white rounded-2xl shadow-sm p-5">
-            <h3 className="font-heading font-semibold text-gray-800 mb-1">Welcome, {user.name?.split(' ')[0]}!</h3>
-            <p className="text-sm text-gray-500">Manage your saved offers and subscribed vendors below.</p>
-          </div>
-        </div>
-      )}
-
-
-      {tab === 'saved' && (
-        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-          <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-50">
-            <Bookmark size={16} className="text-[var(--primary)]" />
-            <h3 className="font-heading font-semibold text-gray-800">Saved Offers</h3>
-            <span className="ml-auto text-xs text-gray-400">{savedOffers.length} saved</span>
-          </div>
-          {savedLoading ? (
-            <div className="divide-y divide-gray-50">
-              {[1,2,3].map((i) => (
-                <div key={i} className="flex gap-3 p-4">
-                  <div className="skeleton w-14 h-14 rounded-xl flex-shrink-0" />
-                  <div className="flex-1 space-y-2 py-1">
-                    <div className="skeleton h-3.5 w-3/4 rounded" />
-                    <div className="skeleton h-3 w-1/2 rounded" />
+                <div className="flex items-center justify-between mb-5 relative z-10">
+                  <div className="flex items-center gap-2.5">
+                    <Gift size={22} className="text-white" />
+                    <span className="font-heading font-extrabold text-lg">Invite & Earn</span>
+                  </div>
+                  <div className="bg-white/15 backdrop-blur-md border border-white/20 rounded-2xl px-3.5 py-1.5 flex items-center gap-1.5 shadow-inner">
+                    <Coins size={16} className="text-yellow-300" />
+                    <span className="font-extrabold text-base tracking-tight">{referral.coins}</span>
+                    <span className="text-[10px] uppercase font-bold tracking-wider opacity-90">Coins</span>
                   </div>
                 </div>
-              ))}
+
+                <p className="text-sm opacity-90 mb-5 leading-relaxed font-medium">
+                  Invite friends to AdsLife. You earn <strong className="font-extrabold text-yellow-200">50 coins</strong>, and they get <strong className="font-extrabold text-yellow-200">20 coins</strong> to redeem premium localized offers!
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 relative z-10">
+                  <div className="sm:col-span-2 bg-white/10 border border-white/20 rounded-2xl px-4 py-2.5 flex items-center justify-between backdrop-blur-sm shadow-inner font-mono text-sm font-extrabold tracking-widest">
+                    <span>{referral.referral_code}</span>
+                    <button 
+                      onClick={copyReferralLink} 
+                      className="p-1.5 hover:bg-white/10 active:scale-95 rounded-lg transition-all cursor-pointer text-white"
+                      title="Copy Code"
+                    >
+                      {refCopied ? <Check size={15} /> : <Copy size={15} />}
+                    </button>
+                  </div>
+
+                  <button
+                    onClick={shareWhatsAppReferral}
+                    className="flex items-center justify-center gap-2 bg-white text-orange-600 hover:bg-orange-50 active:scale-95 shadow-md rounded-2xl py-2.5 text-xs font-bold transition-all cursor-pointer flex-shrink-0"
+                  >
+                    <MessageCircle size={15} fill="currentColor" className="text-orange-500" /> Share Link
+                  </button>
+                </div>
+
+                {referral.referral_count > 0 && (
+                  <p className="text-xs opacity-85 mt-4 text-center font-semibold relative z-10 flex items-center justify-center gap-1.5 bg-black/10 py-1.5 rounded-xl border border-white/5">
+                    🎉 {referral.referral_count} friend{referral.referral_count > 1 ? 's' : ''} joined using your invite link!
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Quick dashboard overview welcome */}
+            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 shadow-sm">
+              <h3 className="font-heading font-extrabold text-base text-[var(--text)] mb-1.5">Welcome back, {user.name?.split(' ')[0]}!</h3>
+              <p className="text-xs text-[var(--text-secondary)] mb-6 font-medium">Here's a quick look at your platform activities and details.</p>
+              
+              <div className="grid grid-cols-3 gap-4">
+                <button onClick={() => setTab('saved')} className="bg-[var(--surface-2)] border border-[var(--border)] hover:border-[var(--primary)]/30 rounded-2xl p-4 flex flex-col items-center justify-center text-center transition-all cursor-pointer hover:shadow-sm">
+                  <Bookmark size={18} className="text-[var(--primary)] mb-2" />
+                  <span className="text-xs font-semibold text-[var(--text-secondary)]">Saved Offers</span>
+                  <span className="text-base font-extrabold text-[var(--text)] mt-1">{savedOffers.length}</span>
+                </button>
+                <button onClick={() => setTab('subscribed')} className="bg-[var(--surface-2)] border border-[var(--border)] hover:border-[var(--primary)]/30 rounded-2xl p-4 flex flex-col items-center justify-center text-center transition-all cursor-pointer hover:shadow-sm">
+                  <Bell size={18} className="text-emerald-500 mb-2" />
+                  <span className="text-xs font-semibold text-[var(--text-secondary)]">Subscriptions</span>
+                  <span className="text-base font-extrabold text-[var(--text)] mt-1">{followedVendors.length}</span>
+                </button>
+                <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-2xl p-4 flex flex-col items-center justify-center text-center">
+                  <Coins size={18} className="text-amber-500 mb-2" />
+                  <span className="text-xs font-semibold text-[var(--text-secondary)]">Coins Wallet</span>
+                  <span className="text-base font-extrabold text-[var(--text)] mt-1">{referral?.coins ?? 0}</span>
+                </div>
+              </div>
             </div>
-          ) : savedOffers.length === 0 ? (
-            <div className="py-16 text-center text-gray-400">
-              <Bookmark size={36} className="mx-auto mb-3 opacity-30" />
-              <p className="text-sm font-medium">No saved offers yet</p>
-              <p className="text-xs mt-1">Save offers while browsing to find them here</p>
+          </motion.div>
+        )}
+
+        {tab === 'saved' && (
+          <motion.div
+            key="saved"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            transition={{ duration: 0.25 }}
+            className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl shadow-sm overflow-hidden"
+          >
+            <div className="flex items-center gap-2 px-6 py-4.5 border-b border-[var(--border)] bg-[var(--surface-2)]/30">
+              <Bookmark size={16} className="text-[var(--primary)]" />
+              <h3 className="font-heading font-bold text-sm text-[var(--text)]">Saved Offers</h3>
+              <span className="ml-auto badge badge-neutral px-2.5 py-0.5 rounded-full text-[10px] font-bold">{savedOffers.length} offers</span>
             </div>
-          ) : (
-            <div className="divide-y divide-gray-50">
-              {savedOffers.map((o) => {
-                const tl = (() => {
-                  if (!o.valid_until) return '';
-                  const diff = new Date(o.valid_until).getTime() - Date.now();
-                  if (diff <= 0) return 'Expired';
-                  const d = Math.floor(diff / 86400000);
-                  return d > 0 ? `${d}d left` : 'Ending soon';
-                })();
-                return (
-                  <div key={o.id} className="flex items-start gap-3 p-4 hover:bg-gray-50/50 transition-colors">
-                    {(o.image_url ?? o.banner_url) ? (
-                      <img src={o.image_url ?? o.banner_url} alt={o.title}
-                        className="w-14 h-14 rounded-xl object-cover flex-shrink-0" />
+            {savedLoading ? (
+              <div className="divide-y divide-[var(--border)]/60 px-6">
+                {[1,2,3].map((i) => (
+                  <div key={i} className="flex gap-4 py-4">
+                    <div className="skeleton w-14 h-14 rounded-2xl flex-shrink-0" />
+                    <div className="flex-1 space-y-2 py-1">
+                      <div className="skeleton h-3.5 w-3/4 rounded" />
+                      <div className="skeleton h-3 w-1/2 rounded" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : savedOffers.length === 0 ? (
+              <div className="py-20 text-center text-[var(--text-muted)] px-6">
+                <div className="text-4xl mb-3">🔖</div>
+                <p className="text-sm font-semibold text-[var(--text-secondary)]">No saved offers yet</p>
+                <p className="text-xs mt-1">Bookmark exclusive deals while browsing to find them listed here.</p>
+              </div>
+            ) : (
+              <motion.div 
+                variants={containerVariants}
+                initial="hidden"
+                animate="show"
+                className="divide-y divide-[var(--border)]/60 px-4"
+              >
+                {savedOffers.map((o) => {
+                  const tl = (() => {
+                    if (!o.valid_until) return '';
+                    const diff = new Date(o.valid_until).getTime() - Date.now();
+                    if (diff <= 0) return 'Expired';
+                    const d = Math.floor(diff / 86400000);
+                    return d > 0 ? `${d}d left` : 'Ending soon';
+                  })();
+                  const isExpiring = tl === 'Ending soon' || tl === 'Expired';
+                  return (
+                    <motion.div 
+                      key={o.id} 
+                      variants={itemVariants}
+                      className="flex items-start gap-4 p-4 hover:bg-gray-50/50 dark:hover:bg-gray-800/10 transition-all duration-300 rounded-2xl my-2 border border-transparent hover:border-[var(--primary)]/10"
+                    >
+                      {(o.image_url ?? o.banner_url) ? (
+                        <img src={o.image_url ?? o.banner_url} alt={o.title}
+                          className="w-14 h-14 rounded-2xl object-cover flex-shrink-0 shadow-sm border border-[var(--border)]" />
+                      ) : (
+                        <div className="w-14 h-14 rounded-2xl bg-orange-50 dark:bg-orange-950/20 border border-orange-100 dark:border-orange-900/30 flex items-center justify-center flex-shrink-0 shadow-sm">
+                          <Tag size={20} className="text-[var(--primary)]" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-[var(--text)] truncate leading-snug">{o.title}</p>
+                        <p className="text-xs text-[var(--text-secondary)] truncate mt-0.5 font-medium">{o.business_name}{o.vendor_city ? ` · ${o.vendor_city}` : ''}</p>
+                        <div className="flex items-center gap-2 mt-2 flex-wrap">
+                          {o.discount_percent > 0 && (
+                            <span className="text-[10px] font-bold bg-orange-50 dark:bg-orange-950/20 text-[var(--primary)] px-2 py-0.5 rounded-full border border-orange-200/50 dark:border-orange-900/30">
+                              {o.discount_percent}% OFF
+                            </span>
+                          )}
+                          {tl && (
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                              isExpiring 
+                                ? 'bg-red-50 dark:bg-red-950/20 text-red-500 border-red-200/30' 
+                                : 'bg-gray-50 dark:bg-gray-800/40 text-[var(--text-secondary)] border-[var(--border)]'
+                            }`}>
+                              {tl}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => navigate(`/offer/${o.id}`)}
+                        className="flex-shrink-0 p-2 text-[var(--text-secondary)] hover:text-[var(--primary)] hover:bg-[var(--surface-2)] rounded-xl transition-all cursor-pointer border border-transparent hover:border-[var(--border)]/50"
+                        title="View Deal"
+                      >
+                        <ExternalLink size={15} />
+                      </button>
+                    </motion.div>
+                  );
+                })}
+              </motion.div>
+            )}
+          </motion.div>
+        )}
+
+        {tab === 'subscribed' && (
+          <motion.div
+            key="subscribed"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            transition={{ duration: 0.25 }}
+            className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl shadow-sm overflow-hidden"
+          >
+            <div className="flex items-center gap-2 px-6 py-4.5 border-b border-[var(--border)] bg-[var(--surface-2)]/30">
+              <Bell size={16} className="text-[var(--primary)]" />
+              <h3 className="font-heading font-bold text-sm text-[var(--text)]">Subscribed Shops</h3>
+              <span className="ml-auto badge badge-neutral px-2.5 py-0.5 rounded-full text-[10px] font-bold">{followedVendors.length} subscribed</span>
+            </div>
+            {followedLoading ? (
+              <div className="divide-y divide-[var(--border)]/60 px-6">
+                {[1,2,3].map((i) => (
+                  <div key={i} className="flex gap-4 py-4">
+                    <div className="skeleton w-12 h-12 rounded-2xl flex-shrink-0" />
+                    <div className="flex-1 space-y-2 py-1">
+                      <div className="skeleton h-3.5 w-2/3 rounded" />
+                      <div className="skeleton h-3 w-1/3 rounded" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : followedVendors.length === 0 ? (
+              <div className="py-20 text-center text-[var(--text-muted)] px-6">
+                <div className="text-4xl mb-3">🔔</div>
+                <p className="text-sm font-semibold text-[var(--text-secondary)]">Not subscribed to any shops</p>
+                <p className="text-xs mt-1">Subscribe to businesses to get real-time alerts on active flash sales.</p>
+              </div>
+            ) : (
+              <motion.div 
+                variants={containerVariants}
+                initial="hidden"
+                animate="show"
+                className="divide-y divide-[var(--border)]/60 px-4"
+              >
+                {followedVendors.map((v) => (
+                  <motion.div 
+                    key={v.id} 
+                    variants={itemVariants}
+                    className="flex items-center gap-4 p-4 hover:bg-gray-50/50 dark:hover:bg-gray-800/10 transition-all duration-300 rounded-2xl my-2 border border-transparent hover:border-[var(--primary)]/10"
+                  >
+                    {v.logo_url ? (
+                      <img src={v.logo_url} alt={v.business_name}
+                        className="w-12 h-12 rounded-2xl object-cover flex-shrink-0 shadow-sm border border-[var(--border)]" />
                     ) : (
-                      <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                        <Tag size={20} className="text-[var(--primary)]" />
+                      <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 flex items-center justify-center flex-shrink-0 font-extrabold text-emerald-600 dark:text-emerald-400 text-lg shadow-sm">
+                        {v.business_name[0]?.toUpperCase()}
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-800 truncate">{o.title}</p>
-                      <p className="text-xs text-gray-500 truncate">{o.business_name}{o.vendor_city ? ` · ${o.vendor_city}` : ''}</p>
-                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                        {o.discount_percent > 0 && (
-                          <span className="text-[10px] font-bold bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">
-                            {o.discount_percent}% OFF
-                          </span>
-                        )}
-                        {tl && (
-                          <span className={`text-[10px] font-medium ${tl === 'Expired' ? 'text-red-400' : 'text-gray-400'}`}>
-                            {tl}
-                          </span>
-                        )}
-                      </div>
+                      <p className="text-sm font-bold text-[var(--text)] truncate leading-snug">{v.business_name}</p>
+                      <p className="text-xs text-[var(--text-secondary)] capitalize truncate mt-0.5 font-semibold">
+                        {v.category}{v.city ? ` · ${v.city}` : ''}
+                      </p>
+                      <p className="text-[10px] text-[var(--text-secondary)] font-medium mt-1">
+                        <strong className="text-[var(--primary)] font-bold">{v.active_offers ?? 0} active</strong> deal{(v.active_offers ?? 0) !== 1 ? 's' : ''} · {(v.total_followers ?? 0).toLocaleString()} followers
+                      </p>
                     </div>
                     <button
-                      onClick={() => navigate(`/offer/${o.id}`)}
-                      className="flex-shrink-0 p-1.5 text-gray-400 hover:text-[var(--primary)] transition-colors"
+                      onClick={() => handleUnfollow(v.id)}
+                      title="Unsubscribe"
+                      className="flex-shrink-0 flex items-center gap-1.5 text-xs text-[var(--text-secondary)] hover:text-red-500 font-bold border border-[var(--border)] hover:border-red-200 bg-[var(--surface)] hover:bg-red-50/40 dark:hover:bg-red-950/10 px-3 py-2 rounded-xl transition-all cursor-pointer"
                     >
-                      <ExternalLink size={15} />
+                      <BellOff size={13} />
+                      <span className="hidden sm:inline">Unsubscribe</span>
                     </button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-      {tab === 'subscribed' && (
-        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-          <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-50">
-            <Bell size={16} className="text-[var(--primary)]" />
-            <h3 className="font-heading font-semibold text-gray-800">Subscribed Shops</h3>
-            <span className="ml-auto text-xs text-gray-400">{followedVendors.length} subscribed</span>
-          </div>
-          {followedLoading ? (
-            <div className="divide-y divide-gray-50">
-              {[1,2,3].map((i) => (
-                <div key={i} className="flex gap-3 p-4">
-                  <div className="skeleton w-12 h-12 rounded-xl flex-shrink-0" />
-                  <div className="flex-1 space-y-2 py-1">
-                    <div className="skeleton h-3.5 w-2/3 rounded" />
-                    <div className="skeleton h-3 w-1/3 rounded" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : followedVendors.length === 0 ? (
-            <div className="py-16 text-center text-gray-400">
-              <Bell size={36} className="mx-auto mb-3 opacity-30" />
-              <p className="text-sm font-medium">Not subscribed to any shops</p>
-              <p className="text-xs mt-1">Subscribe to shops to get notified about their deals</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-gray-50">
-              {followedVendors.map((v) => (
-                <div key={v.id} className="flex items-center gap-3 p-4 hover:bg-gray-50/50 transition-colors">
-                  {v.logo_url ? (
-                    <img src={v.logo_url} alt={v.business_name}
-                      className="w-12 h-12 rounded-xl object-cover flex-shrink-0" />
-                  ) : (
-                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 font-bold text-primary text-lg">
-                      {v.business_name[0]?.toUpperCase()}
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-800 truncate">{v.business_name}</p>
-                    <p className="text-xs text-gray-500 capitalize truncate">
-                      {v.category}{v.city ? ` · ${v.city}` : ''}
-                    </p>
-                    <p className="text-[10px] text-gray-400 mt-0.5">
-                      {v.active_offers} active offer{v.active_offers !== 1 ? 's' : ''} · {v.total_followers} followers
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => handleUnfollow(v.id)}
-                    title="Unsubscribe"
-                    className="flex-shrink-0 flex items-center gap-1 text-xs text-gray-400 hover:text-red-500 border border-gray-200 hover:border-red-300 px-2.5 py-1.5 rounded-lg transition-colors"
-                  >
-                    <BellOff size={13} />
-                    Unsubscribe
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+                  </motion.div>
+                ))}
+              </motion.div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {showVendorModal && (
         <BecomeVendorModal
@@ -985,6 +1121,6 @@ export default function Profile() {
           onSuccess={handleVendorSuccess}
         />
       )}
-    </div>
+    </motion.div>
   );
 }
