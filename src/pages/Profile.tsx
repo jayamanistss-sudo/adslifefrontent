@@ -18,6 +18,10 @@ import toast from 'react-hot-toast';
 
 type Tab = 'overview' | 'saved' | 'subscribed';
 
+const PHONE_PATTERN = /^[6-9]\d{9}$/;
+const GST_PATTERN = /^\d{2}[A-Z]{5}\d{4}[A-Z]\d[Z]{1}[A-Z\d]{1}$/;
+const URL_PATTERN = /^https?:\/\/[^\s/$.?#].[^\s]*$/i;
+
 interface SavedOffer {
   id: number; title: string; description?: string; category?: string;
   discount_percent: number; original_price?: number; offer_price?: number;
@@ -468,12 +472,16 @@ function Step3({ form, update }: {
         <input
           type="text"
           value={form.gst_number}
-          onChange={(e) => update('gst_number', e.target.value.toUpperCase())}
+          onChange={(e) => update('gst_number', e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
           placeholder="22AAAAA0000A1Z5"
           maxLength={15}
           className="input mt-1.5 font-mono tracking-wider uppercase"
         />
-        <p className="text-[10px] text-[var(--text-muted)] mt-1.5">15-character GSTIN — adds a verified badge to your shop</p>
+        {form.gst_number && !GST_PATTERN.test(form.gst_number) ? (
+          <p className="text-[10px] text-red-500 mt-1.5">Enter a valid 15-character GSTIN, e.g. 22AAAAA0000A1Z5</p>
+        ) : (
+          <p className="text-[10px] text-[var(--text-muted)] mt-1.5">15-character GSTIN — adds a verified badge to your shop</p>
+        )}
       </div>
 
       {/* Contact info grid */}
@@ -483,10 +491,14 @@ function Step3({ form, update }: {
           <input
             type="tel"
             value={form.phone}
-            onChange={(e) => update('phone', e.target.value)}
+            onChange={(e) => update('phone', e.target.value.replace(/\D/g, '').slice(0, 10))}
             placeholder="9876543210"
+            inputMode="numeric"
             className="input mt-1.5"
           />
+          {form.phone && !PHONE_PATTERN.test(form.phone) && (
+            <p className="text-[10px] text-red-500 mt-1.5">Enter a valid 10-digit mobile number</p>
+          )}
         </div>
 
         <div>
@@ -501,6 +513,9 @@ function Step3({ form, update }: {
             placeholder="https://yourshop.com"
             className="input mt-1.5"
           />
+          {form.website && !URL_PATTERN.test(form.website) && (
+            <p className="text-[10px] text-red-500 mt-1.5">Enter a valid URL, e.g. https://yourshop.com</p>
+          )}
         </div>
       </div>
 
@@ -559,7 +574,12 @@ function BecomeVendorModal({ onClose, onSuccess }: {
   const canNext = () => {
     if (step === 0) return form.business_name.trim().length > 0 && form.category.length > 0;
     if (step === 1) return form.lat !== null && form.lng !== null;
-    if (step === 2) return form.phone.trim().length > 0;
+    if (step === 2) {
+      if (!PHONE_PATTERN.test(form.phone)) return false;
+      if (form.gst_number && !GST_PATTERN.test(form.gst_number)) return false;
+      if (form.website && !URL_PATTERN.test(form.website)) return false;
+      return true;
+    }
     return selectedPlan !== null;
   };
 
@@ -571,8 +591,11 @@ function BecomeVendorModal({ onClose, onSuccess }: {
     if (step === 1 && (form.lat === null || form.lng === null)) {
       return 'Pin your shop location on the map to continue';
     }
-    if (step === 2 && !form.phone.trim()) {
-      return 'Enter a phone number to continue';
+    if (step === 2) {
+      if (!form.phone.trim()) return 'Enter a phone number to continue';
+      if (!PHONE_PATTERN.test(form.phone)) return 'Enter a valid 10-digit mobile number to continue';
+      if (form.gst_number && !GST_PATTERN.test(form.gst_number)) return 'Fix the GST number to continue';
+      if (form.website && !URL_PATTERN.test(form.website)) return 'Fix the website URL to continue';
     }
     if (step === 3 && !selectedPlan) {
       return 'Select a plan to continue';

@@ -115,7 +115,7 @@ export default function App() {
     <ErrorBoundary>
       <BrowserRouter>
         <PowerSyncProvider>
-        <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
+        <Toaster position="top-right" toastOptions={{ duration: 3000 }} containerStyle={{ zIndex: 10001 }} />
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
