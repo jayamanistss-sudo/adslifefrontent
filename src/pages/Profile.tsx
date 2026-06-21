@@ -277,10 +277,28 @@ function Step2({ form, update, updateLatLng }: {
     }
   };
 
+  const reverseGeocode = async (lat: number, lng: number) => {
+    try {
+      const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`;
+      const res = await fetch(url, { headers: { 'Accept-Language': 'en' } });
+      const data = await res.json() as { display_name?: string; address?: Record<string, string> };
+      if (data.display_name) {
+        update('address', data.display_name.split(',').slice(0, 3).join(',').trim());
+      }
+      const city = data.address?.city ?? data.address?.town ?? data.address?.village ?? data.address?.suburb;
+      if (city) update('city', city);
+    } catch {
+      // best-effort — lat/lng are already set, user can fill address/city manually
+    }
+  };
+
   const useMyLocation = () => {
     if (!navigator.geolocation) { toast.error('Geolocation not supported'); return; }
     navigator.geolocation.getCurrentPosition(
-      (pos) => placeMarker(pos.coords.latitude, pos.coords.longitude),
+      (pos) => {
+        placeMarker(pos.coords.latitude, pos.coords.longitude);
+        reverseGeocode(pos.coords.latitude, pos.coords.longitude);
+      },
       () => toast.error('Location access denied'),
     );
   };
@@ -545,6 +563,23 @@ function BecomeVendorModal({ onClose, onSuccess }: {
     return selectedPlan !== null;
   };
 
+  const stepValidationMessage = () => {
+    if (step === 0) {
+      if (!form.business_name.trim()) return 'Enter your business name to continue';
+      if (!form.category) return 'Select a category to continue';
+    }
+    if (step === 1 && (form.lat === null || form.lng === null)) {
+      return 'Pin your shop location on the map to continue';
+    }
+    if (step === 2 && !form.phone.trim()) {
+      return 'Enter a phone number to continue';
+    }
+    if (step === 3 && !selectedPlan) {
+      return 'Select a plan to continue';
+    }
+    return null;
+  };
+
   const submitApplication = async (paymentOrderId?: string) => {
     const res = await api.post(endpoints.vendorApplySubmit, {
       ...form,
@@ -656,6 +691,13 @@ function BecomeVendorModal({ onClose, onSuccess }: {
             />
           )}
         </div>
+
+        {/* Real-time validation hint */}
+        {stepValidationMessage() && (
+          <p className="px-6 pt-1 text-[11px] font-semibold text-amber-600 text-right">
+            {stepValidationMessage()}
+          </p>
+        )}
 
         {/* Footer buttons */}
         <div className="modal-footer px-6 py-4">
