@@ -150,7 +150,7 @@ export default function AdminDashboard() {
       };
     };
 
-    (async () => {
+    const refresh = async () => {
       try {
         const data = await loadFromPowerSync();
         if (!cancelled) setStats(data);
@@ -158,13 +158,32 @@ export default function AdminDashboard() {
         try {
           const r = await api.get(endpoints.adminStats);
           if (!cancelled && r.data.success) setStats(r.data.data);
-        } catch { /* leave stats null — UI shows skeletons */ }
+        } catch { /* leave stats as-is */ }
       } finally {
         if (!cancelled) setLoading(false);
       }
-    })();
+    };
 
-    return () => { cancelled = true; };
+    refresh();
+
+    // Live-update whenever any underlying table changes (new vendor application,
+    // approval, signup, payment, etc.) — no manual page refresh needed.
+    const unsubscribe = db.onChange(
+      { onChange: () => refresh() },
+      {
+        tables: [
+          'users', 'vendors', 'offers', 'user_interactions', 'payments',
+          'vendor_applications', 'support_tickets', 'banner_ad_requests', 'spotlight_requests',
+        ],
+        throttleMs: 1000,
+      },
+    );
+
+    // Fallback poll in case PowerSync never connects (e.g. offline) — refresh()
+    // itself already retries the PowerSync path first each time.
+    const pollFallback = setInterval(refresh, 60000);
+
+    return () => { cancelled = true; unsubscribe(); clearInterval(pollFallback); };
   }, []);
 
   const handleBroadcast = async () => {
