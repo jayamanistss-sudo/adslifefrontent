@@ -598,7 +598,7 @@ export default function AdminDashboard() {
       <h2 className="font-heading font-bold text-[var(--text)] text-base mb-4 flex items-center gap-2">
         <Store size={18} className="text-[var(--primary)]" /> Platform Management Tools
       </h2>
-      <motion.div variants={containerVariants} className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
           { to: '/admin/users',           icon: Users,       label: 'User Directory',       gradient: 'from-blue-500 to-indigo-600' },
           { to: '/admin/vendors',         icon: Store,       label: 'Vendor Registry',      gradient: 'from-emerald-400 to-teal-600' },
@@ -609,25 +609,19 @@ export default function AdminDashboard() {
           { to: '/admin/banner-ads',      icon: Image,       label: 'Billboard Banners',    gradient: 'from-violet-400 to-purple-600' },
           { to: '/admin/fraud',           icon: ShieldAlert, label: 'Risk & Fraud Center',  gradient: 'from-red-500 to-rose-600' },
         ].map(({ to, icon: Icon, label, gradient }) => (
-          <MotionLink 
-            key={to} 
-            to={to} 
-            variants={cardVariants}
+          <Link
+            key={to}
+            to={to}
             className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-5 shadow-sm flex items-center gap-4 group"
             style={{ boxShadow: '0 4px 20px -2px rgba(0,0,0,0.03)' }}
-            whileHover={{ 
-              y: -5, 
-              boxShadow: '0 15px 35px -10px rgba(255,98,0,0.12), 0 4px 12px -5px rgba(255,98,0,0.05)',
-              borderColor: 'rgba(255,98,0,0.25)' 
-            }}
           >
             <div className={`w-10 h-10 rounded-2xl flex items-center justify-center bg-gradient-to-br ${gradient} text-white shadow-md flex-shrink-0`}>
               <Icon size={18} />
             </div>
             <span className="font-bold text-sm text-[var(--text)] leading-snug group-hover:text-[var(--primary)] transition-colors duration-200">{label}</span>
-          </MotionLink>
+          </Link>
         ))}
-      </motion.div>
+      </div>
     </motion.div>
   );
 }
