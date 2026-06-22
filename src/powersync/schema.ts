@@ -90,6 +90,7 @@ const vendors = new Table(
     status:            column.text,
     subscription_plan: column.text,
     total_followers:   column.integer,
+    created_at:        column.text,
   },
   { indexes: { by_status: ['status'] } },
 );
@@ -111,6 +112,71 @@ const users = new Table(
   { indexes: { by_role: ['role'], by_created: ['created_at'] } },
 );
 
-export const AppSchema = new Schema({ offers, notifications, saved_offers, categories, vendors, users });
+// Admin-only — synced via the `admin_dashboard` bucket (gated on JWT role claim).
+const vendor_applications = new Table(
+  {
+    user_id:       column.integer,
+    business_name: column.text,
+    category:      column.text,
+    city:          column.text,
+    status:        column.text,
+    created_at:    column.text,
+  },
+  { indexes: { by_status: ['status'] } },
+);
+
+const payments = new Table(
+  {
+    amount:     column.real,
+    status:     column.text,
+    created_at: column.text,
+  },
+  { indexes: { by_status: ['status'] } },
+);
+
+const fraud_flags = new Table(
+  {
+    status:     column.text,
+    created_at: column.text,
+  },
+  { indexes: { by_status: ['status'] } },
+);
+
+const support_tickets = new Table(
+  {
+    status:     column.text,
+    created_at: column.text,
+  },
+  { indexes: { by_status: ['status'] } },
+);
+
+const banner_ad_requests = new Table(
+  {
+    status:     column.text,
+    created_at: column.text,
+  },
+  { indexes: { by_status: ['status'] } },
+);
+
+const spotlight_requests = new Table(
+  {
+    status:     column.text,
+    created_at: column.text,
+  },
+  { indexes: { by_status: ['status'] } },
+);
+
+const user_interactions = new Table(
+  {
+    created_at: column.text,
+  },
+  { indexes: { by_created: ['created_at'] } },
+);
+
+export const AppSchema = new Schema({
+  offers, notifications, saved_offers, categories, vendors, users,
+  vendor_applications, payments, fraud_flags, support_tickets,
+  banner_ad_requests, spotlight_requests, user_interactions,
+});
 
 export type Database = (typeof AppSchema)['types'];

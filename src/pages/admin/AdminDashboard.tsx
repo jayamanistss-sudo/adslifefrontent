@@ -9,6 +9,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { motion } from 'framer-motion';
 import type { Variants } from 'framer-motion';
 import { api, endpoints } from '../../utils/api';
+import { db } from '../../powersync/database';
 import toast from 'react-hot-toast';
 
 interface Stats {
@@ -66,9 +67,104 @@ export default function AdminDashboard() {
   const [sending, setSending]     = useState(false);
 
   useEffect(() => {
-    api.get(endpoints.adminStats)
-      .then((r) => { if (r.data.success) setStats(r.data.data); })
-      .finally(() => setLoading(false));
+    let cancelled = false;
+
+    const loadFromPowerSync = async (): Promise<Stats> => {
+      const now = new Date();
+      const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+      const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+
+      const one = async (sql: string, params: unknown[] = []) => (await db.getAll<any>(sql, params))[0];
+
+      const [
+        totalUsers, approvedVendors, activeOffers, totalInteractions, revenue,
+        pendingVendors, openTickets, pendingBanners, pendingSpotlights, pendingFraud,
+        thisMonthUsers, lastMonthUsers, todayActive,
+      ] = await Promise.all([
+        one('SELECT COUNT(*) AS cnt FROM users'),
+        one("SELECT COUNT(*) AS cnt FROM vendors WHERE status = 'approved'"),
+        one('SELECT COUNT(*) AS cnt FROM offers WHERE is_active = 1'),
+        one('SELECT COUNT(*) AS cnt FROM user_interactions'),
+        one("SELECT COALESCE(SUM(amount), 0) AS total FROM payments WHERE status = 'paid'"),
+        one("SELECT COUNT(*) AS cnt FROM vendor_applications WHERE status = 'pending'"),
+        one("SELECT COUNT(*) AS cnt FROM support_tickets WHERE status = 'open'"),
+        one("SELECT COUNT(*) AS cnt FROM banner_ad_requests WHERE status = 'pending'"),
+        one("SELECT COUNT(*) AS cnt FROM spotlight_requests WHERE status = 'pending'"),
+        one("SELECT COUNT(*) AS cnt FROM fraud_flags WHERE status = 'pending'"),
+        one('SELECT COUNT(*) AS cnt FROM users WHERE created_at >= ?', [thisMonthStart]),
+        one('SELECT COUNT(*) AS cnt FROM users WHERE created_at >= ? AND created_at < ?', [lastMonthStart, thisMonthStart]),
+        one('SELECT COUNT(*) AS cnt FROM user_interactions WHERE created_at >= ?', [todayStart]),
+      ]);
+
+      const roleRows = await db.getAll<{ role: string; cnt: number }>(
+        'SELECT role, COUNT(*) AS cnt FROM users GROUP BY role',
+      );
+      const roleBreakdown: Record<string, number> = { user: 0, vendor: 0, admin: 0 };
+      for (const r of roleRows) roleBreakdown[r.role] = Number(r.cnt);
+
+      const dailyRows = await db.getAll<{ d: string; cnt: number }>(
+        "SELECT date(created_at) AS d, COUNT(*) AS cnt FROM users WHERE created_at >= ? GROUP BY date(created_at) ORDER BY d ASC",
+        [sevenDaysAgo],
+      );
+
+      const recentUsers = await db.getAll<any>(
+        'SELECT id, name, email, role FROM users ORDER BY created_at DESC LIMIT 5',
+      );
+      const recentVendors = await db.getAll<any>(
+        `SELECT v.id AS id, v.business_name AS business_name, v.status AS status,
+                v.subscription_plan AS subscription_plan, u.email AS email
+         FROM vendors v JOIN users u ON u.id = v.user_id
+         ORDER BY v.created_at DESC LIMIT 5`,
+      );
+
+      const tm = Number(thisMonthUsers?.cnt ?? 0);
+      const lm = Number(lastMonthUsers?.cnt ?? 0);
+      let growth = 0;
+      if (lm > 0) growth = Math.round(((tm - lm) / lm) * 1000) / 10;
+      else if (tm > 0) growth = 100;
+
+      return {
+        totals: {
+          users: Number(totalUsers?.cnt ?? 0),
+          vendors: Number(approvedVendors?.cnt ?? 0),
+          offers: Number(activeOffers?.cnt ?? 0),
+          interactions: Number(totalInteractions?.cnt ?? 0),
+          revenue: Math.round(Number(revenue?.total ?? 0) * 100) / 100,
+        },
+        pending: {
+          vendors: Number(pendingVendors?.cnt ?? 0),
+          tickets: Number(openTickets?.cnt ?? 0),
+          banners: Number(pendingBanners?.cnt ?? 0),
+          spotlights: Number(pendingSpotlights?.cnt ?? 0),
+          fraud: Number(pendingFraud?.cnt ?? 0),
+        },
+        users: {
+          this_month: tm, growth_pct: growth,
+          today_active: Number(todayActive?.cnt ?? 0), role_breakdown: roleBreakdown,
+        },
+        daily_signups: dailyRows,
+        recent_users: recentUsers,
+        recent_vendors: recentVendors,
+      };
+    };
+
+    (async () => {
+      try {
+        const data = await loadFromPowerSync();
+        if (!cancelled) setStats(data);
+      } catch {
+        try {
+          const r = await api.get(endpoints.adminStats);
+          if (!cancelled && r.data.success) setStats(r.data.data);
+        } catch { /* leave stats null — UI shows skeletons */ }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
   }, []);
 
   const handleBroadcast = async () => {
