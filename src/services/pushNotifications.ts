@@ -1,6 +1,7 @@
 import { initializeApp, getApps } from 'firebase/app';
 import { getMessaging, getToken, onMessage, isSupported } from 'firebase/messaging';
 import { api, endpoints } from '../utils/api';
+import { useNotificationStore } from '../store/useNotificationStore';
 import toast from 'react-hot-toast';
 
 const firebaseConfig = {
@@ -43,10 +44,23 @@ export async function registerPushToken(): Promise<void> {
     await api.post(endpoints.saveToken, { token, platform: 'web' });
     registered = true;
 
-    // Foreground messages (tab focused) — service worker only handles background ones
+    // Foreground messages (tab focused) — service worker only handles background ones.
+    // Push the notification straight into the store so the bell badge/list update
+    // instantly, instead of waiting for NotificationPanel's next 60s REST poll.
     onMessage(messaging, (payload) => {
       const { title = 'AdsLife', body = '' } = payload.notification ?? {};
+      const data = payload.data ?? {};
       toast(`${title}\n${body}`, { icon: '🔔', duration: 5000 });
+      useNotificationStore.getState().addNotification({
+        id: Date.now(),
+        userId: 0,
+        title,
+        body,
+        type: data.type ?? 'push',
+        offerId: data.offer_id ? Number(data.offer_id) : undefined,
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      });
     });
   } catch (err) {
     console.error('[Push] Registration failed:', err);
