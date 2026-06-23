@@ -283,7 +283,9 @@ export default function ManageOffers() {
         is_active:        !o.is_active,
       });
       setOffers((prev) => prev.map((x) => x.id === o.id ? { ...x, is_active: o.is_active ? 0 : 1 } : x));
-    } catch { toast.error('Failed to update offer'); }
+    } catch (err: any) {
+      toast.error(err.response?.data?.error ?? 'Failed to update offer');
+    }
   };
 
   const handleDelete = async (o: Offer) => {
