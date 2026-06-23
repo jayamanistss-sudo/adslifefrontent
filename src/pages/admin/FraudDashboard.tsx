@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 
 import { ShieldAlert, CheckCircle, XCircle } from 'lucide-react';
 import { api, endpoints } from '../../utils/api';
+import { db } from '../../powersync/database';
 import toast from 'react-hot-toast';
 
 interface FraudFlag {
@@ -22,6 +23,15 @@ export default function FraudDashboard() {
   };
 
   useEffect(load, [filter]);
+
+  // Live-refresh whenever a fraud flag changes locally via PowerSync
+  useEffect(() => {
+    const unsubscribe = db.onChange(
+      { onChange: () => load() },
+      { tables: ['fraud_flags'], throttleMs: 1000 },
+    );
+    return unsubscribe;
+  }, [filter]);
 
   const handleAction = async (flagId: number, action: 'dismiss' | 'action') => {
     const status = action === 'dismiss' ? 'false_positive' : 'actioned';

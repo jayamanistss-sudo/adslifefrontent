@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Store, CheckCircle, XCircle, Eye, MapPin, Phone, Globe, CreditCard } from 'lucide-react';
 import BackButton from '../../components/BackButton';
 import { api, endpoints } from '../../utils/api';
+import { db } from '../../powersync/database';
 import toast from 'react-hot-toast';
 
 interface VendorApp {
@@ -35,6 +36,16 @@ export default function VendorRequests() {
   };
 
   useEffect(load, []);
+
+  // Live-refresh whenever a vendor application changes locally via PowerSync
+  // (new submission, status change from another admin session, etc.)
+  useEffect(() => {
+    const unsubscribe = db.onChange(
+      { onChange: () => load() },
+      { tables: ['vendor_applications'], throttleMs: 1000 },
+    );
+    return unsubscribe;
+  }, []);
 
   const handleReview = async (appId: number, action: 'approve' | 'reject') => {
     setReviewing(appId);
