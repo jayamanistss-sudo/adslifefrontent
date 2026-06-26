@@ -28,6 +28,7 @@ export default function GoogleAuthButton({ label = 'Continue with Google' }: Pro
             role: user.role, city: user.city,
             lat: user.lat ? Number.parseFloat(user.lat) : undefined,
             lng: user.lng ? Number.parseFloat(user.lng) : undefined,
+            avatarUrl: user.avatar_url ?? undefined,
           }, token);
           toast.success(is_new ? `Welcome to AdsLife, ${user.name}! 🎉` : `Welcome back, ${user.name}!`);
           navigate('/feed');

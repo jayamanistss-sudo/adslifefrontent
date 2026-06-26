@@ -135,6 +135,7 @@ export default function Login() {
           role:user.role,city:user.city,
           lat:parseFloat(user.lat)||undefined,
           lng:parseFloat(user.lng)||undefined,
+          avatarUrl: user.avatar_url ?? undefined,
         },token);
         toast.success(`Welcome back, ${user.name}!`);
         navigate('/feed');
