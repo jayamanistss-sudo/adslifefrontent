@@ -4,8 +4,8 @@ import { motion } from 'framer-motion';
 import {
   ArrowLeft, MapPin, Phone, Globe, Clock, Tag, Bookmark,
   Navigation, Copy, CheckCheck, Play, Pause, Star, Share2,
-  Calendar, Store, ExternalLink, Bell, BellOff, ZoomIn, X, MessageCircle,
-  Flag, MessageSquare,
+  Calendar, ExternalLink, Bell, BellOff, ZoomIn, X, MessageCircle,
+  Flag, MessageSquare, ChevronRight,
 } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -17,23 +17,20 @@ import type { Offer, OfferReview } from '../types';
 import toast from 'react-hot-toast';
 
 const REPORT_REASONS = [
-  { value: 'fake_offer', label: 'Fake offer' },
-  { value: 'misleading', label: 'Misleading details' },
-  { value: 'expired',    label: 'Expired but still showing' },
-  { value: 'scam',       label: 'Looks like a scam' },
-  { value: 'other',      label: 'Other' },
+  { value: 'fake_offer',  label: 'Fake offer' },
+  { value: 'misleading',  label: 'Misleading details' },
+  { value: 'expired',     label: 'Expired but still showing' },
+  { value: 'scam',        label: 'Looks like a scam' },
+  { value: 'other',       label: 'Other' },
 ];
 
 function StarRow({ value, size = 14 }: { value: number; size?: number }) {
   return (
     <div className="flex items-center gap-0.5">
       {[1, 2, 3, 4, 5].map((i) => (
-        <Star
-          key={i}
-          size={size}
-          className={i <= Math.round(value) ? 'text-warning' : 'text-gray-200'}
-          fill={i <= Math.round(value) ? 'currentColor' : 'none'}
-        />
+        <Star key={i} size={size}
+          className={i <= Math.round(value) ? 'text-warning' : 'text-[var(--border)]'}
+          fill={i <= Math.round(value) ? 'currentColor' : 'none'} />
       ))}
     </div>
   );
@@ -44,11 +41,8 @@ function StarPicker({ value, onChange }: { value: number; onChange: (v: number) 
     <div className="flex items-center gap-1">
       {[1, 2, 3, 4, 5].map((i) => (
         <button key={i} type="button" onClick={() => onChange(i)} className="p-0.5">
-          <Star
-            size={26}
-            className={i <= value ? 'text-warning' : 'text-gray-200'}
-            fill={i <= value ? 'currentColor' : 'none'}
-          />
+          <Star size={28} className={i <= value ? 'text-warning' : 'text-[var(--border)]'}
+            fill={i <= value ? 'currentColor' : 'none'} />
         </button>
       ))}
     </div>
@@ -70,29 +64,31 @@ function formatDate(d?: string) {
   return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+const card = 'bg-[var(--surface)] border border-[var(--border)] rounded-2xl shadow-sm';
+
 export default function OfferDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useUserStore();
   const { isSaved, save, unsave } = useSavedStore();
 
-  const [offer, setOffer] = useState<Offer | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [copied, setCopied] = useState(false);
+  const [offer, setOffer]             = useState<Offer | null>(null);
+  const [loading, setLoading]         = useState(true);
+  const [copied, setCopied]           = useState(false);
   const [videoPlaying, setVideoPlaying] = useState(false);
-  const [lightbox, setLightbox] = useState(false);
-  const [following, setFollowing] = useState(false);
+  const [lightbox, setLightbox]       = useState(false);
+  const [following, setFollowing]     = useState(false);
   const [followersCount, setFollowersCount] = useState(0);
   const [followLoading, setFollowLoading] = useState(false);
 
-  const [reviews, setReviews] = useState<OfferReview[]>([]);
-  const [avgRating, setAvgRating] = useState<number | null>(null);
+  const [reviews, setReviews]         = useState<OfferReview[]>([]);
+  const [avgRating, setAvgRating]     = useState<number | null>(null);
   const [reviewCount, setReviewCount] = useState(0);
-  const [myRating, setMyRating] = useState(0);
-  const [myComment, setMyComment] = useState('');
+  const [myRating, setMyRating]       = useState(0);
+  const [myComment, setMyComment]     = useState('');
   const [submittingReview, setSubmittingReview] = useState(false);
 
-  const [reportOpen, setReportOpen] = useState(false);
+  const [reportOpen, setReportOpen]   = useState(false);
   const [reportReason, setReportReason] = useState(REPORT_REASONS[0].value);
   const [reportDetails, setReportDetails] = useState('');
   const [submittingReport, setSubmittingReport] = useState(false);
@@ -105,24 +101,16 @@ export default function OfferDetail() {
 
   const psOffer = useOffer(Number(id));
 
-  // Load offer — prefer PowerSync local data, fall back to API
   useEffect(() => {
     if (!id) return;
-    if (psOffer) {
-      setOffer(psOffer);
-      setLoading(false);
-      return;
-    }
+    if (psOffer) { setOffer(psOffer); setLoading(false); return; }
     setLoading(true);
     api.get(endpoints.offerDetail(Number(id)))
-      .then((res) => {
-        if (res.data.success) setOffer(res.data.data as Offer);
-      })
+      .then((res) => { if (res.data.success) setOffer(res.data.data as Offer); })
       .catch(() => toast.error('Offer not found'))
       .finally(() => setLoading(false));
   }, [id, psOffer]);
 
-  // Record view exactly once per offer ID
   useEffect(() => {
     if (!id || !offer) return;
     const numId = Number(id);
@@ -131,23 +119,15 @@ export default function OfferDetail() {
     api.post(endpoints.offerView(numId)).catch(() => {});
   }, [id, offer]);
 
-  // Ratings & reviews are always fetched live — never short-circuited by the
-  // PowerSync local offer cache (psOffer), since average/count/myReview are
-  // server-computed and can't exist in the offline-synced offers table.
   useEffect(() => {
     if (!id) return;
-    api.get(endpoints.offerReviews(Number(id)))
-      .then((res) => {
-        if (!res.data.success) return;
-        setReviews(res.data.data as OfferReview[]);
-        setAvgRating(res.data.avgRating ?? null);
-        setReviewCount(res.data.reviewCount ?? 0);
-        if (res.data.myReview) {
-          setMyRating(res.data.myReview.rating);
-          setMyComment(res.data.myReview.comment ?? '');
-        }
-      })
-      .catch(() => {});
+    api.get(endpoints.offerReviews(Number(id))).then((res) => {
+      if (!res.data.success) return;
+      setReviews(res.data.data as OfferReview[]);
+      setAvgRating(res.data.avgRating ?? null);
+      setReviewCount(res.data.reviewCount ?? 0);
+      if (res.data.myReview) { setMyRating(res.data.myReview.rating); setMyComment(res.data.myReview.comment ?? ''); }
+    }).catch(() => {});
   }, [id]);
 
   const handleSubmitReview = async () => {
@@ -162,11 +142,8 @@ export default function OfferDetail() {
         setAvgRating(res.data.avgRating ?? null);
         setReviewCount(res.data.reviewCount ?? 0);
       }
-    } catch {
-      toast.error('Could not submit your review');
-    } finally {
-      setSubmittingReview(false);
-    }
+    } catch { toast.error('Could not submit your review'); }
+    finally { setSubmittingReview(false); }
   };
 
   const handleSubmitReport = async () => {
@@ -178,86 +155,54 @@ export default function OfferDetail() {
       toast.success("Thanks, we'll review this");
       setReportOpen(false);
       setReportDetails('');
-    } catch {
-      toast.error('Could not submit your report');
-    } finally {
-      setSubmittingReport(false);
-    }
+    } catch { toast.error('Could not submit your report'); }
+    finally { setSubmittingReport(false); }
   };
 
-  // Load follow status when vendor changes — runs once per vendor, not on every sync
   useEffect(() => {
     if (!user || !offer?.vendorId) return;
-    api.get(endpoints.vendorFollowStatus(offer.vendorId))
-      .then((r) => {
-        if (r.data.success) {
-          setFollowing(r.data.data.following);
-          setFollowersCount(r.data.data.followers_count);
-        }
-      }).catch(() => {});
+    api.get(endpoints.vendorFollowStatus(offer.vendorId)).then((r) => {
+      if (r.data.success) { setFollowing(r.data.data.following); setFollowersCount(r.data.data.followers_count); }
+    }).catch(() => {});
   }, [offer?.vendorId, user?.id]);
 
-  // Init Leaflet map when offer loads
   useEffect(() => {
     if (!offer?.vendorLat || !offer?.vendorLng || !mapRef.current) return;
     if (mapInst.current) { mapInst.current.remove(); mapInst.current = null; }
-
-    const lat = offer.vendorLat;
-    const lng = offer.vendorLng;
-
+    const lat = offer.vendorLat, lng = offer.vendorLng;
     const map = L.map(mapRef.current, { zoomControl: true, scrollWheelZoom: false }).setView([lat, lng], 15);
     mapInst.current = map;
-
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors',
-    }).addTo(map);
-
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(map);
     const icon = L.divIcon({
-      html: `<div style="background:#FF6200;width:36px;height:36px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;">
-               <div style="transform:rotate(45deg);font-size:16px;">🏪</div>
-             </div>`,
-      className: '',
-      iconSize: [36, 36],
-      iconAnchor: [18, 36],
+      html: `<div style="background:#FF6200;width:36px;height:36px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.3);">
+               <div style="transform:rotate(45deg);font-size:16px;padding-top:6px;text-align:center;">🏪</div></div>`,
+      className: '', iconSize: [36, 36], iconAnchor: [18, 36],
     });
-
-    L.marker([lat, lng], { icon })
-      .addTo(map)
-      .bindPopup(`<b>${offer.businessName ?? 'Shop'}</b><br/>${offer.vendorAddress ?? ''}`)
-      .openPopup();
-
-    return () => { map.remove(); mapInst.current = null; };
+    L.marker([lat, lng], { icon }).addTo(map);
+    return () => { if (mapInst.current) { mapInst.current.remove(); mapInst.current = null; } };
   }, [offer?.vendorLat, offer?.vendorLng]);
-
-  const handleFollow = async () => {
-    if (!user || !offer?.vendorId || followLoading) return;
-    setFollowLoading(true);
-    try {
-      const res = await api.post(endpoints.vendorFollow, { vendor_id: offer.vendorId, action: 'toggle' });
-      if (res.data.success) {
-        setFollowing(res.data.data.following);
-        setFollowersCount(res.data.data.followers_count);
-        toast.success(res.data.data.following ? 'Subscribed to shop!' : 'Unsubscribed');
-      }
-    } catch {
-      toast.error('Failed to update subscription');
-    } finally {
-      setFollowLoading(false);
-    }
-  };
 
   const saved = offer ? isSaved(offer.id) : false;
 
   const handleSave = async () => {
     if (!user) { toast.error('Sign in to save offers'); navigate('/login'); return; }
     if (!offer) return;
-    if (saved) {
-      await unsave(offer.id);
-      toast.success('Removed from saved');
-    } else {
-      await save(offer.id);
-      toast.success('Offer saved!');
-    }
+    if (saved) { await unsave(offer.id); toast.success('Removed from saved'); }
+    else        { await save(offer.id);  toast.success('Offer saved!'); }
+  };
+
+  const handleFollow = async () => {
+    if (!user) { toast.error('Sign in to subscribe'); navigate('/login'); return; }
+    if (!offer?.vendorId || followLoading) return;
+    setFollowLoading(true);
+    const action = following ? 'unfollow' : 'follow';
+    try {
+      await api.post(endpoints.vendorFollow, { vendor_id: offer.vendorId, action });
+      setFollowing(!following);
+      setFollowersCount((c) => c + (following ? -1 : 1));
+      toast.success(following ? 'Unsubscribed' : 'Subscribed! You\'ll get alerts on new offers.');
+    } catch { toast.error('Could not update subscription'); }
+    finally { setFollowLoading(false); }
   };
 
   const handleCopyCoupon = () => {
@@ -270,32 +215,18 @@ export default function OfferDetail() {
 
   const handleTakeStep = () => {
     if (!offer) return;
-
-    const destLat = offer.vendorLat;
-    const destLng = offer.vendorLng;
-
+    const destLat = offer.vendorLat, destLng = offer.vendorLng;
     if (!destLat || !destLng) {
       const q = encodeURIComponent(offer.vendorAddress ?? offer.businessName ?? '');
       window.open(`https://www.google.com/maps/search/?api=1&query=${q}`, '_blank');
       return;
     }
-
     const destination = `${destLat},${destLng}`;
-
-    // Open Google Maps immediately (must be synchronous with user gesture to avoid popup blocker)
-    const mapsTab = window.open(
-      `https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`,
-      '_blank',
-    );
-
-    // Try to get user location and update the Maps URL with origin
+    const mapsTab = window.open(`https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`, '_blank');
     if (navigator.geolocation && mapsTab) {
       navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const origin = `${pos.coords.latitude},${pos.coords.longitude}`;
-          mapsTab.location.href = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=driving`;
-        },
-        () => { /* keep the tab open with destination-only URL */ },
+        (pos) => { mapsTab.location.href = `https://www.google.com/maps/dir/?api=1&origin=${pos.coords.latitude},${pos.coords.longitude}&destination=${destination}&travelmode=driving`; },
+        () => {},
         { timeout: 5000 },
       );
     }
@@ -305,14 +236,12 @@ export default function OfferDetail() {
     if (!offer) return;
     const url  = `${window.location.origin}/offer/${offer.id}`;
     const text = `${offer.title} — ${offer.discountPercent}% OFF at ${offer.businessName}!`;
-    const wa   = `https://wa.me/?text=${encodeURIComponent(`${text}\n${url}`)}`;
-    window.open(wa, '_blank');
+    window.open(`https://wa.me/?text=${encodeURIComponent(`${text}\n${url}`)}`, '_blank');
   };
 
   const handleCopyLink = () => {
     if (!offer) return;
-    const url = `${window.location.origin}/offer/${offer.id}`;
-    navigator.clipboard.writeText(url);
+    navigator.clipboard.writeText(`${window.location.origin}/offer/${offer.id}`);
     toast.success('Link copied!');
   };
 
@@ -320,215 +249,188 @@ export default function OfferDetail() {
     const vid = videoRef.current;
     if (!vid) return;
     if (videoPlaying) { vid.pause(); setVideoPlaying(false); }
-    else              { vid.play(); setVideoPlaying(true); }
+    else              { vid.play();  setVideoPlaying(true); }
   };
 
   if (loading) return (
-    <div className="w-full max-w-3xxl mx-auto pt-8 pb-20 animate-pulse space-y-4">
-      <div className="skeleton h-64 rounded-2xl" />
+    <div className="w-full max-w-2xl mx-auto pt-6 pb-24 space-y-4 animate-pulse px-4">
+      <div className="skeleton h-72 rounded-3xl" />
       <div className="skeleton h-8 w-3/4 rounded-xl" />
       <div className="skeleton h-5 w-1/2 rounded-xl" />
-      <div className="skeleton h-48 rounded-2xl" />
+      <div className="skeleton h-40 rounded-2xl" />
     </div>
   );
 
   if (!offer) return (
-    <div className="w-full max-w-3xxl mx-auto pt-16 text-center text-gray-500">
+    <div className="w-full max-w-2xl mx-auto pt-20 text-center px-4">
       <div className="text-5xl mb-4">🔍</div>
-      <p className="font-heading font-semibold text-gray-700 mb-1">Offer not found</p>
-      <button onClick={() => navigate('/feed')} className="mt-4 text-primary underline text-sm">Back to feed</button>
+      <p className="font-heading font-semibold text-[var(--text)] mb-1">Offer not found</p>
+      <button onClick={() => navigate('/feed')} className="mt-4 text-[var(--primary)] underline text-sm">Back to feed</button>
     </div>
   );
 
   const tl = timeLeft(offer.validUntil);
+  const isUrgent = tl === 'Ending soon' || tl.includes('1d');
 
   return (
-    <div className="w-full max-w-3xxl mx-auto pb-24">
+    <div className="w-full max-w-2xl mx-auto pb-28">
 
-      {/* Back button */}
-      <button
-        onClick={() => navigate(-1)}
-        className="flex items-center gap-2 text-gray-500 hover:text-gray-900 text-sm font-medium mb-4 transition-colors"
-      >
+      {/* Back */}
+      <button onClick={() => navigate(-1)}
+        className="flex items-center gap-1.5 text-[var(--text-secondary)] hover:text-[var(--text)] text-sm font-medium mb-4 transition-colors">
         <ArrowLeft size={16} /> Back
       </button>
 
-      {/* Hero: video or image */}
-      <div className="relative rounded-2xl overflow-hidden bg-gray-100 mb-5">
+      {/* ── Hero ── */}
+      <div className="relative rounded-3xl overflow-hidden mb-5 shadow-lg">
         {offer.videoUrl ? (
-          <div className="relative h-64 sm:h-80 bg-black">
-            <video
-              ref={videoRef}
-              src={offer.videoUrl}
-              className="w-full h-full object-cover"
-              playsInline
-              onEnded={() => setVideoPlaying(false)}
-            />
-            <button
-              onClick={toggleVideo}
-              className="absolute inset-0 flex items-center justify-center group"
-            >
-              <div className={`w-16 h-16 rounded-full flex items-center justify-center shadow-xl transition-all ${
-                videoPlaying ? 'bg-black/50 opacity-0 group-hover:opacity-100' : 'bg-primary/90 backdrop-blur-sm'
-              }`}>
-                {videoPlaying
-                  ? <Pause size={26} className="text-white" />
-                  : <Play  size={26} className="text-white ml-1" />}
+          <div className="relative h-72 sm:h-96 bg-black">
+            <video ref={videoRef} src={offer.videoUrl} className="w-full h-full object-cover"
+              playsInline onEnded={() => setVideoPlaying(false)} />
+            <button onClick={toggleVideo} className="absolute inset-0 flex items-center justify-center group">
+              <div className={`w-16 h-16 rounded-full flex items-center justify-center shadow-xl backdrop-blur-sm transition-all
+                ${videoPlaying ? 'bg-black/50 opacity-0 group-hover:opacity-100' : 'bg-[var(--primary)]/90'}`}>
+                {videoPlaying ? <Pause size={26} className="text-white" /> : <Play size={26} className="text-white ml-1" />}
               </div>
             </button>
-            {!videoPlaying && (
-              <div className="absolute top-4 left-4 bg-black/60 text-white text-xs font-semibold px-3 py-1 rounded-full backdrop-blur-sm flex items-center gap-1.5">
-                <Play size={11} fill="white" /> Watch Video Ad
-              </div>
-            )}
           </div>
         ) : (offer.bannerUrl || offer.imageUrl) ? (
-          <button
-            type="button"
-            onClick={() => setLightbox(true)}
-            className="relative w-full group block"
-          >
-            <img
-              src={offer.bannerUrl || offer.imageUrl}
-              alt={offer.title}
-              className="w-full h-64 sm:h-80 object-cover"
-            />
-            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-              <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 rounded-full p-3 backdrop-blur-sm">
+          <button type="button" onClick={() => setLightbox(true)} className="relative w-full group block">
+            <img src={offer.bannerUrl || offer.imageUrl} alt={offer.title} className="w-full h-72 sm:h-96 object-cover" />
+            {/* gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="bg-white/20 backdrop-blur-sm rounded-full p-3">
                 <ZoomIn size={22} className="text-white" />
+              </div>
+            </div>
+            {/* Overlay title */}
+            <div className="absolute bottom-0 left-0 right-0 p-5">
+              <div className="flex items-end justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <span className="inline-block bg-white/20 backdrop-blur-sm text-white text-[10px] font-bold px-2.5 py-1 rounded-full mb-2 capitalize border border-white/20">
+                    {offer.category}
+                  </span>
+                  <h1 className="font-heading font-bold text-white text-xl leading-snug drop-shadow-md line-clamp-2">
+                    {offer.title}
+                  </h1>
+                </div>
+                {offer.discountPercent > 0 && (
+                  <div className="bg-[var(--primary)] text-white font-heading font-extrabold text-2xl px-4 py-2 rounded-2xl shadow-lg flex-shrink-0">
+                    {offer.discountPercent}%<br/><span className="text-xs font-bold leading-none">OFF</span>
+                  </div>
+                )}
               </div>
             </div>
           </button>
         ) : (
-          <div className="h-64 flex items-center justify-center text-7xl bg-gradient-to-br from-primary/10 to-primary/5">
+          <div className="h-56 flex items-center justify-center text-7xl bg-gradient-to-br from-[var(--primary)]/10 to-[var(--primary)]/5 rounded-3xl">
             🏷️
           </div>
         )}
 
-        {/* Discount badge */}
-        {offer.discountPercent > 0 && (
-          <div className="absolute top-4 right-4 bg-primary text-white font-heading font-bold text-base px-3 py-1.5 rounded-xl shadow-lg">
-            {offer.discountPercent}% OFF
-          </div>
-        )}
-
-        {/* Featured */}
+        {/* Featured badge */}
         {offer.isFeatured && (
-          <div className="absolute top-4 left-4 bg-warning text-white text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1">
+          <div className="absolute top-4 left-4 bg-warning text-white text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1 shadow-md">
             <Star size={10} fill="white" /> Featured
           </div>
         )}
       </div>
 
-      {/* Title + actions */}
-      <div className="flex items-start justify-between gap-3 mb-4">
-        <div className="flex-1">
-          <span className="inline-block bg-primary/10 text-primary text-xs font-semibold px-2.5 py-0.5 rounded-full mb-2 capitalize">
+      {/* Title row (when no image overlay) */}
+      {!(offer.bannerUrl || offer.imageUrl || offer.videoUrl) && (
+        <div className="mb-4">
+          <span className="inline-block bg-[var(--primary)]/10 text-[var(--primary)] text-xs font-semibold px-2.5 py-0.5 rounded-full mb-2 capitalize">
             {offer.category}
           </span>
-          <h1 className="font-heading font-bold text-gray-900 text-xl leading-snug">
-            {offer.title}
-          </h1>
+          <h1 className="font-heading font-bold text-[var(--text)] text-2xl leading-snug">{offer.title}</h1>
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <button
-            onClick={handleShare}
-            title="Share on WhatsApp"
-            className="p-2.5 rounded-xl border border-gray-200 text-gray-500 hover:text-green-600 hover:border-green-400 transition-colors"
-          >
-            <MessageCircle size={18} />
-          </button>
-          <button
-            onClick={handleCopyLink}
-            title="Copy link"
-            className="p-2.5 rounded-xl border border-gray-200 text-gray-500 hover:text-primary hover:border-primary transition-colors"
-          >
-            <Share2 size={18} />
-          </button>
-          <button
-            onClick={handleSave}
-            className={`p-2.5 rounded-xl border transition-colors ${
-              saved ? 'bg-primary border-primary text-white' : 'border-gray-200 text-gray-500 hover:text-primary hover:border-primary'
-            }`}
-          >
-            <Bookmark size={18} fill={saved ? 'currentColor' : 'none'} />
-          </button>
-          <button
-            onClick={() => setReportOpen(true)}
-            title="Report this offer"
-            className="p-2.5 rounded-xl border border-gray-200 text-gray-500 hover:text-danger hover:border-danger transition-colors"
-          >
-            <Flag size={18} />
-          </button>
-        </div>
+      )}
+
+      {/* ── Action bar ── */}
+      <div className="flex items-center gap-2 mb-5">
+        <button onClick={handleShare} title="Share on WhatsApp"
+          className="p-2.5 rounded-xl border border-[var(--border)] text-[var(--text-secondary)] hover:text-green-600 hover:border-green-400 transition-colors bg-[var(--surface)]">
+          <MessageCircle size={18} />
+        </button>
+        <button onClick={handleCopyLink} title="Copy link"
+          className="p-2.5 rounded-xl border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--primary)] hover:border-[var(--primary)] transition-colors bg-[var(--surface)]">
+          <Share2 size={18} />
+        </button>
+        <button onClick={handleSave}
+          className={`p-2.5 rounded-xl border transition-colors bg-[var(--surface)] ${
+            saved ? 'bg-[var(--primary)] border-[var(--primary)] text-white' : 'border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--primary)] hover:border-[var(--primary)]'
+          }`}>
+          <Bookmark size={18} fill={saved ? 'currentColor' : 'none'} />
+        </button>
+        <button onClick={() => setReportOpen(true)} title="Report"
+          className="p-2.5 rounded-xl border border-[var(--border)] text-[var(--text-secondary)] hover:text-red-500 hover:border-red-300 transition-colors bg-[var(--surface)] ml-auto">
+          <Flag size={18} />
+        </button>
       </div>
 
-      {/* Price + coupon */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-white rounded-2xl p-4 mb-4 shadow-sm border border-gray-100"
-      >
-        <div className="flex items-center justify-between flex-wrap gap-3">
+      {/* ── Price & Coupon card ── */}
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+        className={`${card} p-5 mb-4`}>
+        <div className="flex items-center justify-between flex-wrap gap-4">
           {(offer.offerPrice ?? 0) > 0 && (
             <div className="flex items-baseline gap-2">
-              <span className="font-heading font-bold text-primary text-3xl">₹{offer.offerPrice}</span>
+              <span className="font-heading font-extrabold text-[var(--primary)] text-4xl">₹{offer.offerPrice}</span>
               {(offer.originalPrice ?? 0) > 0 && (
-                <span className="text-gray-400 line-through text-lg">₹{offer.originalPrice}</span>
+                <span className="text-[var(--text-muted)] line-through text-xl">₹{offer.originalPrice}</span>
+              )}
+              {offer.discountPercent > 0 && (offer.bannerUrl || offer.imageUrl || offer.videoUrl) && (
+                <span className="ml-1 bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-400 text-xs font-bold px-2 py-0.5 rounded-full">
+                  {offer.discountPercent}% OFF
+                </span>
               )}
             </div>
           )}
           {offer.couponCode && (
-            <button
-              onClick={handleCopyCoupon}
-              className="flex items-center gap-2 bg-primary/5 border-2 border-dashed border-primary/30 hover:border-primary px-4 py-2 rounded-xl transition-all group"
-            >
-              <Tag size={14} className="text-primary" />
-              <span className="font-mono font-bold text-primary text-sm">{offer.couponCode}</span>
-              {copied
-                ? <CheckCheck size={14} className="text-accent" />
-                : <Copy size={14} className="text-gray-400 group-hover:text-primary transition-colors" />}
+            <button onClick={handleCopyCoupon}
+              className="flex items-center gap-2 bg-[var(--primary)]/8 border-2 border-dashed border-[var(--primary)]/40 hover:border-[var(--primary)] px-4 py-2.5 rounded-xl transition-all group">
+              <Tag size={14} className="text-[var(--primary)]" />
+              <span className="font-mono font-bold text-[var(--primary)] text-sm tracking-widest">{offer.couponCode}</span>
+              {copied ? <CheckCheck size={14} className="text-green-500" /> : <Copy size={14} className="text-[var(--text-muted)] group-hover:text-[var(--primary)] transition-colors" />}
             </button>
           )}
         </div>
 
         {/* Validity */}
         {(offer.validFrom || offer.validUntil) && (
-          <div className="flex items-center gap-4 mt-3 pt-3 border-t border-gray-100 text-xs text-gray-500">
-            <span className="flex items-center gap-1.5">
-              <Calendar size={12} /> From {formatDate(offer.validFrom)}
-            </span>
+          <div className="flex items-center gap-4 mt-4 pt-4 border-t border-[var(--border)] text-xs text-[var(--text-secondary)]">
+            {offer.validFrom && (
+              <span className="flex items-center gap-1.5">
+                <Calendar size={12} /> From {formatDate(offer.validFrom)}
+              </span>
+            )}
             {offer.validUntil && (
-              <span className={`flex items-center gap-1.5 font-semibold ${tl === 'Ending soon' ? 'text-danger' : ''}`}>
-                <Clock size={12} /> {tl || `Until ${formatDate(offer.validUntil)}`}
+              <span className={`flex items-center gap-1.5 font-semibold ${isUrgent ? 'text-red-500' : ''}`}>
+                <Clock size={12} />
+                {tl || `Until ${formatDate(offer.validUntil)}`}
               </span>
             )}
           </div>
         )}
       </motion.div>
 
-      {/* Description */}
+      {/* ── Description ── */}
       {offer.description && (
-        <div className="bg-white rounded-2xl p-4 mb-4 shadow-sm border border-gray-100">
-          <h2 className="font-heading font-semibold text-gray-900 text-sm mb-2">About this offer</h2>
-          <p className="text-gray-600 text-sm leading-relaxed">{offer.description}</p>
-        </div>
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
+          className={`${card} p-5 mb-4`}>
+          <h2 className="text-xs font-extrabold text-[var(--text-secondary)] uppercase tracking-wider mb-2">About this offer</h2>
+          <p className="text-[var(--text)] text-sm leading-relaxed">{offer.description}</p>
+        </motion.div>
       )}
 
-      {/* Redeem Online banner */}
+      {/* ── Redeem Online banner ── */}
       {offer.redeemUrl && (
-        <a
-          href={offer.redeemUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={() => {
-            if (offer.couponCode) handleCopyCoupon();
-          }}
-          className="flex items-center justify-between gap-3 bg-primary text-white px-5 py-4 rounded-2xl mb-4 shadow-lg shadow-primary/30 hover:opacity-90 transition-opacity"
-        >
+        <a href={offer.redeemUrl} target="_blank" rel="noopener noreferrer"
+          onClick={() => { if (offer.couponCode) handleCopyCoupon(); }}
+          className="flex items-center justify-between gap-3 bg-gradient-to-r from-[var(--primary)] to-orange-500 text-white px-5 py-4 rounded-2xl mb-4 shadow-lg shadow-[var(--primary)]/25 hover:opacity-95 transition-opacity">
           <div>
             <p className="font-heading font-bold text-base leading-none">Redeem Online</p>
-            <p className="text-xs text-white/80 mt-1">Click to visit the offer page</p>
+            <p className="text-xs text-white/80 mt-1">Tap to visit the offer page</p>
           </div>
           <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
             <ExternalLink size={20} />
@@ -536,136 +438,153 @@ export default function OfferDetail() {
         </a>
       )}
 
-      {/* Vendor info */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="bg-white rounded-2xl p-4 mb-4 shadow-sm border border-gray-100"
-      >
-        <h2 className="font-heading font-semibold text-gray-900 text-sm mb-3 flex items-center gap-2">
-          <Store size={15} className="text-primary" /> Shop Details
-        </h2>
-
-        <div className="flex items-center gap-3 mb-3">
-          <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+      {/* ── Vendor card ── */}
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}
+        className={`${card} overflow-hidden mb-4`}>
+        {/* Vendor header */}
+        <div className="px-5 pt-5 pb-4 flex items-center gap-3">
+          <div className="w-14 h-14 rounded-2xl bg-[var(--primary)]/10 flex items-center justify-center flex-shrink-0 overflow-hidden border border-[var(--border)]">
             {offer.vendorLogo
-              ? <img src={offer.vendorLogo} alt="" className="w-12 h-12 rounded-xl object-cover" />
-              : <span className="font-bold text-primary text-lg">{offer.businessName?.[0]}</span>}
+              ? <img src={offer.vendorLogo} alt="" className="w-full h-full object-cover" />
+              : <span className="font-bold text-[var(--primary)] text-2xl">{offer.businessName?.[0]}</span>}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="font-semibold text-gray-900 text-sm">{offer.businessName}</p>
-            <p className="text-xs text-gray-500 capitalize">{offer.vendorCategory} · {offer.vendorCity}</p>
+            <p className="font-heading font-bold text-[var(--text)] text-base leading-tight">{offer.businessName}</p>
+            <p className="text-xs text-[var(--text-secondary)] capitalize mt-0.5">
+              {offer.vendorCategory}{offer.vendorCity ? ` · ${offer.vendorCity}` : ''}
+            </p>
             {followersCount > 0 && (
-              <p className="text-xs text-gray-400 mt-0.5">{followersCount.toLocaleString()} subscribers</p>
+              <p className="text-[11px] text-[var(--text-muted)] mt-0.5">{followersCount.toLocaleString()} subscribers</p>
             )}
           </div>
           {user && (
-            <button
-              onClick={handleFollow}
-              disabled={followLoading}
-              className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border transition-all flex-shrink-0 ${
+            <button onClick={handleFollow} disabled={followLoading}
+              className={`flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-xl border transition-all flex-shrink-0 ${
                 following
-                  ? 'bg-primary/10 border-primary/30 text-primary'
-                  : 'bg-white border-gray-200 text-gray-600 hover:border-primary hover:text-primary'
-              }`}
-            >
+                  ? 'bg-[var(--primary)]/10 border-[var(--primary)]/30 text-[var(--primary)]'
+                  : 'bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)]'
+              }`}>
               {following ? <BellOff size={13} /> : <Bell size={13} />}
               {following ? 'Subscribed' : 'Subscribe'}
             </button>
           )}
         </div>
 
-        {offer.vendorDescription && (
-          <p className="text-xs text-gray-500 mb-3 leading-relaxed">{offer.vendorDescription}</p>
-        )}
-
-        <div className="space-y-2">
+        {/* Contact details */}
+        <div className="border-t border-[var(--border)] divide-y divide-[var(--border)]">
           {offer.vendorAddress && (
-            <div className="flex items-start gap-2 text-sm text-gray-600">
-              <MapPin size={14} className="text-primary mt-0.5 flex-shrink-0" />
-              <span>{offer.vendorAddress}</span>
+            <div className="flex items-start gap-3 px-5 py-3 text-sm text-[var(--text-secondary)]">
+              <MapPin size={15} className="text-[var(--primary)] mt-0.5 flex-shrink-0" />
+              <span className="leading-snug">{offer.vendorAddress}</span>
             </div>
           )}
           {offer.vendorPhone && (
-            <a href={`tel:${offer.vendorPhone}`} className="flex items-center gap-2 text-sm text-gray-600 hover:text-primary transition-colors">
-              <Phone size={14} className="text-primary flex-shrink-0" />
+            <a href={`tel:${offer.vendorPhone}`}
+              className="flex items-center gap-3 px-5 py-3 text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-2)] transition-colors">
+              <Phone size={15} className="text-[var(--primary)] flex-shrink-0" />
               <span>{offer.vendorPhone}</span>
+              <ChevronRight size={14} className="ml-auto text-[var(--text-muted)]" />
             </a>
           )}
           {offer.vendorWebsite && (
             <a href={offer.vendorWebsite} target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-2 text-sm text-primary hover:underline">
-              <Globe size={14} className="flex-shrink-0" />
+              className="flex items-center gap-3 px-5 py-3 text-sm text-[var(--primary)] hover:bg-[var(--surface-2)] transition-colors">
+              <Globe size={15} className="flex-shrink-0" />
               <span className="truncate">{offer.vendorWebsite}</span>
-              <ExternalLink size={11} />
+              <ExternalLink size={12} className="ml-auto flex-shrink-0 text-[var(--text-muted)]" />
             </a>
           )}
+          <button onClick={handleTakeStep}
+            className="w-full flex items-center gap-3 px-5 py-3.5 text-sm font-semibold text-[var(--text)] hover:bg-[var(--surface-2)] transition-colors">
+            <Navigation size={15} className="text-[var(--primary)] flex-shrink-0" />
+            Get Directions
+            <ChevronRight size={14} className="ml-auto text-[var(--text-muted)]" />
+          </button>
         </div>
       </motion.div>
 
-      {/* Ratings & Feedback */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.12 }}
-        className="bg-white rounded-2xl p-4 mb-4 shadow-sm border border-gray-100"
-      >
-        <h2 className="font-heading font-semibold text-gray-900 text-sm mb-3 flex items-center gap-2">
-          <MessageSquare size={15} className="text-primary" /> Ratings & Feedback
+      {/* ── Map ── */}
+      {offer.vendorLat && offer.vendorLng && (
+        <motion.div ref={mapSectionRef} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+          className={`${card} overflow-hidden mb-4`}>
+          <div className="px-5 py-3 flex items-center justify-between border-b border-[var(--border)]">
+            <h2 className="text-xs font-extrabold text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-2">
+              <MapPin size={13} className="text-[var(--primary)]" /> Location
+            </h2>
+            <button onClick={handleTakeStep} className="text-xs text-[var(--primary)] font-semibold flex items-center gap-1 hover:underline">
+              Open in Maps <ExternalLink size={11} />
+            </button>
+          </div>
+          <div ref={mapRef} className="h-52 w-full" />
+        </motion.div>
+      )}
+
+      {/* ── Ratings & Reviews ── */}
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}
+        className={`${card} p-5 mb-4`}>
+        <h2 className="text-xs font-extrabold text-[var(--text-secondary)] uppercase tracking-wider mb-4 flex items-center gap-2">
+          <MessageSquare size={13} className="text-[var(--primary)]" /> Ratings & Reviews
         </h2>
 
-        <div className="flex items-center gap-3 mb-4">
-          <span className="font-heading font-bold text-gray-900 text-2xl">
-            {avgRating ? avgRating.toFixed(1) : '—'}
-          </span>
-          <div>
-            <StarRow value={avgRating ?? 0} />
-            <p className="text-xs text-gray-400 mt-0.5">
-              {reviewCount ? `${reviewCount} review${reviewCount > 1 ? 's' : ''}` : 'No reviews yet'}
+        {/* Summary */}
+        <div className="flex items-center gap-4 mb-5 pb-5 border-b border-[var(--border)]">
+          <div className="text-center">
+            <p className="font-heading font-extrabold text-4xl text-[var(--text)]">
+              {avgRating ? avgRating.toFixed(1) : '—'}
             </p>
+            <StarRow value={avgRating ?? 0} size={13} />
+            <p className="text-[11px] text-[var(--text-muted)] mt-1">
+              {reviewCount ? `${reviewCount} review${reviewCount !== 1 ? 's' : ''}` : 'No reviews'}
+            </p>
+          </div>
+          <div className="flex-1 space-y-1.5">
+            {[5,4,3,2,1].map((star) => {
+              const count = reviews.filter((r) => Math.round(r.rating) === star).length;
+              const pct = reviewCount ? Math.round((count / reviewCount) * 100) : 0;
+              return (
+                <div key={star} className="flex items-center gap-2">
+                  <span className="text-[11px] text-[var(--text-muted)] w-3">{star}</span>
+                  <div className="flex-1 h-1.5 rounded-full bg-[var(--surface-2)]">
+                    <div className="h-full rounded-full bg-warning transition-all" style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 
-        {/* Leave / edit a rating */}
-        <div className="bg-gray-50 rounded-xl p-3 mb-4">
-          <p className="text-xs font-semibold text-gray-600 mb-2">
+        {/* Leave a rating */}
+        <div className="bg-[var(--surface-2)] rounded-2xl p-4 mb-4">
+          <p className="text-xs font-bold text-[var(--text-secondary)] mb-2.5">
             {myRating > 0 ? 'Your rating' : 'Rate this offer'}
           </p>
           <StarPicker value={myRating} onChange={setMyRating} />
-          <textarea
-            value={myComment}
-            onChange={(e) => setMyComment(e.target.value)}
-            placeholder="Share your experience (optional)"
-            rows={2}
-            className="w-full mt-2 text-sm bg-white border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-primary resize-none"
-          />
-          <button
-            onClick={handleSubmitReview}
-            disabled={submittingReview || myRating < 1}
-            className="mt-2 text-xs font-semibold bg-primary text-white px-4 py-2 rounded-lg disabled:opacity-50 hover:bg-primary-dark transition-colors"
-          >
+          <textarea value={myComment} onChange={(e) => setMyComment(e.target.value)}
+            placeholder="Share your experience (optional)" rows={2}
+            className="w-full mt-3 text-sm bg-[var(--surface)] border border-[var(--border)] rounded-xl px-3 py-2 focus:outline-none focus:border-[var(--primary)] resize-none text-[var(--text)] placeholder-[var(--text-muted)]" />
+          <button onClick={handleSubmitReview} disabled={submittingReview || myRating < 1}
+            className="mt-2.5 text-xs font-bold bg-[var(--primary)] text-white px-5 py-2 rounded-xl disabled:opacity-40 hover:opacity-90 transition-opacity">
             {submittingReview ? 'Submitting…' : myRating > 0 ? 'Update Rating' : 'Submit Rating'}
           </button>
         </div>
 
         {/* Review list */}
         {reviews.length > 0 && (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {reviews.map((r) => (
-              <div key={r.id} className="flex gap-3 pt-3 border-t border-gray-100 first:border-t-0 first:pt-0">
-                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 text-xs font-bold text-primary">
+              <div key={r.id} className="flex gap-3">
+                <div className="w-9 h-9 rounded-full bg-[var(--primary)]/10 flex items-center justify-center flex-shrink-0 text-xs font-bold text-[var(--primary)] overflow-hidden">
                   {r.userAvatar
-                    ? <img src={r.userAvatar} alt="" className="w-8 h-8 rounded-full object-cover" />
+                    ? <img src={r.userAvatar} alt="" className="w-full h-full object-cover" />
                     : r.userName?.[0]?.toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-gray-900">{r.userName}</span>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-semibold text-[var(--text)]">{r.userName}</span>
                     <StarRow value={r.rating} size={11} />
+                    <span className="text-[11px] text-[var(--text-muted)] ml-auto">{formatDate(r.createdAt)}</span>
                   </div>
-                  {r.comment && <p className="text-xs text-gray-500 mt-1 leading-relaxed">{r.comment}</p>}
-                  <p className="text-[11px] text-gray-300 mt-1">{formatDate(r.createdAt)}</p>
+                  {r.comment && <p className="text-xs text-[var(--text-secondary)] mt-1 leading-relaxed">{r.comment}</p>}
                 </div>
               </div>
             ))}
@@ -673,138 +592,61 @@ export default function OfferDetail() {
         )}
       </motion.div>
 
-      {/* Map */}
-      {offer.vendorLat && offer.vendorLng && (
-        <motion.div
-          ref={mapSectionRef}
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-          className="bg-white rounded-2xl overflow-hidden mb-4 shadow-sm border border-gray-100"
-        >
-          <div className="p-3 flex items-center justify-between border-b border-gray-100">
-            <h2 className="font-heading font-semibold text-gray-900 text-sm flex items-center gap-2">
-              <MapPin size={15} className="text-primary" /> Location
-            </h2>
-            <button
-              onClick={handleTakeStep}
-              className="text-xs text-primary font-medium flex items-center gap-1 hover:underline"
-            >
-              Open in Maps <ExternalLink size={11} />
-            </button>
-          </div>
-          <div ref={mapRef} className="h-56 w-full" />
-        </motion.div>
-      )}
-
-      {/* CTA buttons */}
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 py-3 flex gap-3 z-50 shadow-xl"
-      >
-        {/* Take Step — open shop in maps */}
-        <button
-          onClick={handleTakeStep}
-          className="flex-1 flex items-center justify-center gap-2 bg-dark text-white font-semibold py-3.5 rounded-xl hover:bg-dark-card transition-colors"
-        >
-          <Navigation size={18} />
-          Take Step — Get Directions
+      {/* ── Fixed bottom CTA ── */}
+      <div className="fixed bottom-0 left-0 right-0 bg-[var(--surface)]/95 backdrop-blur-md border-t border-[var(--border)] px-4 py-3 flex gap-3 z-50">
+        <button onClick={handleTakeStep}
+          className="flex-1 flex items-center justify-center gap-2 bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text)] font-semibold py-3.5 rounded-2xl hover:bg-[var(--border)] transition-colors text-sm">
+          <Navigation size={17} /> Directions
         </button>
-
-        {/* Redeem */}
         {offer.redeemUrl ? (
-          <a
-            href={offer.redeemUrl}
-            target="_blank"
-            rel="noopener noreferrer"
+          <a href={offer.redeemUrl} target="_blank" rel="noopener noreferrer"
             onClick={() => { if (offer.couponCode) handleCopyCoupon(); }}
-            className="flex-1 flex items-center justify-center gap-2 bg-primary hover:bg-primary-dark text-white font-semibold py-3.5 rounded-xl transition-colors shadow-lg shadow-primary/30"
-          >
-            <ExternalLink size={18} />
-            Redeem Online
+            className="flex-1 flex items-center justify-center gap-2 bg-[var(--primary)] hover:opacity-90 text-white font-bold py-3.5 rounded-2xl transition-opacity shadow-lg shadow-[var(--primary)]/30 text-sm">
+            <ExternalLink size={17} /> Redeem Online
           </a>
         ) : (
-          <button
-            onClick={() => {
-              if (offer.couponCode) handleCopyCoupon();
-              toast.success('Offer redeemed! 🎉');
-            }}
-            className="flex-1 flex items-center justify-center gap-2 bg-primary hover:bg-primary-dark text-white font-semibold py-3.5 rounded-xl transition-colors shadow-lg shadow-primary/30"
-          >
-            <Tag size={18} />
-            Redeem Offer
+          <button onClick={() => { if (offer.couponCode) handleCopyCoupon(); toast.success('Offer redeemed! 🎉'); }}
+            className="flex-1 flex items-center justify-center gap-2 bg-[var(--primary)] hover:opacity-90 text-white font-bold py-3.5 rounded-2xl transition-opacity shadow-lg shadow-[var(--primary)]/30 text-sm">
+            <Tag size={17} /> Redeem Offer
           </button>
         )}
+      </div>
 
-      </motion.div>
-
-      {/* Lightbox */}
+      {/* ── Lightbox ── */}
       {lightbox && (offer.bannerUrl || offer.imageUrl) && (
-        <div
-          className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4"
-          onClick={() => setLightbox(false)}
-        >
-          <button
-            onClick={() => setLightbox(false)}
-            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
-          >
+        <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4" onClick={() => setLightbox(false)}>
+          <button onClick={() => setLightbox(false)}
+            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors">
             <X size={20} className="text-white" />
           </button>
-          <img
-            src={offer.bannerUrl || offer.imageUrl}
-            alt={offer.title}
-            className="max-w-full max-h-[90vh] object-contain rounded-xl shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          />
+          <img src={offer.bannerUrl || offer.imageUrl} alt={offer.title}
+            className="max-w-full max-h-[90vh] object-contain rounded-2xl shadow-2xl" onClick={(e) => e.stopPropagation()} />
         </div>
       )}
 
-      {/* Report modal */}
+      {/* ── Report modal ── */}
       {reportOpen && (
-        <div
-          className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4"
-          onClick={() => setReportOpen(false)}
-        >
-          <div
-            className="bg-white rounded-2xl p-5 w-full max-w-sm shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-heading font-semibold text-gray-900 text-sm flex items-center gap-2">
-                <Flag size={15} className="text-danger" /> Report this offer
+        <div className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4" onClick={() => setReportOpen(false)}>
+          <div className={`${card} p-5 w-full max-w-sm shadow-2xl`} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-heading font-semibold text-[var(--text)] text-sm flex items-center gap-2">
+                <Flag size={15} className="text-red-500" /> Report this offer
               </h3>
-              <button onClick={() => setReportOpen(false)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => setReportOpen(false)} className="text-[var(--text-muted)] hover:text-[var(--text)]">
                 <X size={18} />
               </button>
             </div>
-
-            <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Reason</label>
-            <select
-              value={reportReason}
-              onChange={(e) => setReportReason(e.target.value)}
-              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 mb-3 focus:outline-none focus:border-primary"
-            >
-              {REPORT_REASONS.map((r) => (
-                <option key={r.value} value={r.value}>{r.label}</option>
-              ))}
+            <label className="text-xs font-bold text-[var(--text-secondary)] mb-1.5 block uppercase tracking-wider">Reason</label>
+            <select value={reportReason} onChange={(e) => setReportReason(e.target.value)}
+              className="input-field w-full mb-3">
+              {REPORT_REASONS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
             </select>
-
-            <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Details (optional)</label>
-            <textarea
-              value={reportDetails}
-              onChange={(e) => setReportDetails(e.target.value)}
-              placeholder="Tell us more…"
-              rows={3}
-              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 mb-4 focus:outline-none focus:border-primary resize-none"
-            />
-
-            <button
-              onClick={handleSubmitReport}
-              disabled={submittingReport}
-              className="w-full bg-danger text-white font-semibold text-sm py-2.5 rounded-xl disabled:opacity-50 hover:opacity-90 transition-opacity"
-            >
+            <label className="text-xs font-bold text-[var(--text-secondary)] mb-1.5 block uppercase tracking-wider">Details (optional)</label>
+            <textarea value={reportDetails} onChange={(e) => setReportDetails(e.target.value)}
+              placeholder="Tell us more…" rows={3}
+              className="input-field w-full mb-4 resize-none" />
+            <button onClick={handleSubmitReport} disabled={submittingReport}
+              className="w-full bg-red-500 hover:bg-red-600 text-white font-bold text-sm py-2.5 rounded-xl disabled:opacity-50 transition-colors">
               {submittingReport ? 'Submitting…' : 'Submit Report'}
             </button>
           </div>

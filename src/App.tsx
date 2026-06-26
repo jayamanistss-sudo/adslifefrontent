@@ -35,6 +35,7 @@ class ErrorBoundary extends Component<{ children: React.ReactNode }, { hasError:
 import Layout from "./components/Layout";
 import PowerSyncProvider from "./powersync/PowerSyncProvider";
 import { useUserStore } from "./store/useUserStore";
+import { api, endpoints } from "./utils/api";
 // Pages
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -107,11 +108,31 @@ function ProtectedRoute({ children, roles }: { readonly children: React.ReactNod
 }
 
 export default function App() {
+  const { isAuthenticated, updateUser } = useUserStore();
+
   useEffect(() => {
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("/sw.js").catch(() => {});
     }
   }, []);
+
+  // On startup, refresh user data from DB so a role change (e.g. vendor approval)
+  // is reflected immediately without requiring the user to log out and back in.
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    api.get(endpoints.authMe).then((res) => {
+      if (res.data.success) {
+        const u = res.data.data;
+        updateUser({
+          name:      u.name,
+          phone:     u.phone      ?? undefined,
+          city:      u.city       ?? undefined,
+          avatarUrl: u.avatar_url ?? undefined,
+          role:      u.role,
+        });
+      }
+    }).catch(() => {});
+  }, [isAuthenticated]);
 
   return (
     <ErrorBoundary>
