@@ -209,8 +209,11 @@ export default function Layout({ children }: Props) {
                     onClick={() => setProfileOpen(!profileOpen)}
                     className="flex items-center gap-2 pl-1 pr-2.5 py-1 rounded-xl hover:bg-[var(--surface-2)] transition-colors"
                   >
-                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#FF7420] to-[#B04200] flex items-center justify-center text-white font-bold text-xs">
-                      {user?.name?.[0]?.toUpperCase() ?? 'U'}
+                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#FF7420] to-[#B04200] flex items-center justify-center text-white font-bold text-xs overflow-hidden flex-shrink-0">
+                      {user?.avatarUrl
+                        ? <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+                        : user?.name?.[0]?.toUpperCase() ?? 'U'
+                      }
                     </div>
                     <div className="hidden lg:block text-left">
                       <div className="text-[0.8125rem] font-semibold text-[var(--text)] leading-none">{user?.name?.split(' ')[0]}</div>
