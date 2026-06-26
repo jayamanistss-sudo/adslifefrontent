@@ -4,7 +4,7 @@ import {
   LogOut, Store, ChevronRight, X, CheckCircle,
   MapPin, Search, LocateFixed, Upload, ImagePlus,
   ChevronLeft, Building2, FileText, Camera, Layers, Check,
-  Bookmark, Bell, BellOff, ExternalLink, Tag, Copy, Gift, MessageCircle, Info, Coins
+  Bookmark, Bell, BellOff, ExternalLink, Tag, Copy, Gift, MessageCircle, Info, Coins, Pencil
 } from 'lucide-react';
 import CategoryIcon from '../components/CategoryIcon';
 import L from 'leaflet';
@@ -759,11 +759,171 @@ function BecomeVendorModal({ onClose, onSuccess }: {
   );
 }
 
+// ─── Edit Profile Modal ────────────────────────────────────────────────────────
+function EditProfileModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
+  const { user, updateUser } = useUserStore();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [form, setForm] = useState({
+    name:       user?.name       ?? '',
+    phone:      user?.phone      ?? '',
+    city:       user?.city       ?? '',
+    avatar_url: user?.avatarUrl  ?? '',
+  });
+  const [uploading, setUploading] = useState(false);
+  const [saving,    setSaving]    = useState(false);
+  const [phoneErr,  setPhoneErr]  = useState('');
+
+  const upd = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }));
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('image', file);
+      const res = await api.post(endpoints.uploadImage, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      if (res.data.success) upd('avatar_url', res.data.data.url as string);
+    } catch {
+      toast.error('Photo upload failed');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (form.phone && !PHONE_PATTERN.test(form.phone)) {
+      setPhoneErr('Enter a valid 10-digit mobile number starting with 6–9');
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await api.put(endpoints.authProfile, {
+        name:       form.name.trim()  || undefined,
+        phone:      form.phone.trim() || undefined,
+        city:       form.city.trim()  || undefined,
+        avatar_url: form.avatar_url   || undefined,
+      });
+      if (res.data.success) {
+        updateUser({
+          name:      res.data.data.name,
+          phone:     res.data.data.phone,
+          city:      res.data.data.city,
+          avatarUrl: res.data.data.avatar_url ?? undefined,
+        });
+        toast.success('Profile updated!');
+        onSaved();
+      }
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error ?? 'Update failed';
+      toast.error(msg);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return createPortal(
+    <div className="modal-overlay">
+      <div className="modal-content max-w-sm rounded-3xl shadow-2xl">
+        {/* Header */}
+        <div className="modal-header px-6 py-4.5">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-2xl bg-[var(--primary)]/10 flex items-center justify-center">
+              <Pencil size={16} className="text-[var(--primary)]" />
+            </div>
+            <h2 className="modal-title text-base font-bold">Edit Profile</h2>
+          </div>
+          <button onClick={onClose} className="modal-close"><X size={18} /></button>
+        </div>
+
+        <div className="p-6 space-y-5 bg-[var(--surface)]">
+          {/* Avatar */}
+          <div className="flex flex-col items-center gap-3">
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              className="relative w-20 h-20 rounded-2xl overflow-hidden bg-gradient-to-br from-[var(--primary)] to-orange-500 flex items-center justify-center cursor-pointer group shadow-md"
+            >
+              {form.avatar_url ? (
+                <img src={form.avatar_url} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-white text-3xl font-extrabold">
+                  {form.name?.[0]?.toUpperCase() ?? user?.name?.[0]?.toUpperCase()}
+                </span>
+              )}
+              <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                {uploading ? (
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Camera size={20} className="text-white" />
+                )}
+              </div>
+            </button>
+            <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={handleAvatarUpload} />
+            <p className="text-[11px] text-[var(--text-muted)] font-medium">Tap to change photo</p>
+          </div>
+
+          {/* Name */}
+          <div>
+            <label className="block text-xs font-bold text-[var(--text-secondary)] mb-1.5 uppercase tracking-wider">Full Name</label>
+            <input
+              value={form.name}
+              onChange={(e) => upd('name', e.target.value)}
+              placeholder="Your name"
+              className="input-field w-full"
+            />
+          </div>
+
+          {/* Phone */}
+          <div>
+            <label className="block text-xs font-bold text-[var(--text-secondary)] mb-1.5 uppercase tracking-wider">Phone</label>
+            <input
+              value={form.phone}
+              onChange={(e) => {
+                upd('phone', e.target.value.replace(/\D/g, '').slice(0, 10));
+                setPhoneErr('');
+              }}
+              placeholder="10-digit mobile number"
+              inputMode="numeric"
+              className="input-field w-full"
+            />
+            {phoneErr && <p className="text-xs text-red-500 mt-1 font-medium">{phoneErr}</p>}
+          </div>
+
+          {/* City */}
+          <div>
+            <label className="block text-xs font-bold text-[var(--text-secondary)] mb-1.5 uppercase tracking-wider">City</label>
+            <input
+              value={form.city}
+              onChange={(e) => upd('city', e.target.value)}
+              placeholder="Your city"
+              className="input-field w-full"
+            />
+          </div>
+        </div>
+
+        <div className="modal-footer px-6 py-4">
+          <button onClick={onClose} className="btn btn-secondary py-2.5 px-5 cursor-pointer">Cancel</button>
+          <button
+            onClick={handleSave}
+            disabled={saving || uploading || !form.name.trim()}
+            className="btn btn-primary flex-1 py-2.5 cursor-pointer"
+          >
+            {saving ? 'Saving…' : 'Save Changes'}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 // ─── Profile Page ─────────────────────────────────────────────────────────────
 export default function Profile() {
   const { user, logout } = useUserStore();
   const [tab, setTab]               = useState<Tab>('overview');
-  const [showVendorModal, setShowVendorModal] = useState(false);
+  const [showVendorModal,  setShowVendorModal]  = useState(false);
+  const [showEditProfile,  setShowEditProfile]  = useState(false);
   const [savedOffers,   setSavedOffers]   = useState<SavedOffer[]>([]);
   const [savedLoading,  setSavedLoading]  = useState(false);
   const [followedVendors, setFollowedVendors] = useState<FollowedVendor[]>([]);
@@ -912,8 +1072,11 @@ export default function Profile() {
         className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 shadow-sm mb-6 flex items-center gap-4 relative overflow-hidden"
         style={{ boxShadow: '0 4px 20px -2px rgba(0,0,0,0.03)' }}
       >
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[var(--primary)] to-accent flex items-center justify-center text-2xl font-extrabold text-white flex-shrink-0 shadow-md">
-          {user.name?.[0]?.toUpperCase()}
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[var(--primary)] to-accent flex items-center justify-center text-2xl font-extrabold text-white flex-shrink-0 shadow-md overflow-hidden">
+          {user.avatarUrl
+            ? <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+            : user.name?.[0]?.toUpperCase()
+          }
         </div>
         <div className="flex-1 min-w-0">
           <h2 className="font-heading font-extrabold text-xl text-[var(--text)] leading-tight">{user.name}</h2>
@@ -929,13 +1092,22 @@ export default function Profile() {
             )}
           </div>
         </div>
-        <button 
-          onClick={handleLogout} 
-          className="p-2.5 text-[var(--text-secondary)] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-2xl transition-all flex-shrink-0 cursor-pointer border border-transparent hover:border-red-200/30"
-          title="Sign Out"
-        >
-          <LogOut size={18} />
-        </button>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            onClick={() => setShowEditProfile(true)}
+            className="p-2.5 text-[var(--text-secondary)] hover:text-[var(--primary)] hover:bg-[var(--primary)]/10 rounded-2xl transition-all cursor-pointer border border-transparent hover:border-[var(--primary)]/20"
+            title="Edit Profile"
+          >
+            <Pencil size={16} />
+          </button>
+          <button
+            onClick={handleLogout}
+            className="p-2.5 text-[var(--text-secondary)] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-2xl transition-all cursor-pointer border border-transparent hover:border-red-200/30"
+            title="Sign Out"
+          >
+            <LogOut size={18} />
+          </button>
+        </div>
       </motion.div>
 
       {/* Tab Navigation */}
@@ -1232,6 +1404,13 @@ export default function Profile() {
         <BecomeVendorModal
           onClose={() => setShowVendorModal(false)}
           onSuccess={handleVendorSuccess}
+        />
+      )}
+
+      {showEditProfile && (
+        <EditProfileModal
+          onClose={() => setShowEditProfile(false)}
+          onSaved={() => setShowEditProfile(false)}
         />
       )}
     </motion.div>

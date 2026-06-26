@@ -58,6 +58,7 @@ export const endpoints = {
   register: "/auth/register",
   googleAuth: "/auth/google",
   becomeVendor: "/auth/become-vendor",
+  authProfile: "/auth/profile",
 
   // Feed
   feed: (_uid: number, lat: number, lng: number, page = 1, perPage = 20, q = "") =>

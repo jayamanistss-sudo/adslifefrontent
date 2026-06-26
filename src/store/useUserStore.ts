@@ -7,6 +7,7 @@ interface UserState {
   token: string | null;
   isAuthenticated: boolean;
   setUser: (user: User, token: string) => void;
+  updateUser: (fields: Partial<User>) => void;
   logout: () => void;
 }
 
@@ -50,6 +51,15 @@ export const useUserStore = create<UserState>((set) => ({
     localStorage.setItem("adslife_token", token);
     set({ user, token, isAuthenticated: true });
     registerPushToken();
+  },
+
+  updateUser: (fields) => {
+    set((state) => {
+      if (!state.user) return {};
+      const updated = { ...state.user, ...fields };
+      localStorage.setItem("adslife_user", JSON.stringify(updated));
+      return { user: updated };
+    });
   },
 
   logout: () => {
