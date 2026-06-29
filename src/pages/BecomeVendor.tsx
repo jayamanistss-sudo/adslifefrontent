@@ -156,7 +156,7 @@ export default function BecomeVendor() {
       </div>
 
       {/* Benefits */}
-      <div className="max-w-4xl px-6 py-16 mx-auto">
+      <div className="px-6 py-16 mx-auto max-w-4xxl">
         <h2 className="mb-10 text-3xl font-bold text-center text-[var(--text)]">Everything you need to grow locally</h2>
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {BENEFITS.map((b, i) => (

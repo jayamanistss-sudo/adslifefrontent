@@ -30,13 +30,13 @@ const STATUS_STYLES: Record<string, string> = {
 };
 
 // Top is currently the only live placement on the site (the homepage hero strip),
-// so every banner — regardless of chosen position — is validated against its size.
-const BANNER_ASPECT_RATIO = 4;     // width / height, e.g. 1600x400
-const BANNER_ASPECT_TOLERANCE = 0.15; // ±15%
+// which displays via object-cover — so any wide landscape banner fits, not just
+// one exact ratio. Accept the common 2:1–5:1 banner range instead of a single target.
+const BANNER_MIN_RATIO = 2;   // e.g. 2400x1200
+const BANNER_MAX_RATIO = 5;   // e.g. 2000x400
 const BANNER_MIN_WIDTH = 1200;
-const BANNER_MIN_HEIGHT = 300;
 const BANNER_MAX_VIDEO_SECONDS = 30;
-const BANNER_SIZE_HINT = '1600×400px (4:1) · min 1200×300px';
+const BANNER_SIZE_HINT = 'Wide banner, 2:1–5:1 ratio · min width 1200px';
 
 function readImageDimensions(file: File): Promise<{ width: number; height: number }> {
   return new Promise((resolve, reject) => {
@@ -64,14 +64,12 @@ function readVideoMeta(file: File): Promise<{ width: number; height: number; dur
 
 /** Returns an error message if the media fails the Top Banner size requirement, otherwise null. */
 function validateBannerSize(width: number, height: number): string | null {
-  if (width < BANNER_MIN_WIDTH || height < BANNER_MIN_HEIGHT) {
-    return `Too small — needs at least ${BANNER_MIN_WIDTH}×${BANNER_MIN_HEIGHT}px (yours is ${width}×${height}px)`;
+  if (width < BANNER_MIN_WIDTH) {
+    return `Too small — needs at least ${BANNER_MIN_WIDTH}px wide (yours is ${width}px)`;
   }
   const ratio = width / height;
-  const minRatio = BANNER_ASPECT_RATIO * (1 - BANNER_ASPECT_TOLERANCE);
-  const maxRatio = BANNER_ASPECT_RATIO * (1 + BANNER_ASPECT_TOLERANCE);
-  if (ratio < minRatio || ratio > maxRatio) {
-    return `Wrong aspect ratio — needs ~${BANNER_ASPECT_RATIO}:1 (wide banner), yours is ${ratio.toFixed(2)}:1`;
+  if (ratio < BANNER_MIN_RATIO || ratio > BANNER_MAX_RATIO) {
+    return `Needs a wide banner shape (${BANNER_MIN_RATIO}:1 to ${BANNER_MAX_RATIO}:1), yours is ${ratio.toFixed(2)}:1`;
   }
   return null;
 }
@@ -283,7 +281,7 @@ export default function BannerAdRequest() {
               </div>
               <div
                 onClick={() => fileRef.current?.click()}
-                className="relative aspect-[4/1] border-2 border-dashed border-[var(--border)] rounded-xl overflow-hidden cursor-pointer hover:border-[var(--primary)] transition-colors bg-[var(--surface-2)]"
+                className="relative aspect-[3/1] border-2 border-dashed border-[var(--border)] rounded-xl overflow-hidden cursor-pointer hover:border-[var(--primary)] transition-colors bg-[var(--surface-2)]"
               >
                 {form.image_url ? (
                   <>
