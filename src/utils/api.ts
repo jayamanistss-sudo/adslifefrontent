@@ -174,8 +174,13 @@ export const endpoints = {
 
   // Banner ads
   bannerList: "/banner-ads",
+  bannerListMine: "/banner-ads/my",
+  bannerListAdmin: "/banner-ads/admin",
   bannerRequest: "/banner-ads/request",
   bannerReview: (id: number) => `/banner-ads/${id}/review`,
+
+  // Banner plans
+  bannerPlansList: "/banner-plans",
 
   // Categories
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -186,6 +191,7 @@ export const endpoints = {
 
   // Upload
   uploadImage: "/upload/image",
+  uploadVideo: "/upload/video",
 
   // Push notifications
   saveToken: "/notifications/save-token",

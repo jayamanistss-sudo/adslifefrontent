@@ -24,23 +24,12 @@ const emptyBannerPlan = (): Partial<BannerPlan> => ({
   duration_days: 7,
   price: 0,
   description: "",
-  position: "any",
+  position: "top",
   is_active: true,
 });
 
-const POSITION_LABELS: Record<string, string> = {
-  top: "Top Banner",
-  mid: "Mid Page",
-  bottom: "Bottom Banner",
-  any: "Any Position",
-};
-
-const POSITION_COLORS: Record<string, string> = {
-  top: "bg-violet-100 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300",
-  mid: "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300",
-  bottom: "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300",
-  any: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300",
-};
+// Top Banner is currently the only live placement on the site — position is
+// fixed and shown for context only, not editable, until more placements exist.
 
 // ─── Subscription Plan helpers (unchanged) ──────────────────────────────────
 const emptyPlan = (): Partial<Plan> => ({
@@ -138,7 +127,6 @@ export default function AdminSubscriptions() {
           duration_days: Number(bannerEditing.duration_days),
           price: Number(bannerEditing.price),
           description: bannerEditing.description || null,
-          position: bannerEditing.position ?? "any",
         });
         toast.success("Banner plan created");
       } else {
@@ -147,7 +135,6 @@ export default function AdminSubscriptions() {
           duration_days: Number(bannerEditing.duration_days),
           price: Number(bannerEditing.price),
           description: bannerEditing.description || null,
-          position: bannerEditing.position ?? "any",
           is_active: bannerEditing.is_active,
         });
         toast.success("Banner plan updated");
@@ -317,8 +304,8 @@ export default function AdminSubscriptions() {
                       </div>
                       <div>
                         <p className="font-bold text-[var(--text)] text-sm">{plan.name}</p>
-                        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md ${POSITION_COLORS[plan.position] ?? POSITION_COLORS.any}`}>
-                          {POSITION_LABELS[plan.position] ?? plan.position}
+                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-violet-100 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300">
+                          Top Banner
                         </span>
                       </div>
                     </div>
@@ -486,27 +473,6 @@ export default function AdminSubscriptions() {
                       ₹{(Number(bannerEditing.price) / bannerEditing.duration_days).toFixed(0)}/day
                     </p>
                   )}
-                </div>
-              </div>
-
-              {/* Position */}
-              <div>
-                <label className="modal-label">Banner Position</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {(["any", "top", "mid", "bottom"] as const).map((pos) => (
-                    <button
-                      key={pos}
-                      type="button"
-                      onClick={() => setBannerEditing({ ...bannerEditing, position: pos })}
-                      className={`py-2.5 px-3 rounded-xl border text-sm font-medium transition-all ${
-                        bannerEditing.position === pos
-                          ? "border-[var(--primary)] bg-[var(--primary)]/10 text-[var(--primary)]"
-                          : "border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg)]"
-                      }`}
-                    >
-                      {POSITION_LABELS[pos]}
-                    </button>
-                  ))}
                 </div>
               </div>
 

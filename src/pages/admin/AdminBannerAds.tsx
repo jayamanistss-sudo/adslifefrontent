@@ -1,18 +1,23 @@
 import { useState, useEffect } from 'react';
-import { Image, CheckCircle, XCircle } from 'lucide-react';
+import { Image, Video, CheckCircle, XCircle } from 'lucide-react';
 import BackButton from '../../components/BackButton';
 import { api, endpoints } from '../../utils/api';
 import toast from 'react-hot-toast';
 
 interface BannerAd {
-  id: number; business_name: string; title: string; description: string;
-  image_url: string; target_url: string; budget: number; placement: string;
-  start_date: string; end_date: string; status: string; admin_note: string; created_at: string;
+  id: number; business_name: string; title: string | null; image_url: string; media_type: string; target_url: string;
+  duration_days: number; banner_plan_id: number | null; plan_name: string | null;
+  price: number | null; position: string;
+  status: string; review_note: string; expires_at: string | null; created_at: string;
 }
 
 const STATUS_STYLE: Record<string, string> = {
   pending: 'badge-warning', approved: 'badge-accent', rejected: 'badge-danger',
   live: 'badge-accent', expired: 'badge-neutral',
+};
+
+const POSITION_LABELS: Record<string, string> = {
+  top: 'Top Banner', mid: 'Mid Page', bottom: 'Bottom Banner', any: 'Any Position',
 };
 
 export default function AdminBannerAds() {
@@ -25,7 +30,7 @@ export default function AdminBannerAds() {
 
   const load = () => {
     setLoading(true);
-    api.get(endpoints.bannerList).then((r) => {
+    api.get(endpoints.bannerListAdmin).then((r) => {
       if (r.data.success) {
         const all = r.data.data as BannerAd[];
         setAds(filter ? all.filter((a) => a.status === filter) : all);
@@ -89,7 +94,11 @@ export default function AdminBannerAds() {
                 className="w-full flex items-start gap-4 p-4 text-left hover:bg-[var(--surface-2)] transition-colors"
               >
                 {ad.image_url ? (
-                  <img src={ad.image_url} alt="" className="w-14 h-10 rounded-lg object-cover flex-shrink-0" />
+                  ad.media_type === 'video' ? (
+                    <video src={ad.image_url} className="w-14 h-10 rounded-lg object-cover flex-shrink-0" muted />
+                  ) : (
+                    <img src={ad.image_url} alt="" className="w-14 h-10 rounded-lg object-cover flex-shrink-0" />
+                  )
                 ) : (
                   <div className="w-14 h-10 rounded-lg bg-[var(--surface-2)] flex items-center justify-center flex-shrink-0">
                     <Image size={16} className="text-[var(--text-muted)]" />
@@ -97,22 +106,21 @@ export default function AdminBannerAds() {
                 )}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-heading font-semibold text-[var(--text)] text-sm">{ad.title}</span>
+                    <span className="font-heading font-semibold text-[var(--text)] text-sm">{ad.title ?? ad.plan_name ?? 'Banner Ad'}</span>
                     <span className={`badge ${STATUS_STYLE[ad.status] ?? 'badge-neutral'}`}>{ad.status}</span>
-                    <span className="badge badge-neutral">{ad.placement}</span>
+                    <span className="badge badge-neutral">{POSITION_LABELS[ad.position] ?? ad.position}</span>
+                    {ad.media_type === 'video' && <span className="badge badge-neutral flex items-center gap-1"><Video size={10} /> Video</span>}
                   </div>
                   <p className="text-xs text-[var(--text-secondary)] mt-0.5">
-                    {ad.business_name} · ₹{ad.budget?.toLocaleString() ?? 0} budget · {new Date(ad.created_at).toLocaleDateString()}
+                    {ad.business_name} · {ad.plan_name ? `${ad.plan_name} · ` : ''}₹{ad.price != null ? Number(ad.price).toLocaleString() : 0} · {ad.duration_days}d · {new Date(ad.created_at).toLocaleDateString()}
                   </p>
                 </div>
               </button>
 
               {expanded === ad.id && (
                 <div className="border-t border-[var(--border)] p-4 space-y-4">
-                  {ad.description && <p className="text-sm text-[var(--text-secondary)]">{ad.description}</p>}
                   <div className="grid grid-cols-2 gap-3 text-xs text-[var(--text-muted)]">
-                    {ad.start_date && <span>Start: {ad.start_date}</span>}
-                    {ad.end_date   && <span>End: {ad.end_date}</span>}
+                    {ad.expires_at && <span>Expires: {new Date(ad.expires_at).toLocaleDateString()}</span>}
                     {ad.target_url && (
                       <a href={ad.target_url} target="_blank" rel="noreferrer" className="text-[var(--primary)] hover:underline col-span-2 truncate">{ad.target_url}</a>
                     )}
@@ -136,10 +144,10 @@ export default function AdminBannerAds() {
                       </div>
                     </>
                   )}
-                  {ad.admin_note && ad.status !== 'pending' && (
+                  {ad.review_note && ad.status !== 'pending' && (
                     <div className="bg-[var(--surface-2)] rounded-xl p-3">
                       <p className="text-xs font-semibold text-[var(--text-muted)] mb-1">Admin Note</p>
-                      <p className="text-sm text-[var(--text-secondary)]">{ad.admin_note}</p>
+                      <p className="text-sm text-[var(--text-secondary)]">{ad.review_note}</p>
                     </div>
                   )}
                 </div>
