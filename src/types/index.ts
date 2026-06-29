@@ -73,6 +73,7 @@ export interface Offer {
   avgRating?: number | null;
   reviewCount?: number;
   myReview?: { rating: number; comment: string | null } | null;
+  isSaved?: boolean;
 }
 
 export interface OfferReview {

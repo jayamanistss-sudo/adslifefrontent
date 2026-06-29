@@ -1,21 +1,26 @@
 import axios from "axios";
 
+const currentHost = globalThis.window === undefined ? "adslife.in" : globalThis.window.location.hostname;
+
 function getBaseURL(): string {
   if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
-  // Auto-detect from hostname so each deployment calls its own backend
-  const host = typeof window !== "undefined" ? window.location.hostname : "adslife.in";
-  if (host === "dev.adslife.in") return "https://dev.adslife.in/api";
-  if (host === "test.adslife.in") return "https://test.adslife.in/api";
+  if (currentHost === "dev.adslife.in") return "https://dev.adslife.in/api";
+  if (currentHost === "test.adslife.in") return "https://test.adslife.in/api";
   return "https://adslife.in/api";
 }
 const BASE_URL = getBaseURL();
 
-// Rewrite internal IPs in any URL string returned by the server
-const INTERNAL_IP_RE = /http:\/\/160\.250\.224\.242(:\d+)?/g;
-const PUBLIC_BASE = "http://103.190.92.21:3001";
+// Rewrite internal IPs / localhost URLs returned by the server to the public origin
+const LOCALHOST_OR_INTERNAL_RE = /http:\/\/(localhost|127\.0\.0\.1|160\.250\.224\.242)(:\d+)?/g;
+
+function getPublicOrigin(): string {
+  if (currentHost === "dev.adslife.in") return "https://dev.adslife.in";
+  if (currentHost === "test.adslife.in") return "https://test.adslife.in";
+  return "https://adslife.in";
+}
 
 function fixUrls(obj: unknown): unknown {
-  if (typeof obj === "string") return obj.replace(INTERNAL_IP_RE, PUBLIC_BASE);
+  if (typeof obj === "string") return obj.replace(LOCALHOST_OR_INTERNAL_RE, getPublicOrigin());
   if (Array.isArray(obj)) return obj.map(fixUrls);
   if (obj && typeof obj === "object") {
     return Object.fromEntries(Object.entries(obj as Record<string, unknown>).map(([k, v]) => [k, fixUrls(v)]));
@@ -55,6 +60,7 @@ api.interceptors.response.use(
 export const endpoints = {
   // Auth
   login: "/auth/login",
+  logout: "/auth/logout",
   register: "/auth/register",
   googleAuth: "/auth/google",
   becomeVendor: "/auth/become-vendor",
@@ -197,6 +203,7 @@ export const endpoints = {
   adminOfferAction: (id: number) => `/admin/offers/${id}`,
   adminVendors: (search = "", status = "", plan = "", limit = 30, offset = 0) =>
     `/admin/vendors?search=${encodeURIComponent(search)}&status=${status}&plan=${plan}&limit=${limit}&offset=${offset}`,
+  adminVendorDetail: (id: number) => `/admin/vendors/${id}`,
   adminVendorAction: (id: number) => `/admin/vendors/${id}`,
   adminVendorsBulkPlan: "/admin/vendors/bulk-plan",
   adminReviewVendor: (id: number) => `/admin/review-vendor/${id}`,

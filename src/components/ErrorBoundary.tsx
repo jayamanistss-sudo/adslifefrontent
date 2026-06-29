@@ -16,7 +16,7 @@ export default class ErrorBoundary extends Component<Props, State> {
         <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">
             <h2 className="text-xl font-bold text-red-500 mb-2">Something went wrong</h2>
-            <p className="text-sm text-gray-500 mb-4">{this.state.error?.message}</p>
+            <p className="text-sm text-[var(--text-muted)] mb-4">{this.state.error?.message}</p>
             <button onClick={() => globalThis.location.reload()} className="btn btn-primary">Reload</button>
           </div>
         </div>

@@ -22,12 +22,13 @@ export const useSavedStore = create<SavedState>((set, get) => ({
     } catch {
       try {
         const r = await api.get(endpoints.savedIds);
-        if (r.data.success) set({ savedIds: new Set<number>(r.data.data.ids), loaded: true });
+        if (r.data.success) set({ savedIds: new Set<number>((r.data.data as number[]).map(Number)), loaded: true });
       } catch {}
     }
   },
 
   save: async (offerId) => {
+    if (get().savedIds.has(offerId)) return; // already saved — prevent duplicate API call
     set((s) => ({ savedIds: new Set([...s.savedIds, offerId]) }));
     try {
       await api.post(endpoints.interaction, { offer_id: offerId, action: 'save' });
@@ -37,6 +38,7 @@ export const useSavedStore = create<SavedState>((set, get) => ({
   },
 
   unsave: async (offerId) => {
+    if (!get().savedIds.has(offerId)) return; // not saved — nothing to do
     set((s) => { const ids = new Set(s.savedIds); ids.delete(offerId); return { savedIds: ids }; });
     try {
       await api.delete(endpoints.unsaveOffer, { data: { offer_id: offerId } });

@@ -4,8 +4,8 @@ import type { Offer } from '../types';
 
 function mapOffer(o: any): Offer {
   return {
-    id:                 o.id,
-    vendorId:           o.vendor_id,
+    id:                 Number(o.id),
+    vendorId:           Number(o.vendor_id),
     title:              o.title,
     description:        o.description,
     category:           o.category,
@@ -124,4 +124,86 @@ export function useNotifications(userId: number) {
 export function useVendors() {
   const { data } = useQuery("SELECT * FROM vendors WHERE status = 'approved'");
   return data ?? [];
+}
+
+// Vendor dashboard snapshot — instant data from local SQLite
+export interface VendorDashboardPS {
+  vendor: {
+    id: number; business_name: string; city: string; status: string;
+    logo_url: string; total_followers: number; subscription_plan: string;
+  } | null;
+  offerStats: {
+    total: number; active: number; inactive: number;
+    total_views: number; total_clicks: number; total_saves: number; total_redemptions: number;
+  } | null;
+  recentOffers: Array<{
+    id: number; title: string; category: string; discount_percent: number;
+    views: number; clicks: number; saves: number;
+    is_active: number; valid_until: string | null;
+    current_redemptions: number; max_redemptions: number;
+  }>;
+  vendorId: number;
+}
+
+export function useVendorDashboardPS(userId: number): VendorDashboardPS {
+  const { data: vRows } = useQuery<any>(
+    'SELECT id, business_name, city, status, logo_url, subscription_plan, total_followers FROM vendors WHERE user_id = ? LIMIT 1',
+    [userId],
+  );
+  const v = vRows?.[0];
+  const vendorId = v ? Number(v.id) : -1;
+
+  const { data: sRows } = useQuery<any>(
+    `SELECT COUNT(*) AS total,
+            SUM(CASE WHEN is_active=1 THEN 1 ELSE 0 END) AS active,
+            SUM(CASE WHEN is_active=0 THEN 1 ELSE 0 END) AS inactive,
+            COALESCE(SUM(views),0)               AS total_views,
+            COALESCE(SUM(clicks),0)              AS total_clicks,
+            COALESCE(SUM(saves),0)               AS total_saves,
+            COALESCE(SUM(current_redemptions),0) AS total_redemptions
+     FROM offers WHERE vendor_id = ?`,
+    [vendorId],
+  );
+
+  const { data: rRows } = useQuery<any>(
+    `SELECT id, title, category, discount_percent, views, clicks, saves,
+            is_active, valid_until, current_redemptions, max_redemptions
+     FROM offers WHERE vendor_id = ? ORDER BY created_at DESC LIMIT 5`,
+    [vendorId],
+  );
+
+  return useMemo(() => ({
+    vendorId,
+    vendor: v ? {
+      id:                  Number(v.id),
+      business_name:       v.business_name ?? '',
+      city:                v.city ?? '',
+      status:              v.status ?? 'pending',
+      logo_url:            v.logo_url ?? '',
+      total_followers:     Number(v.total_followers) || 0,
+      subscription_plan:   v.subscription_plan ?? 'free',
+    } : null,
+    offerStats: sRows?.[0] ? {
+      total:              Number(sRows[0].total)              || 0,
+      active:             Number(sRows[0].active)             || 0,
+      inactive:           Number(sRows[0].inactive)           || 0,
+      total_views:        Number(sRows[0].total_views)        || 0,
+      total_clicks:       Number(sRows[0].total_clicks)       || 0,
+      total_saves:        Number(sRows[0].total_saves)        || 0,
+      total_redemptions:  Number(sRows[0].total_redemptions)  || 0,
+    } : null,
+    recentOffers: (rRows ?? []).map((o: any) => ({
+      id:                  Number(o.id),
+      title:               o.title,
+      category:            o.category,
+      discount_percent:    Number(o.discount_percent) || 0,
+      views:               Number(o.views)  || 0,
+      clicks:              Number(o.clicks) || 0,
+      saves:               Number(o.saves)  || 0,
+      is_active:           Number(o.is_active),
+      valid_until:         o.valid_until,
+      current_redemptions: Number(o.current_redemptions) || 0,
+      max_redemptions:     Number(o.max_redemptions)     || 0,
+    })),
+  }), [v, sRows, rRows]);
 }

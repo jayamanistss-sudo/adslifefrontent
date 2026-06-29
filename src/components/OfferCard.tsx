@@ -77,34 +77,30 @@ export default function OfferCard({ offer, onSave }: Props) {
 
   return (
     <motion.div
-      className="relative bg-white rounded-3xl overflow-hidden cursor-pointer group h-full flex flex-col"
-      style={{ boxShadow: '0 4px 28px rgba(0,0,0,0.09)' }}
+      className="relative bg-[var(--surface)] rounded-3xl overflow-hidden cursor-pointer group h-full flex flex-col border border-[var(--border)]"
+      style={{ boxShadow: '0 4px 28px rgba(0,0,0,0.07)' }}
       onClick={handleCardClick}
       onHoverStart={() => setIsHovered(true)}
       onHoverEnd={() => setIsHovered(false)}
-      whileHover={{ y: -6, boxShadow: '0 20px 52px rgba(255,98,0,0.18), 0 4px 16px rgba(0,0,0,0.08)' }}
-      whileTap={{ scale: 0.98 }}
+      whileHover={{ y: -5, boxShadow: '0 20px 52px rgba(255,98,0,0.16), 0 4px 16px rgba(0,0,0,0.08)' }}
+      whileTap={{ scale: 0.985 }}
     >
+      {/* TOP — image / media area */}
+      <div className="relative bg-[var(--primary-light)]" style={{ '--primary-light': '#FFF5EE' } as React.CSSProperties}>
 
-      {/* ══════════════════════════════════════════
-          TOP — very light orange tint background
-         ══════════════════════════════════════════ */}
-      <div className="relative" style={{ background: '#FFF5EE' }}>
-
-        {/* Sparkles */}
         <SparkleIcon size={13} className="absolute top-3 left-6 text-orange-300 opacity-80 pointer-events-none z-10" />
         <SparkleIcon size={8}  className="absolute top-6 left-2 text-orange-200 opacity-55 pointer-events-none z-10" />
         <SparkleIcon size={10} className="absolute top-3 right-16 text-orange-300 opacity-65 pointer-events-none z-10" />
         <SparkleIcon size={7}  className="absolute bottom-8 right-3 text-orange-300 opacity-60 pointer-events-none z-10" />
 
-        {/* 🔥 Hot badge — orange pill */}
+        {/* Hot badge */}
         {isHot && !videoPlaying && (
           <div className="absolute top-3.5 left-4 z-20 flex items-center gap-1.5 bg-red-600 text-white text-[11px] font-bold px-3 py-1.5 rounded-full shadow-md">
             🔥 Hot
           </div>
         )}
 
-        {/* 33% OFF — orange bookmark/ribbon badge */}
+        {/* Discount ribbon */}
         {discount > 0 && !videoPlaying && (
           <div
             className="absolute top-0 right-5 z-20 flex flex-col items-center text-white shadow-xl"
@@ -118,14 +114,10 @@ export default function OfferCard({ offer, onSave }: Props) {
           >
             <span className="font-black text-[1.2rem] leading-none">{discount}%</span>
             <span className="font-bold text-[10px] tracking-[0.15em] mt-0.5 opacity-90">OFF</span>
-
-            {/* Shine sweep clipped to bookmark shape */}
             {isHovered && (
               <motion.span
                 className="absolute inset-0 pointer-events-none"
-                style={{
-                  background: 'linear-gradient(110deg, transparent 30%, rgba(255,255,255,0.5) 50%, transparent 70%)',
-                }}
+                style={{ background: 'linear-gradient(110deg, transparent 30%, rgba(255,255,255,0.5) 50%, transparent 70%)' }}
                 initial={{ x: '-150%' }}
                 animate={{ x: '260%' }}
                 transition={{ duration: 0.5, ease: 'easeIn', repeat: Infinity, repeatDelay: 0.9 }}
@@ -134,18 +126,15 @@ export default function OfferCard({ offer, onSave }: Props) {
           </div>
         )}
 
-        {/* Image — arch animates to straight on hover */}
+        {/* Image */}
         <div
-          className="relative overflow-hidden"
+          className="relative overflow-hidden aspect-[16/9] sm:aspect-[4/3]"
           style={{
-            height: 215,
-            /* each bottom corner uses elliptical radius: horizontal / vertical */
             borderBottomLeftRadius:  isHovered ? '0px' : '50% 56px',
             borderBottomRightRadius: isHovered ? '0px' : '50% 56px',
             transition: 'border-bottom-left-radius 0.38s ease, border-bottom-right-radius 0.38s ease',
           }}
         >
-          {/* Media */}
           {hasVideo && videoPlaying ? (
             <video
               ref={videoRef}
@@ -167,12 +156,10 @@ export default function OfferCard({ offer, onSave }: Props) {
             </div>
           )}
 
-          {/* Bottom gradient */}
           {!videoPlaying && (
-            <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-transparent pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/12 via-transparent to-transparent pointer-events-none" />
           )}
 
-          {/* Video controls */}
           {hasVideo && (
             <button onClick={toggleVideo} className="absolute inset-0 flex items-center justify-center group/vid">
               <div className={`w-11 h-11 rounded-full flex items-center justify-center shadow-lg transition-all duration-200 ${
@@ -186,27 +173,25 @@ export default function OfferCard({ offer, onSave }: Props) {
           )}
         </div>
 
-        {/* Bookmark / save button */}
+        {/* Save button */}
         <button
           onClick={handleSave}
+          aria-label={saved ? 'Remove from saved' : 'Save offer'}
           className={`absolute right-4 z-20 w-9 h-9 rounded-full flex items-center justify-center shadow-md transition-all duration-200 ${
             saved
               ? 'bg-[#FF6200] text-white scale-110'
-              : 'bg-white text-gray-400 hover:text-[#FF6200] hover:scale-110'
+              : 'bg-[var(--surface)] text-[var(--text-muted)] hover:text-[#FF6200] hover:scale-110'
           }`}
-          style={{ top: 'calc(215px - 52px)' }}
+          style={{ bottom: '52px' }}
         >
           <Bookmark size={15} fill={saved ? 'currentColor' : 'none'} />
         </button>
 
-        {/* Spacer — constant height to prevent layout shift */}
         <div style={{ height: 22 }} />
       </div>
 
-      {/* ══════════════════════════════════════════
-          BOTTOM — white content section
-         ══════════════════════════════════════════ */}
-      <div className="bg-white px-4 pt-4 pb-5 flex-grow flex flex-col">
+      {/* BOTTOM — content */}
+      <div className="bg-[var(--surface)] px-4 pt-4 pb-5 flex-grow flex flex-col">
 
         {/* Business row */}
         <div className="flex items-center justify-between gap-2 mb-3">
@@ -218,16 +203,16 @@ export default function OfferCard({ offer, onSave }: Props) {
                 className="w-11 h-11 rounded-full object-cover flex-shrink-0 ring-2 ring-orange-100 shadow-sm"
               />
             ) : (
-              <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#FFE8D9] to-[#FFCFAD] flex items-center justify-center flex-shrink-0 ring-2 ring-orange-100 shadow-sm">
+              <div className="w-11 h-11 rounded-full bg-gradient-to-br from-orange-100 to-orange-200 flex items-center justify-center flex-shrink-0 ring-2 ring-orange-100 shadow-sm">
                 <span className="text-sm font-extrabold text-[#FF6200]">{offer.businessName?.[0]?.toUpperCase()}</span>
               </div>
             )}
             <div className="min-w-0">
               <div className="flex items-center gap-1">
-                <span className="text-[13px] font-bold text-[#1E293B] truncate leading-tight">{offer.businessName}</span>
+                <span className="text-[13px] font-bold text-[var(--text)] truncate leading-tight">{offer.businessName}</span>
                 <BadgeCheck size={14} className="text-blue-500 flex-shrink-0" />
               </div>
-              <div className="flex items-center gap-1 text-[11px] text-gray-400 mt-0.5">
+              <div className="flex items-center gap-1 text-[11px] text-[var(--text-muted)] mt-0.5">
                 <MapPin size={9} className="flex-shrink-0" />
                 <span className="truncate">{offer.vendorCity || 'Nearby'}</span>
               </div>
@@ -237,26 +222,26 @@ export default function OfferCard({ offer, onSave }: Props) {
           {offer.isFeatured && (
             <div className="flex items-center gap-1 border border-emerald-400 text-emerald-600 text-[10px] font-semibold px-2.5 py-1.5 rounded-full flex-shrink-0 whitespace-nowrap">
               <ShieldCheck size={11} className="flex-shrink-0" />
-              Trusted Seller
+              Trusted
             </div>
           )}
         </div>
 
         {/* Title */}
-        <h3 className="font-heading font-bold text-[#1E293B] text-[0.93rem] leading-snug mb-3 line-clamp-2 group-hover:text-[#FF6200] transition-colors duration-200">
+        <h3 className="font-heading font-bold text-[var(--text)] text-[0.93rem] leading-snug mb-3 line-clamp-2 group-hover:text-[#FF6200] transition-colors duration-200">
           {offer.title}
         </h3>
 
-        {/* Price row */}
+        {/* Price */}
         {(offer.offerPrice ?? 0) > 0 ? (
           <div className="flex items-center gap-2.5 mb-4 flex-wrap">
             <span className="font-heading font-extrabold text-[#FF6200] text-2xl leading-none">₹{offer.offerPrice}</span>
             {(offer.originalPrice ?? 0) > 0 && (
-              <span className="text-sm text-gray-400 line-through leading-none">₹{offer.originalPrice}</span>
+              <span className="text-sm text-[var(--text-muted)] line-through leading-none">₹{offer.originalPrice}</span>
             )}
             {savings > 0 && (
               <span className="flex items-center gap-1 text-[11px] font-semibold text-orange-600 border border-orange-200 bg-orange-50 px-2.5 py-1 rounded-full whitespace-nowrap">
-                🏷️ You save ₹{savings}
+                🏷️ Save ₹{savings}
               </span>
             )}
           </div>
@@ -270,39 +255,37 @@ export default function OfferCard({ offer, onSave }: Props) {
           <div className="mb-4" />
         )}
 
-        {/* Stats footer — 3 equal columns with dividers */}
-        <div className="flex items-stretch pt-3 border-t border-gray-100 mt-auto">
-
+        {/* Stats footer */}
+        <div className="flex items-stretch pt-3 border-t border-[var(--border)] mt-auto">
           <div className="flex-1 flex flex-col items-center gap-0.5 py-0.5">
             <div className="flex items-center gap-1">
-              <Eye size={14} className="text-gray-400" />
-              <span className="font-semibold text-gray-700 text-[13px]">{offer.views ?? 0}</span>
+              <Eye size={14} className="text-[var(--text-muted)]" />
+              <span className="font-semibold text-[var(--text)] text-[13px]">{offer.views ?? 0}</span>
             </div>
-            <span className="text-[10px] text-gray-400">Views</span>
+            <span className="text-[10px] text-[var(--text-muted)]">Views</span>
           </div>
 
-          <div className="w-px bg-gray-200 self-stretch my-0.5" />
+          <div className="w-px bg-[var(--border)] self-stretch my-0.5" />
 
           <div className="flex-1 flex flex-col items-center gap-0.5 py-0.5">
             <div className="flex items-center gap-1">
-              <Heart size={14} className="text-gray-400" />
-              <span className="font-semibold text-gray-700 text-[13px]">{offer.saves ?? 0}</span>
+              <Heart size={14} className="text-[var(--text-muted)]" />
+              <span className="font-semibold text-[var(--text)] text-[13px]">{offer.saves ?? 0}</span>
             </div>
-            <span className="text-[10px] text-gray-400">Likes</span>
+            <span className="text-[10px] text-[var(--text-muted)]">Saves</span>
           </div>
 
-          <div className="w-px bg-gray-200 self-stretch my-0.5" />
+          <div className="w-px bg-[var(--border)] self-stretch my-0.5" />
 
           <div className="flex-1 flex flex-col items-center gap-0.5 py-0.5">
             <div className="flex items-center gap-1">
-              <Clock size={14} className={isExpiring ? 'text-red-500' : 'text-gray-400'} />
-              <span className={`font-semibold text-[13px] ${isExpiring ? 'text-red-500' : 'text-gray-700'}`}>
+              <Clock size={14} className={isExpiring ? 'text-red-500' : 'text-[var(--text-muted)]'} />
+              <span className={`font-semibold text-[13px] ${isExpiring ? 'text-red-500' : 'text-[var(--text)]'}`}>
                 {tl || '--'}
               </span>
             </div>
-            <span className="text-[10px] text-gray-400">Offer ends</span>
+            <span className="text-[10px] text-[var(--text-muted)]">Ends</span>
           </div>
-
         </div>
       </div>
     </motion.div>

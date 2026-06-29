@@ -41,8 +41,8 @@ export default function NearbyDropdown({ radius, onChange }: Props) {
       </button>
 
       {open && (
-        <div className="absolute top-full mt-2 left-0 z-50 bg-white rounded-2xl shadow-xl border border-gray-100 w-52 py-2 animate-fade-in">
-          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-4 pb-1.5 pt-1">
+        <div className="absolute top-full mt-2 left-0 z-50 bg-[var(--surface)] rounded-2xl shadow-[var(--shadow-xl)] border border-[var(--border)] w-52 py-2 animate-fade-in">
+          <p className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider px-4 pb-1.5 pt-1">
             Filter by distance
           </p>
           {RADIUS_OPTIONS.map((opt) => (
@@ -58,7 +58,7 @@ export default function NearbyDropdown({ radius, onChange }: Props) {
                 onChange={() => { onChange(opt.value); setOpen(false); }}
                 className="accent-primary w-4 h-4 cursor-pointer"
               />
-              <span className={`text-sm ${radius === opt.value ? 'font-semibold text-primary' : 'text-gray-700 group-hover:text-gray-900'}`}>
+              <span className={`text-sm ${radius === opt.value ? 'font-semibold text-primary' : 'text-[var(--text-secondary)] group-hover:text-[var(--text)]'}`}>
                 {opt.label}
               </span>
               {radius === opt.value && (

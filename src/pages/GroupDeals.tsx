@@ -47,17 +47,17 @@ export default function GroupDeals() {
   return (
     <div className="w-full pb-20 sm:pb-6">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-heading font-bold text-gray-900">Group Deals 👥</h1>
+        <h1 className="text-2xl font-heading font-bold text-[var(--text)]">Group Deals 👥</h1>
         <select
           value={city}
           onChange={(e) => setCity(e.target.value)}
-          className="border border-gray-200 rounded-xl px-3 py-1.5 text-sm bg-white"
+          className="border border-[var(--border)] rounded-xl px-3 py-1.5 text-sm bg-[var(--surface)]"
         >
           {['Chennai', 'Mumbai', 'Bangalore', 'Delhi'].map((c) => <option key={c}>{c}</option>)}
         </select>
       </div>
 
-      <div className="mb-4 p-4 bg-accent/5 border border-accent/20 rounded-xl text-sm text-gray-600">
+      <div className="mb-4 p-4 bg-accent/5 border border-accent/20 rounded-xl text-sm text-[var(--text-secondary)]">
         💡 <strong>Group deals</strong> unlock when enough people join together. Invite friends for bigger savings!
       </div>
 
@@ -66,9 +66,9 @@ export default function GroupDeals() {
           {[1,2,3,4].map((i) => <div key={i} className="skeleton rounded-2xl h-72" />)}
         </div>
       ) : deals.length === 0 ? (
-        <div className="text-center py-16 text-gray-400">
+        <div className="text-center py-16 text-[var(--text-muted)]">
           <div className="text-4xl mb-3">👥</div>
-          <p className="font-heading font-semibold text-gray-600 mb-1">No active group deals</p>
+          <p className="font-heading font-semibold text-[var(--text-secondary)] mb-1">No active group deals</p>
           <p className="text-sm">Check back soon for group discounts!</p>
         </div>
       ) : (

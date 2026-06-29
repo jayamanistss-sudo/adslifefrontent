@@ -5,10 +5,12 @@ import {
   PanelLeftClose, PanelLeftOpen, BarChart2, ShieldCheck, Zap, Settings,
   Users, Tag, Building2, Star, LayoutGrid, CreditCard, SlidersHorizontal
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useUserStore } from '../store/useUserStore';
 import { useSiteSettings } from '../store/useSiteSettings';
 import { useSavedStore } from '../store/useSavedStore';
 import NotificationPanel from './NotificationPanel';
+import { api, endpoints } from '../utils/api';
 
 interface Props { readonly children: React.ReactNode }
 
@@ -86,13 +88,18 @@ export default function Layout({ children }: Props) {
   ] : [];
 
   // Mobile bottom nav (flat list)
-  const mobileNav = [...mainNav, ...(user?.role === 'vendor' || user?.role === 'admin'
-    ? [{ to: '/vendor/dashboard', icon: Store, label: 'Dashboard' }] : [])];
+  const mobileNav = [
+    ...mainNav,
+    ...(user?.role === 'vendor' || user?.role === 'admin'
+      ? [{ to: '/vendor/dashboard', icon: Store, label: 'Dashboard' }] : []),
+    ...(user?.role === 'admin'
+      ? [{ to: '/admin/dashboard', icon: ShieldCheck, label: 'Admin' }] : []),
+  ];
 
   const NavSection = ({ items, title }: { items: NavItem[]; title?: string }) => (
     <>
       {title && items.length > 0 && (
-        <div className={`section-label transition-all duration-200 ${sidebarOpen ? 'opacity-100' : 'opacity-0 h-0 overflow-hidden'}`}>
+        <div className={`section-label mt-1 transition-all duration-200 ${sidebarOpen ? 'opacity-100 max-h-6' : 'opacity-0 max-h-0 overflow-hidden'}`}>
           {title}
         </div>
       )}
@@ -103,12 +110,15 @@ export default function Layout({ children }: Props) {
           className={`nav-item ${isActive(to) ? 'active' : ''}`}
           title={!sidebarOpen ? label : undefined}
         >
-          <Icon size={18} className="flex-shrink-0" />
+          <Icon size={17} className="flex-shrink-0" />
           <span className={`transition-all duration-200 ${sidebarOpen ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'}`}>
             {label}
           </span>
           {badge && sidebarOpen && (
             <span className="ml-auto badge badge-primary text-[10px] px-1.5 py-0.5">{badge}</span>
+          )}
+          {isActive(to) && !sidebarOpen && (
+            <span className="absolute right-1.5 top-1/2 -translate-y-1/2 w-1 h-4 rounded-full bg-[var(--primary)] opacity-80" />
           )}
         </Link>
       ))}
@@ -181,7 +191,7 @@ export default function Layout({ children }: Props) {
       {/* ── Right side: navbar + content ── */}
       <div
         style={{ marginLeft: sidebarOpen ? 'var(--sidebar-w)' : 'var(--sidebar-w-sm)' }}
-        className="hidden md:flex flex-col flex-1 transition-all duration-250 ease-out"
+        className="hidden md:flex flex-col flex-1 min-w-0 transition-all duration-250 ease-out"
       >
         {/* ── Navbar ── */}
         <header className="sticky top-0 z-40 h-[var(--navbar-h)] bg-[var(--surface)] border-b border-[var(--border)] shadow-[0_1px_0_var(--border),0_4px_20px_rgba(0,0,0,0.04)] flex items-center gap-3 px-5">
@@ -254,8 +264,13 @@ export default function Layout({ children }: Props) {
 
                       <div className="border-t border-[var(--border)] mt-1 pt-1">
                         <button
-                          onClick={() => { logout?.(); navigate('/login'); setProfileOpen(false); }}
-                          className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-danger-600 hover:bg-danger-50 transition-colors"
+                          onClick={async () => {
+                            try { await api.post(endpoints.logout); } catch {}
+                            logout?.();
+                            navigate('/login');
+                            setProfileOpen(false);
+                          }}
+                          className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-[var(--danger)] hover:bg-[rgba(239,68,68,0.06)] transition-colors"
                         >
                           <LogOut size={15} /> Sign out
                         </button>
@@ -274,7 +289,17 @@ export default function Layout({ children }: Props) {
 
         {/* ── Page content ── */}
         <main className="flex-1 p-6 overflow-x-hidden overflow-y-auto">
-          {children}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={location.pathname}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] as const }}
+            >
+              {children}
+            </motion.div>
+          </AnimatePresence>
         </main>
       </div>
 
@@ -313,37 +338,56 @@ export default function Layout({ children }: Props) {
 
         {/* Mobile content */}
         <main className="flex-1 pb-20 overflow-x-hidden overflow-y-auto">
-          {children}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={location.pathname}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] as const }}
+            >
+              {children}
+            </motion.div>
+          </AnimatePresence>
         </main>
 
         {/* Mobile bottom nav */}
         <nav className="fixed bottom-0 left-0 right-0 z-40 bg-[var(--surface)] border-t border-[var(--border)] safe-area-pb">
           <div className="flex items-center justify-around h-16">
             {isAuthenticated ? (
-              mobileNav.slice(0, 5).map(({ to, icon: Icon, label }) => (
-                <Link
-                  key={to}
-                  to={to}
-                  className={`flex flex-col items-center gap-0.5 px-3 py-1 transition-colors ${
-                    isActive(to) ? 'text-[var(--primary)]' : 'text-[var(--text-muted)]'
-                  }`}
-                >
-                  <Icon size={19} />
-                  <span className="text-[9px] font-medium">{label}</span>
-                </Link>
-              ))
+              mobileNav.slice(0, 5).map(({ to, icon: Icon, label }) => {
+                const active = isActive(to);
+                return (
+                  <Link
+                    key={to}
+                    to={to}
+                    className={`relative flex flex-col items-center gap-0.5 px-3 py-1 transition-colors ${
+                      active ? 'text-[var(--primary)]' : 'text-[var(--text-muted)]'
+                    }`}
+                  >
+                    {active && (
+                      <span className="absolute -top-px inset-x-2 h-[2.5px] rounded-full bg-[var(--primary)]" />
+                    )}
+                    <div className={`p-1.5 rounded-xl transition-all ${active ? 'bg-[var(--primary-light)]' : ''}`}>
+                      <Icon size={17} />
+                    </div>
+                    <span className="text-[9px] font-medium">{label}</span>
+                  </Link>
+                );
+              })
             ) : (
               <>
-                <Link to="/feed" className={`flex flex-col items-center gap-0.5 px-3 py-1 transition-colors ${isActive('/feed') ? 'text-[var(--primary)]' : 'text-[var(--text-muted)]'}`}>
-                  <Home size={19} />
+                <Link to="/feed" className={`relative flex flex-col items-center gap-0.5 px-3 py-1 transition-colors ${isActive('/feed') ? 'text-[var(--primary)]' : 'text-[var(--text-muted)]'}`}>
+                  {isActive('/feed') && <span className="absolute -top-px inset-x-2 h-[2.5px] rounded-full bg-[var(--primary)]" />}
+                  <div className={`p-1.5 rounded-xl ${isActive('/feed') ? 'bg-[var(--primary-light)]' : ''}`}><Home size={17} /></div>
                   <span className="text-[9px] font-medium">Discover</span>
                 </Link>
                 <Link to="/login" className="flex flex-col items-center gap-0.5 px-5 py-2 bg-[var(--primary)] text-white rounded-xl mx-2">
-                  <User size={19} />
+                  <User size={17} />
                   <span className="text-[9px] font-semibold">Login</span>
                 </Link>
-                <Link to="/register" className={`flex flex-col items-center gap-0.5 px-3 py-1 transition-colors text-[var(--text-muted)]`}>
-                  <Zap size={19} />
+                <Link to="/register" className="flex flex-col items-center gap-0.5 px-3 py-1 transition-colors text-[var(--text-muted)]">
+                  <div className="p-1.5 rounded-xl"><Zap size={17} /></div>
                   <span className="text-[9px] font-medium">Sign Up</span>
                 </Link>
               </>

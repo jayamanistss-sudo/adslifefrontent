@@ -50,25 +50,25 @@ const SECTIONS = [
 
 export default function Terms() {
   return (
-    <div className="min-h-screen bg-gray-50 py-10 px-4">
-      <div className="max-w-2xl mx-auto">
-        <Link to="/login" className="flex items-center gap-1.5 text-gray-500 text-sm mb-6 hover:text-primary transition-colors">
+    <div className="min-h-screen px-4 py-10 bg-[var(--surface-2)]">
+      <div className="mx-auto max-w-2xxl">
+        <Link to="/login" className="flex items-center gap-1.5 text-[var(--text-muted)] text-sm mb-6 hover:text-primary transition-colors">
           <ArrowLeft size={15} /> Back
         </Link>
-        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 sm:p-10">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">Terms of Service</h1>
-          <p className="text-sm text-gray-400 mb-8">Last updated: June 2026</p>
+        <div className="p-8 card rounded-3xl sm:p-10">
+          <h1 className="mb-1 text-2xl font-bold text-[var(--text)] sm:text-3xl">Terms of Service</h1>
+          <p className="mb-8 text-sm text-[var(--text-muted)]">Last updated: June 2026</p>
 
           <div className="space-y-6">
             {SECTIONS.map((s) => (
               <section key={s.title}>
-                <h2 className="text-sm font-bold text-gray-800 mb-1.5">{s.title}</h2>
-                <p className="text-sm text-gray-600 leading-relaxed">{s.body}</p>
+                <h2 className="text-sm font-bold text-[var(--text)] mb-1.5">{s.title}</h2>
+                <p className="text-sm leading-relaxed text-[var(--text-secondary)]">{s.body}</p>
               </section>
             ))}
           </div>
 
-          <p className="text-xs text-gray-400 mt-8 pt-6 border-t border-gray-100">
+          <p className="pt-6 mt-8 text-xs text-[var(--text-muted)] border-t border-[var(--border)]">
             See also our <Link to="/privacy" className="underline hover:text-primary">Privacy Policy</Link>.
           </p>
         </div>

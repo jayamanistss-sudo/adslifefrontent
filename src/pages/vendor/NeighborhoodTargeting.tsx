@@ -88,18 +88,18 @@ export default function NeighborhoodTargeting() {
   return (
     <div className="pb-20 sm:pb-6">
       <BackButton to="/vendor/dashboard" />
-      <h1 className="text-2xl font-heading font-bold text-gray-900 mb-6">Neighborhood Targeting</h1>
+      <h1 className="text-2xl font-heading font-bold text-[var(--text)] mb-6">Neighborhood Targeting</h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Controls */}
         <div className="space-y-4">
           {/* Target type */}
-          <div className="bg-white rounded-2xl shadow-sm p-4">
-            <label className="text-sm font-medium text-gray-700 mb-2 block">Target Type</label>
+          <div className="card p-4">
+            <label className="text-sm font-medium text-[var(--text-secondary)] mb-2 block">Target Type</label>
             <div className="flex gap-2">
               {(['radius', 'pincode', 'area'] as const).map((t) => (
                 <button key={t} onClick={() => setTargetType(t)}
-                  className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all capitalize ${targetType === t ? 'bg-primary text-white' : 'bg-gray-100 text-gray-500'}`}>
+                  className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all capitalize ${targetType === t ? 'bg-primary text-white' : 'bg-[var(--surface-2)] text-[var(--text-muted)]'}`}>
                   {t}
                 </button>
               ))}
@@ -107,8 +107,8 @@ export default function NeighborhoodTargeting() {
           </div>
 
           {/* Area search */}
-          <div className="bg-white rounded-2xl shadow-sm p-4">
-            <label className="text-sm font-medium text-gray-700 mb-2 block">Search Area</label>
+          <div className="card p-4">
+            <label className="text-sm font-medium text-[var(--text-secondary)] mb-2 block">Search Area</label>
             <div className="flex gap-2">
               <input
                 type="text"
@@ -116,7 +116,7 @@ export default function NeighborhoodTargeting() {
                 onChange={(e) => setSearch(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                 placeholder="e.g. Anna Nagar Chennai"
-                className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary"
+                className="flex-1 border border-[var(--border)] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary"
               />
               <button onClick={handleSearch} disabled={loading}
                 className="p-2 bg-primary text-white rounded-xl hover:bg-blue-600 transition-colors">
@@ -126,23 +126,23 @@ export default function NeighborhoodTargeting() {
           </div>
 
           {targetType === 'pincode' && (
-            <div className="bg-white rounded-2xl shadow-sm p-4">
-              <label className="text-sm font-medium text-gray-700 mb-2 block">PIN Code</label>
+            <div className="card p-4">
+              <label className="text-sm font-medium text-[var(--text-secondary)] mb-2 block">PIN Code</label>
               <input
                 type="text"
                 value={pincode}
                 onChange={(e) => setPincode(e.target.value.replace(/\D/g,'').slice(0,6))}
                 placeholder="600040"
                 maxLength={6}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary"
+                className="w-full border border-[var(--border)] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary"
               />
             </div>
           )}
 
           {/* Radius slider */}
           {targetType === 'radius' && (
-            <div className="bg-white rounded-2xl shadow-sm p-4">
-              <label className="text-sm font-medium text-gray-700 mb-2 block">
+            <div className="card p-4">
+              <label className="text-sm font-medium text-[var(--text-secondary)] mb-2 block">
                 Radius: <span className="text-primary font-bold">{radius} km</span>
               </label>
               <input
@@ -150,7 +150,7 @@ export default function NeighborhoodTargeting() {
                 onChange={(e) => handleRadiusChange(parseInt(e.target.value))}
                 className="w-full accent-primary"
               />
-              <div className="flex justify-between text-xs text-gray-400 mt-1">
+              <div className="flex justify-between text-xs text-[var(--text-muted)] mt-1">
                 <span>1 km</span><span>25 km</span>
               </div>
             </div>
@@ -160,7 +160,7 @@ export default function NeighborhoodTargeting() {
           {reachEst !== null && (
             <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4 text-center">
               <div className="font-heading font-bold text-2xl text-primary">~{reachEst.toLocaleString()}</div>
-              <div className="text-xs text-gray-500">Estimated reach in this area</div>
+              <div className="text-xs text-[var(--text-muted)]">Estimated reach in this area</div>
             </div>
           )}
 
@@ -175,7 +175,7 @@ export default function NeighborhoodTargeting() {
 
         {/* Map */}
         <div className="lg:col-span-2">
-          <div className="bg-white rounded-2xl shadow-sm overflow-hidden h-96 lg:h-[500px]">
+          <div className="card overflow-hidden h-96 lg:h-[500px]">
             <div ref={mapDivRef} className="w-full h-full" />
           </div>
         </div>

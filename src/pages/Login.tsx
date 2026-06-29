@@ -183,21 +183,6 @@ export default function Login() {
           background-size:200% auto;
           animation:accentShimmer 3s linear infinite;
         }
-        .inp-field{
-          width:100%;background:transparent;font-size:14px;
-          padding:9px 38px;outline:none;color:inherit;
-        }
-        .inp-field::placeholder{color:rgba(0,0,0,.35);}
-        .inp-wrap{
-          position:relative;border-radius:12px;
-          border:1.5px solid #e8e4e0;
-          background:#fff;
-          transition:border-color .2s,box-shadow .2s;
-        }
-        .inp-wrap:focus-within{
-          border-color:#FF7420;
-          box-shadow:0 0 0 3px rgba(255,116,32,.12);
-        }
         .btn-go{transition:transform .18s ease,box-shadow .18s ease;}
         .btn-go:not(:disabled):hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(255,116,32,.28);}
         .btn-go:not(:disabled):active{transform:translateY(0);}
@@ -206,38 +191,34 @@ export default function Login() {
       <LeftPanel/>
 
       {/* RIGHT */}
-      <div className="relative flex flex-col justify-center overflow-hidden h-full px-8 py-6 xl:px-14"
-        style={{background:'linear-gradient(150deg,#fff 0%,#fffcf8 45%,#fff4e6 100%)'}}>
-
-        {/* Dot texture */}
-        <div className="absolute inset-0 pointer-events-none"
-          style={{backgroundImage:'radial-gradient(rgba(255,116,32,.065) 1px,transparent 1px)',backgroundSize:'22px 22px'}}/>
+      <div className="relative flex flex-col justify-center overflow-hidden h-full px-8 py-6 xl:px-14 bg-[var(--surface)]"
+        style={{backgroundImage:'radial-gradient(var(--border) 1px,transparent 1px)',backgroundSize:'22px 22px'}}>
 
         {/* Ambient orbs */}
         <div className="ro1 absolute pointer-events-none rounded-full"
           style={{width:280,height:280,top:-70,right:-60,
-            background:'radial-gradient(circle,rgba(255,116,32,.09) 0%,transparent 65%)'}}/>
+            background:'radial-gradient(circle,rgba(255,116,32,.07) 0%,transparent 65%)'}}/>
         <div className="ro2 absolute pointer-events-none rounded-full"
           style={{width:200,height:200,bottom:-50,left:-40,
-            background:'radial-gradient(circle,rgba(255,150,50,.07) 0%,transparent 65%)'}}/>
+            background:'radial-gradient(circle,rgba(255,150,50,.05) 0%,transparent 65%)'}}/>
 
         {/* Accent line at top */}
         <div className="accent-bar absolute top-0 left-0 right-0 h-[3px] pointer-events-none"/>
 
-        {/* Content — no card wrapper */}
+        {/* Content */}
         <div className="r-enter relative z-10 w-full max-w-[400px] mx-auto">
 
           {/* Brand mark */}
           <div className="r-f1 flex items-center gap-2.5 mb-5">
             <div className="w-9 h-9 bg-gradient-to-br from-[#FF7420] to-[#C84E00] rounded-[11px] flex items-center justify-center text-white font-bold text-sm shadow-md">A</div>
-            <span className="font-bold text-gray-800 text-[15px] tracking-tight">AdsLife</span>
+            <span className="font-bold text-[var(--text)] text-[15px] tracking-tight">AdsLife</span>
           </div>
 
           {/* Heading */}
           <div className="r-f1 mb-6">
-            <p className="text-[11px] font-semibold text-[#FF7420] uppercase tracking-widest mb-1">Sign in</p>
-            <h1 className="font-heading font-black text-[28px] text-gray-900 leading-tight">Welcome back</h1>
-            <p className="text-gray-500 text-sm mt-1">Sign in to continue to your account</p>
+            <p className="text-[11px] font-semibold text-[var(--primary)] uppercase tracking-widest mb-1">Sign in</p>
+            <h1 className="font-heading font-black text-[28px] text-[var(--text)] leading-tight">Welcome back</h1>
+            <p className="text-[var(--text-muted)] text-sm mt-1">Sign in to continue to your account</p>
           </div>
 
           {/* Google */}
@@ -247,32 +228,34 @@ export default function Login() {
 
           {/* Divider */}
           <div className="r-f3 flex items-center gap-3 my-5">
-            <div className="flex-1 h-px bg-gray-200"/>
-            <span className="text-[10px] text-gray-400 font-semibold tracking-widest uppercase">or</span>
-            <div className="flex-1 h-px bg-gray-200"/>
+            <div className="flex-1 h-px bg-[var(--border)]"/>
+            <span className="text-[10px] text-[var(--text-muted)] font-semibold tracking-widest uppercase">or</span>
+            <div className="flex-1 h-px bg-[var(--border)]"/>
           </div>
 
           {/* Form */}
           <form onSubmit={handleSubmit} noValidate className="space-y-4">
             <div className="r-f3">
-              <label className="block text-[10px] font-bold text-gray-500 mb-1.5 tracking-widest uppercase">Email</label>
-              <div className="inp-wrap">
-                <Mail size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"/>
+              <label className="block text-[10px] font-bold text-[var(--text-secondary)] mb-1.5 tracking-widest uppercase">Email</label>
+              <div className="relative rounded-xl border border-[var(--border)] bg-[var(--surface)] transition-all duration-200 focus-within:border-[var(--primary)] focus-within:shadow-[0_0_0_3px_var(--primary-muted)]">
+                <Mail size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none"/>
                 <input id="login-email" type="email" required autoComplete="email"
-                  className="inp-field" placeholder="you@example.com"
+                  className="w-full bg-transparent text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] outline-none pl-9 pr-4 py-2.5"
+                  placeholder="you@example.com"
                   value={form.email} onChange={e=>setForm(f=>({...f,email:e.target.value}))}/>
               </div>
             </div>
 
             <div className="r-f4">
-              <label className="block text-[10px] font-bold text-gray-500 mb-1.5 tracking-widest uppercase">Password</label>
-              <div className="inp-wrap">
-                <Lock size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"/>
+              <label className="block text-[10px] font-bold text-[var(--text-secondary)] mb-1.5 tracking-widest uppercase">Password</label>
+              <div className="relative rounded-xl border border-[var(--border)] bg-[var(--surface)] transition-all duration-200 focus-within:border-[var(--primary)] focus-within:shadow-[0_0_0_3px_var(--primary-muted)]">
+                <Lock size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none"/>
                 <input id="login-password" type={showPw?'text':'password'} required autoComplete="current-password"
-                  className="inp-field" style={{paddingRight:42}} placeholder="Enter your password"
+                  className="w-full bg-transparent text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] outline-none pl-9 pr-10 py-2.5"
+                  placeholder="Enter your password"
                   value={form.password} onChange={e=>setForm(f=>({...f,password:e.target.value}))}/>
                 <button type="button" onClick={()=>setShowPw(!showPw)} tabIndex={-1}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text)] transition-colors">
                   {showPw ? <EyeOff size={14}/> : <Eye size={14}/>}
                 </button>
               </div>
@@ -280,7 +263,7 @@ export default function Login() {
 
             <div className="r-f5">
               <button type="submit" disabled={loading}
-                className="btn-go btn btn-primary btn-lg w-full flex items-center justify-center gap-2"
+                className="btn-go btn btn-primary btn-lg w-full"
                 style={{marginTop:4}}>
                 {loading
                   ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"/>Signing in…</>
@@ -290,14 +273,14 @@ export default function Login() {
             </div>
           </form>
 
-          <p className="r-f6 text-center text-sm text-gray-500 mt-6">
+          <p className="r-f6 text-center text-sm text-[var(--text-muted)] mt-6">
             Don't have an account?{' '}
-            <Link to="/register" className="text-[#FF7420] font-semibold hover:underline underline-offset-2">Create one free</Link>
+            <Link to="/register" className="text-[var(--primary)] font-semibold hover:underline underline-offset-2">Create one free</Link>
           </p>
-          <p className="text-center text-[10px] text-gray-400 mt-2">
+          <p className="text-center text-[10px] text-[var(--text-muted)] mt-2">
             By signing in you agree to our{' '}
-            <a href="/terms" className="underline underline-offset-2">Terms</a>{' & '}
-            <a href="/privacy" className="underline underline-offset-2">Privacy Policy</a>
+            <a href="/terms" className="underline underline-offset-2 hover:text-[var(--text)] transition-colors">Terms</a>{' & '}
+            <a href="/privacy" className="underline underline-offset-2 hover:text-[var(--text)] transition-colors">Privacy Policy</a>
           </p>
         </div>
       </div>

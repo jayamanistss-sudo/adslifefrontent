@@ -54,7 +54,7 @@ function TrendChip({ v }: { v: number }) {
     </span>
   );
   return (
-    <span className="flex items-center gap-1 text-xs font-semibold text-gray-400 bg-gray-50 dark:bg-gray-800/30 px-2.5 py-1 rounded-full border border-gray-200/50 dark:border-gray-700/30">
+    <span className="flex items-center gap-1 text-xs font-semibold text-[var(--text-muted)] bg-[var(--surface-2)] px-2.5 py-1 rounded-full border border-[var(--border)]">
       <Minus size={12} />0%
     </span>
   );
@@ -358,7 +358,7 @@ export default function AdminDashboard() {
                         </span>
                         <span className="text-[var(--text-secondary)] font-medium">{cnt} ({pct}%)</span>
                       </div>
-                      <div className="h-2.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                      <div className="h-2.5 bg-[var(--surface-2)] rounded-full overflow-hidden">
                         <motion.div 
                           className={`h-full rounded-full bg-gradient-to-r ${barGradient[role] ?? 'from-gray-400 to-gray-500'}`} 
                           initial={{ width: 0 }}
@@ -466,7 +466,7 @@ export default function AdminDashboard() {
                   user: 'from-blue-400 to-indigo-500'
                 };
                 return (
-                  <div key={u.id} className="flex items-center gap-3 py-3.5 first:pt-0 last:pb-0 transition-colors hover:bg-gray-50/40 dark:hover:bg-gray-800/10 rounded-2xl px-2 -mx-2">
+                  <div key={u.id} className="flex items-center gap-3 py-3.5 first:pt-0 last:pb-0 transition-colors hover:bg-[var(--surface-2)]/60 rounded-2xl px-2 -mx-2">
                     <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${initialBg[u.role] ?? 'from-gray-400 to-gray-500'} flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-sm`}>
                       {u.name[0]?.toUpperCase() ?? 'U'}
                     </div>
@@ -515,7 +515,7 @@ export default function AdminDashboard() {
                   rejected: 'badge-danger'
                 };
                 return (
-                  <div key={v.id} className="flex items-center gap-3 py-3.5 first:pt-0 last:pb-0 transition-colors hover:bg-gray-50/40 dark:hover:bg-gray-800/10 rounded-2xl px-2 -mx-2">
+                  <div key={v.id} className="flex items-center gap-3 py-3.5 first:pt-0 last:pb-0 transition-colors hover:bg-[var(--surface-2)]/60 rounded-2xl px-2 -mx-2">
                     <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-sm">
                       {v.business_name[0]?.toUpperCase() ?? 'V'}
                     </div>
@@ -523,7 +523,7 @@ export default function AdminDashboard() {
                       <p className="text-sm font-semibold text-[var(--text)] truncate">{v.business_name}</p>
                       <div className="flex items-center gap-1.5 mt-0.5">
                         <span className="text-xs text-[var(--text-muted)] truncate max-w-[150px] sm:max-w-none">{v.email}</span>
-                        <span className="w-1.5 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--border)] flex-shrink-0" />
                         <span className="text-[10px] font-bold text-[var(--primary)] bg-orange-50 dark:bg-orange-950/20 px-1.5 py-0.5 rounded uppercase tracking-wider flex-shrink-0">{v.subscription_plan}</span>
                       </div>
                     </div>

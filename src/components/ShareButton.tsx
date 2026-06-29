@@ -60,35 +60,35 @@ export default function ShareButton({ offer }: Props) {
     <div ref={ref} className="relative" onClick={e => e.stopPropagation()}>
       <button
         onClick={toggle}
-        className="p-1.5 rounded-full text-gray-400 hover:text-primary hover:bg-primary/10 transition-all"
+        className="p-1.5 rounded-full text-[var(--text-muted)] hover:text-primary hover:bg-primary/10 transition-all"
       >
         {copied ? <Check size={16} className="text-green-500" /> : <Share2 size={16} />}
       </button>
 
       {open && (
-        <div className="absolute bottom-8 right-0 bg-white rounded-xl shadow-xl border border-gray-100 p-2 z-50 w-44 space-y-1">
-          <div className="flex items-center justify-between px-2 pb-1 border-b border-gray-100 mb-1">
-            <span className="text-xs font-semibold text-gray-500">Share offer</span>
-            <button onClick={e => { e.stopPropagation(); setOpen(false); }}><X size={12} className="text-gray-400" /></button>
+        <div className="absolute bottom-8 right-0 bg-[var(--surface)] rounded-xl shadow-[var(--shadow-xl)] border border-[var(--border)] p-2 z-50 w-44 space-y-1">
+          <div className="flex items-center justify-between px-2 pb-1 border-b border-[var(--border)] mb-1">
+            <span className="text-xs font-semibold text-[var(--text-secondary)]">Share offer</span>
+            <button onClick={e => { e.stopPropagation(); setOpen(false); }}><X size={12} className="text-[var(--text-muted)]" /></button>
           </div>
           <button
             onClick={shareWhatsApp}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-green-50 text-sm text-gray-700"
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-[rgba(16,185,129,0.08)] text-sm text-[var(--text-secondary)]"
           >
             <MessageCircle size={15} className="text-green-500" /> WhatsApp
           </button>
           <button
             onClick={copyLink}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-blue-50 text-sm text-gray-700"
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-[rgba(59,130,246,0.08)] text-sm text-[var(--text-secondary)]"
           >
             <Link size={15} className="text-blue-500" /> Copy Link
           </button>
           {typeof navigator.share === 'function' && (
             <button
               onClick={nativeShare}
-              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-50 text-sm text-gray-700"
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-[var(--surface-2)] text-sm text-[var(--text-secondary)]"
             >
-              <Share2 size={15} className="text-gray-400" /> More options
+              <Share2 size={15} className="text-[var(--text-muted)]" /> More options
             </button>
           )}
         </div>

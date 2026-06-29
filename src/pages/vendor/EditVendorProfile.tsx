@@ -7,8 +7,6 @@ import toast from 'react-hot-toast';
 
 declare const L: any;
 
-const CATEGORIES = ['food', 'retail', 'beauty', 'fitness', 'tech', 'travel', 'entertainment', 'general'];
-
 interface VendorProfile {
   business_name: string; category: string; description: string;
   address: string; city: string; phone: string; website: string;
@@ -33,8 +31,15 @@ export default function EditVendorProfile() {
     address: '', city: '', phone: '', website: '', gst_number: '', logo_url: '',
     lat: '' as string, lng: '' as string,
   });
+  const [categories, setCategories] = useState<{ slug: string; name: string }[]>([]);
   const [search, setSearch] = useState('');
   const [searching, setSearching] = useState(false);
+
+  useEffect(() => {
+    api.get(endpoints.categoriesList(true)).then((r) => {
+      if (r.data.success) setCategories(r.data.data ?? []);
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     api.get(endpoints.vendorProfile).then((r) => {
@@ -75,6 +80,7 @@ export default function EditVendorProfile() {
         markerRef.current.on('dragend', (e: any) => {
           const { lat: la, lng: lo } = e.target.getLatLng();
           setForm((f) => ({ ...f, lat: String(la.toFixed(7)), lng: String(lo.toFixed(7)) }));
+          reverseGeocode(la, lo);
         });
       }
       map.on('click', (e: any) => {
@@ -82,6 +88,7 @@ export default function EditVendorProfile() {
         setForm((f) => ({ ...f, lat: String(la.toFixed(7)), lng: String(lo.toFixed(7)) }));
         if (markerRef.current) { markerRef.current.setLatLng([la, lo]); }
         else { markerRef.current = L.marker([la, lo], { draggable: true }).addTo(map); }
+        reverseGeocode(la, lo);
       });
       mapObj.current = map;
     };
@@ -95,6 +102,16 @@ export default function EditVendorProfile() {
   }, [loading]);
 
   const upd = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }));
+
+  const reverseGeocode = async (la: number, lo: number) => {
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${la}&lon=${lo}&zoom=18&addressdetails=1`,
+      );
+      const data = await res.json();
+      if (data.display_name) setForm((f) => ({ ...f, address: data.display_name }));
+    } catch {}
+  };
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -137,6 +154,7 @@ export default function EditVendorProfile() {
         if (markerRef.current) { markerRef.current.setLatLng([la, lo]); }
         else { markerRef.current = L.marker([la, lo], { draggable: true }).addTo(mapObj.current); }
       }
+      reverseGeocode(la, lo);
     }, () => toast.error('Could not get location'));
   };
 
@@ -170,9 +188,9 @@ export default function EditVendorProfile() {
     return (
       <div className="max-w-2xxl pb-6">
         <BackButton to="/vendor/dashboard" />
-        <div className="card p-10 text-center text-gray-500 space-y-4">
+        <div className="card p-10 text-center text-[var(--text-secondary)] space-y-4">
           <div className="text-5xl">{isNoVendor ? '🏪' : '⚠️'}</div>
-          <p className="font-semibold text-gray-700 text-lg">
+          <p className="font-semibold text-[var(--text)] text-lg">
             {isNoVendor ? "You don't have a vendor account yet" : error}
           </p>
           {isNoVendor && (
@@ -182,7 +200,7 @@ export default function EditVendorProfile() {
                 <Store size={16} /> Apply as Vendor
               </Link>
               <Link to="/feed"
-                className="inline-flex items-center gap-2 border border-gray-200 text-gray-600 px-5 py-2.5 rounded-xl font-semibold hover:bg-gray-50 text-sm">
+                className="btn btn-secondary btn-sm">
                 Back to Feed
               </Link>
             </div>
@@ -245,7 +263,7 @@ export default function EditVendorProfile() {
               <div>
                 <label htmlFor="vp-cat" className="block text-sm font-medium text-[var(--text)] mb-1.5">Category</label>
                 <select id="vp-cat" className="input" value={form.category} onChange={(e) => upd('category', e.target.value)}>
-                  {CATEGORIES.map((c) => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
+                  {categories.map((c) => <option key={c.slug} value={c.slug}>{c.name}</option>)}
                 </select>
               </div>
             </div>

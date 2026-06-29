@@ -36,7 +36,7 @@ export default function ABTestDashboard() {
     }
   };
 
-  if (loading) return <><BackButton to="/vendor/dashboard" /><div className="text-center py-20 text-gray-400">Loading A/B test...</div></>;
+  if (loading) return <><BackButton to="/vendor/dashboard" /><div className="text-center py-20 text-[var(--text-muted)]">Loading A/B test...</div></>;
 
   if (!result) return null;
 
@@ -44,24 +44,24 @@ export default function ABTestDashboard() {
 
   return (
     <div className="pb-20 sm:pb-6">
-      <h1 className="text-2xl font-heading font-bold text-gray-900 mb-2">A/B Test Dashboard</h1>
-      <p className="text-gray-500 text-sm mb-6">Started {new Date(result.started_at).toLocaleDateString()}</p>
+      <h1 className="text-2xl font-heading font-bold text-[var(--text)] mb-2">A/B Test Dashboard</h1>
+      <p className="text-[var(--text-muted)] text-sm mb-6">Started {new Date(result.started_at).toLocaleDateString()}</p>
 
       {/* Confidence meter */}
-      <div className="bg-white rounded-2xl shadow-sm p-5 mb-6">
+      <div className="card p-5 mb-6">
         <div className="flex justify-between items-center mb-2">
-          <span className="text-sm font-medium text-gray-600">Statistical Confidence</span>
-          <span className={`text-sm font-bold ${result.confidence >= 85 ? 'text-accent' : result.confidence >= 60 ? 'text-warning' : 'text-gray-400'}`}>
+          <span className="text-sm font-medium text-[var(--text-secondary)]">Statistical Confidence</span>
+          <span className={`text-sm font-bold ${result.confidence >= 85 ? 'text-accent' : result.confidence >= 60 ? 'text-warning' : 'text-[var(--text-muted)]'}`}>
             {result.confidence}%
           </span>
         </div>
-        <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+        <div className="h-3 bg-[var(--surface-2)] rounded-full overflow-hidden">
           <div
-            className={`h-full rounded-full transition-all duration-1000 ${result.confidence >= 85 ? 'bg-accent' : result.confidence >= 60 ? 'bg-warning' : 'bg-gray-300'}`}
+            className={`h-full rounded-full transition-all duration-1000 ${result.confidence >= 85 ? 'bg-accent' : result.confidence >= 60 ? 'bg-warning' : 'bg-[var(--border)]'}`}
             style={{ width: `${result.confidence}%` }}
           />
         </div>
-        <p className="text-xs text-gray-400 mt-2">
+        <p className="text-xs text-[var(--text-muted)] mt-2">
           {result.confidence >= 85 ? '✅ Results are statistically significant — you can declare a winner.' :
            `Need ${(85 - result.confidence).toFixed(1)}% more confidence to declare. Keep running...`}
         </p>
@@ -73,7 +73,7 @@ export default function ABTestDashboard() {
           { label: 'Variant A', offer: result.offer_a, isWinner: result.winner === 'A' },
           { label: 'Variant B', offer: result.offer_b, isWinner: result.winner === 'B' },
         ].map(({ label, offer, isWinner }) => (
-          <div key={label} className={`bg-white rounded-2xl shadow-sm p-5 border-2 transition-colors ${
+          <div key={label} className={`card p-5 border-2 transition-colors ${
             isWinner ? 'border-accent' : 'border-transparent'
           }`}>
             {isWinner && (
@@ -86,7 +86,7 @@ export default function ABTestDashboard() {
                 {label}
               </span>
             </div>
-            <h3 className="font-heading font-semibold text-gray-800 text-sm mb-3 line-clamp-2">{offer.title}</h3>
+            <h3 className="font-heading font-semibold text-[var(--text)] text-sm mb-3 line-clamp-2">{offer.title}</h3>
             <div className="space-y-2 text-sm">
               {[
                 { label: 'Impressions', value: offer.impressions },
@@ -95,8 +95,8 @@ export default function ABTestDashboard() {
                 { label: 'CTR',         value: `${offer.ctr}%` },
               ].map((m) => (
                 <div key={m.label} className="flex justify-between">
-                  <span className="text-gray-500">{m.label}</span>
-                  <span className="font-heading font-semibold text-gray-800">{m.value}</span>
+                  <span className="text-[var(--text-muted)]">{m.label}</span>
+                  <span className="font-heading font-semibold text-[var(--text)]">{m.value}</span>
                 </div>
               ))}
             </div>

@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { TrendingUp, Zap, Clock, SlidersHorizontal, WifiOff, LogIn, ChevronLeft, ChevronRight, X, LayoutGrid } from 'lucide-react';
+import { OfferCardSkeleton } from '../components/ui/Skeleton';
+import { EmptyState } from '../components/ui/EmptyState';
 import NearbyDropdown from '../components/NearbyDropdown';
 import SpotlightHero from '../components/SpotlightHero';
 import OfferCard from '../components/OfferCard';
@@ -158,16 +160,16 @@ export default function Feed() {
 
       {/* Guest banner */}
       {!user && (
-        <div className="mb-4 bg-gradient-to-r from-primary/10 to-orange-50 border border-primary/20 rounded-xl px-4 py-3 flex items-center justify-between gap-3">
+        <div className="flex items-center justify-between gap-3 px-4 py-3.5 mb-5 rounded-xl border border-[var(--primary-border)] bg-[var(--primary-light)]">
           <div>
-            <p className="text-sm font-semibold text-[var(--text)]">Sign in to save offers & earn rewards</p>
-            <p className="text-xs text-[var(--text-muted)] mt-0.5">Join free — unlock saves, coins & leaderboard</p>
+            <p className="text-sm font-semibold text-[var(--text)]">Sign in to save offers &amp; earn rewards</p>
+            <p className="text-xs text-[var(--text-muted)] mt-0.5">Join free — unlock saves, coins &amp; leaderboard</p>
           </div>
-          <div className="flex gap-2 flex-shrink-0">
-            <Link to="/login" className="flex items-center gap-1.5 bg-primary text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:opacity-90 transition-opacity">
+          <div className="flex flex-shrink-0 gap-2">
+            <Link to="/login" className="btn btn-primary btn-sm">
               <LogIn size={13} /> Login
             </Link>
-            <Link to="/register" className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-primary text-primary hover:bg-primary/5 transition-colors">
+            <Link to="/register" className="btn btn-secondary btn-sm">
               Sign Up
             </Link>
           </div>
@@ -176,19 +178,19 @@ export default function Feed() {
 
       {/* Offline banner */}
       {!isOnline && (
-        <div className="mb-4 bg-[#FFFBEB] border border-[#FDE68A] rounded-xl px-4 py-2.5 flex items-center gap-2 text-[#78350F] text-sm">
-          <WifiOff size={16} />
-          <span>You are offline — some features may be unavailable</span>
+        <div className="mb-4 bg-[var(--warning-light)] border border-[rgba(245,158,11,0.2)] rounded-xl px-4 py-2.5 flex items-center gap-2 text-[var(--text-secondary)] text-sm">
+          <WifiOff size={16} className="text-amber-500 flex-shrink-0" />
+          <span>You are offline — showing cached data</span>
         </div>
       )}
 
       {/* API error banner */}
       {error && (
-        <div className="mb-4 bg-red-50 border border-red-200 rounded-xl px-4 py-2.5 flex items-center justify-between gap-2 text-red-700 text-sm">
-          <span>{error}</span>
+        <div className="mb-4 bg-[var(--danger-light)] border border-[rgba(239,68,68,0.18)] rounded-xl px-4 py-2.5 flex items-center justify-between gap-2 text-sm">
+          <span className="text-[var(--text-secondary)]">{error}</span>
           <button
             onClick={() => { setError(null); globalThis.location.reload(); }}
-            className="text-xs font-semibold underline hover:no-underline flex-shrink-0"
+            className="flex-shrink-0 text-xs font-semibold text-[var(--danger)] underline hover:no-underline"
           >
             Retry
           </button>
@@ -199,7 +201,7 @@ export default function Feed() {
       <SpotlightHero onExplore={() => setActiveFilter('trending')} />
 
       {/* Explore Popular Categories - horizontal scroll carousel */}
-      <div className="mb-8 mt-6">
+      <div className="mt-6 mb-8">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-heading font-bold text-[var(--text)] text-lg">Explore Popular Categories</h2>
           <button
@@ -209,7 +211,7 @@ export default function Feed() {
             <LayoutGrid size={14} /> View All <ChevronRight size={14} />
           </button>
         </div>
-        <div className="flex gap-6 overflow-x-auto pt-2 pb-3 scrollbar-hide -mx-1 px-1">
+        <div className="flex gap-6 px-1 pt-2 pb-3 -mx-1 overflow-x-auto scrollbar-hide">
           {categories.map((cat, i) => (
             <motion.button
               key={cat.slug}
@@ -249,7 +251,7 @@ export default function Feed() {
 
               {/* Sheet */}
               <motion.div
-                className="relative w-full sm:max-w-2xl bg-[var(--surface)] rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden"
+                className="relative w-full sm:max-w-2xxl bg-[var(--surface)] rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden"
                 initial={{ y: 80, opacity: 0, scale: 0.97 }}
                 animate={{ y: 0, opacity: 1, scale: 1 }}
                 exit={{ y: 80, opacity: 0, scale: 0.97 }}
@@ -257,7 +259,7 @@ export default function Feed() {
                 onClick={e => e.stopPropagation()}
               >
                 {/* Drag handle (mobile) */}
-                <div className="sm:hidden flex justify-center pt-3 pb-1">
+                <div className="flex justify-center pt-3 pb-1 sm:hidden">
                   <div className="w-10 h-1 rounded-full bg-[var(--border-strong)]" />
                 </div>
 
@@ -277,9 +279,9 @@ export default function Feed() {
 
                 {/* Active category hint */}
                 {activeCategory && (
-                  <div className="px-6 pt-3 flex items-center gap-2">
+                  <div className="flex items-center gap-2 px-6 pt-3">
                     <span className="text-xs text-[var(--text-muted)]">Active filter:</span>
-                    <span className="badge badge-primary capitalize">{activeCategory}</span>
+                    <span className="capitalize badge badge-primary">{activeCategory}</span>
                     <button
                       onClick={() => { setActiveCategory(null); setPage(1); setShowAllCategories(false); }}
                       className="text-xs text-[var(--text-muted)] hover:text-red-500 underline transition-colors"
@@ -290,7 +292,7 @@ export default function Feed() {
                 )}
 
                 {/* Categories grid */}
-                <div className="px-6 py-5 grid grid-cols-4 sm:grid-cols-5 gap-4 max-h-[55vh] overflow-y-auto scrollbar-hide">
+                <div className="px-6 py-5 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4 max-h-[55vh] overflow-y-auto scrollbar-hide">
                   {categories.map((cat, i) => {
                     const isActive = activeCategory === cat.slug;
                     return (
@@ -338,7 +340,7 @@ export default function Feed() {
       </AnimatePresence>
 
       {/* Filter tabs + sort */}
-      <div className="flex items-center justify-between mb-5 gap-3 flex-wrap">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
         <div className="flex items-center gap-2 flex-wrap p-1 bg-[var(--surface-2)] rounded-2xl border border-[var(--border)]">
           {FILTER_TABS.map(({ key, label, icon: Icon }) => (
             <button
@@ -362,8 +364,8 @@ export default function Feed() {
       </div>
 
       {/* Offers heading + per-page selector */}
-      <div className="flex items-center justify-between gap-2 mb-4 flex-wrap">
-        <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+        <div className="flex flex-wrap items-center gap-2">
           <h2 className="font-heading font-bold text-[var(--text)] text-lg">
             {search ? `Results for "${search}"` : 'All Offers'}
           </h2>
@@ -400,29 +402,32 @@ export default function Feed() {
 
       {/* Skeleton */}
       {loading && pagedOffers.length === 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-4">
+        <div className="grid grid-cols-1 gap-4 mt-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="card overflow-hidden">
-              <div className="skeleton h-44 w-full rounded-none" />
-              <div className="p-4 space-y-2">
-                <div className="skeleton h-4 w-3/4" />
-                <div className="skeleton h-3 w-1/2" />
-                <div className="skeleton h-6 w-1/3" />
-              </div>
-            </div>
+            <OfferCardSkeleton key={i} />
           ))}
         </div>
       )}
 
       {/* Offers grid */}
       {!loading && pagedOffers.length === 0 ? (
-        <div className="text-center py-16 text-[var(--text-muted)]">
-          <div className="text-5xl mb-4">🎁</div>
-          <p className="font-heading font-semibold text-[var(--text-secondary)] mb-1">No offers found</p>
-          <p className="text-sm">Try a different category or filter</p>
-        </div>
+        <EmptyState
+          icon="🎁"
+          title="No offers found"
+          description={search ? `No results for "${search}". Try a different keyword or clear the filter.` : 'No offers match your current filters. Try a different category.'}
+          action={
+            (activeCategory || search) ? (
+              <button
+                className="btn btn-secondary text-sm"
+                onClick={() => { setActiveCategory(null); setSearch(''); window.history.pushState({}, '', '/feed'); }}
+              >
+                Clear filters
+              </button>
+            ) : undefined
+          }
+        />
       ) : !loading && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {pagedOffers.map((offer: Offer, i: number) => (
             <motion.div
               key={offer.id}
@@ -439,7 +444,7 @@ export default function Feed() {
 
       {/* Pagination bar */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 mt-8 flex-wrap">
+        <div className="flex flex-wrap items-center justify-center gap-2 mt-8">
           {/* Prev */}
           <button
             onClick={() => goToPage(page - 1)}

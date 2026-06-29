@@ -164,13 +164,13 @@ export default function AdminCategories() {
                         className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold cursor-pointer border border-transparent hover:border-[var(--primary)]/20 transition-all ${
                           cat.is_active
                             ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-400"
-                            : "bg-gray-100 text-gray-500 dark:bg-slate-800 dark:text-slate-400"
+                            : "bg-[var(--surface-2)] text-[var(--text-muted)] dark:bg-slate-800 dark:text-slate-400"
                         }`}
                         title="Click to toggle status"
                       >
                         <span
                           className={`w-1.5 h-1.5 rounded-full ${
-                            cat.is_active ? "bg-emerald-500 animate-pulse" : "bg-gray-400"
+                            cat.is_active ? "bg-emerald-500 animate-pulse" : "bg-[var(--border)]"
                           }`}
                         />
                         {cat.is_active ? "Active" : "Inactive"}
@@ -288,7 +288,7 @@ export default function AdminCategories() {
                     type="button"
                     onClick={() => setEditing({ ...editing, is_active: editing.is_active ? 0 : 1 })}
                     className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                      editing.is_active ? 'bg-emerald-500' : 'bg-gray-200 dark:bg-slate-700'
+                      editing.is_active ? 'bg-emerald-500' : 'bg-[var(--border)] dark:bg-slate-700'
                     }`}
                   >
                     <span

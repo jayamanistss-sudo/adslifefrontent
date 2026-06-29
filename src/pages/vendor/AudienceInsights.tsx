@@ -1,181 +1,199 @@
 import BackButton from '../../components/BackButton';
-import { useState, useEffect } from 'react';
-import { Users } from 'lucide-react';
+import { DashboardSkeleton } from '../../components/ui/Skeleton';
+import { ErrorState } from '../../components/ui/EmptyState';
+import { useState } from 'react';
+import { Users, Smartphone, Monitor, Tablet, MapPin, TrendingUp, MousePointer, Bookmark } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { PieChart, Pie, Cell, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { api, endpoints } from '../../utils/api';
 import type { AudienceData } from '../../types';
+import { useUserStore } from '../../store/useUserStore';
+import { useVendorDashboardPS } from '../../powersync/queries';
+import { useCachedApi } from '../../hooks/useCachedApi';
+import { endpoints } from '../../utils/api';
+
+const fadeUp = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] as const } } };
+
+const DEVICE_COLORS = { Mobile: '#3B82F6', Desktop: '#10B981', Tablet: '#F59E0B' };
 
 export default function AudienceInsights() {
-  const [data, setData]       = useState<AudienceData | null>(null);
-  const [days, setDays]       = useState(30);
-  const [loading, setLoading] = useState(true);
-  const [vendorId, setVendorId] = useState(0);
-  const [followers, setFollowers] = useState<{ total: number; this_month: number; growth_pct: number }>({ total: 0, this_month: 0, growth_pct: 0 });
+  const { user } = useUserStore();
+  const [days, setDays] = useState(30);
 
-  // Fetch vendor id once
-  useEffect(() => {
-    api.get(endpoints.vendorProfile).then((res) => {
-      if (res.data.success) setVendorId(res.data.data.id as number);
-    });
-  }, []);
+  const ps = useVendorDashboardPS(user?.id ?? 0);
+  const vendorId = ps.vendorId > 0 ? ps.vendorId : 0;
 
-  // Fetch audience data whenever vendorId or days changes
-  useEffect(() => {
-    if (!vendorId) return;
-    setLoading(true);
-    Promise.all([
-      api.get(endpoints.audience(vendorId, days)),
-      api.get(endpoints.vendorFollowers(vendorId, 5)),
-    ]).then(([audRes, follRes]) => {
-      if (audRes.data.success) {
-        const d = audRes.data.data;
-        setData({
-          deviceBreakdown:  d.device_breakdown,
-          peakHours:        d.peak_hours,
-          topCities:        d.top_cities,
-          engagementRate:   d.engagement_rate,
-          totalImpressions: d.total_impressions,
-          totalClicks:      d.total_clicks,
-          totalSaves:       d.total_saves,
-        });
-      }
-      if (follRes.data.success) {
-        const f = follRes.data.data;
-        setFollowers({ total: f.total, this_month: f.this_month, growth_pct: f.growth_pct });
-      }
-    }).finally(() => setLoading(false));
-  }, [vendorId, days]);
-
-  if (loading) return (
-    <>
-      <BackButton to="/vendor/dashboard" />
-      <div className="text-center py-20 text-gray-400">Loading insights…</div>
-    </>
+  const { data: raw, loading, error } = useCachedApi<any>(
+    vendorId ? endpoints.audience(vendorId, days) : '',
   );
 
-  if (!data) return null;
+  const data: AudienceData | null = raw ? {
+    deviceBreakdown:  raw.device_breakdown,
+    peakHours:        raw.peak_hours,
+    topCities:        raw.top_cities,
+    engagementRate:   raw.engagement_rate,
+    totalImpressions: raw.total_impressions,
+    totalClicks:      raw.total_clicks,
+    totalSaves:       raw.total_saves,
+  } : null;
+
+  if (loading || !vendorId) return (
+    <div className="pb-6">
+      <BackButton to="/vendor/dashboard" />
+      <DashboardSkeleton />
+    </div>
+  );
+
+  if (error || !data) return (
+    <div className="pb-6">
+      <BackButton to="/vendor/dashboard" />
+      <ErrorState description={error || 'No audience data available yet.'} />
+    </div>
+  );
 
   const deviceData = [
-    { name: 'Mobile',  value: data.deviceBreakdown.mobile,  color: '#1A73E8' },
-    { name: 'Desktop', value: data.deviceBreakdown.desktop, color: '#34A853' },
-    { name: 'Tablet',  value: data.deviceBreakdown.tablet,  color: '#FBBC04' },
-  ].filter((d) => d.value > 0);
+    { name: 'Mobile',  value: data.deviceBreakdown.mobile,  color: DEVICE_COLORS.Mobile },
+    { name: 'Desktop', value: data.deviceBreakdown.desktop, color: DEVICE_COLORS.Desktop },
+    { name: 'Tablet',  value: data.deviceBreakdown.tablet,  color: DEVICE_COLORS.Tablet },
+  ].filter(d => d.value > 0);
 
-  const hourData = data.peakHours.map((count, hr) => ({ hour: `${hr}h`, users: count }));
-  const cityData = data.topCities.map((c) => ({ city: c.city, count: c.count }));
+  const hourData  = data.peakHours.map((count, hr) => ({ hour: `${hr}:00`, users: count }));
+  const cityData  = data.topCities.map(c => ({ city: c.city, count: c.count }));
+
+  const deviceIcons: Record<string, React.ElementType> = { Mobile: Smartphone, Desktop: Monitor, Tablet };
+
+  const kpis = [
+    { label: 'Impressions',    value: data.totalImpressions?.toLocaleString() ?? '0', icon: TrendingUp, accent: '#3B82F6' },
+    { label: 'Clicks',         value: data.totalClicks?.toLocaleString()      ?? '0', icon: MousePointer, accent: '#FF6200' },
+    { label: 'Saves',          value: data.totalSaves?.toLocaleString()       ?? '0', icon: Bookmark, accent: '#F59E0B' },
+    { label: 'Engagement',     value: `${data.engagementRate ?? 0}%`,                 icon: Users, accent: '#10B981' },
+  ];
 
   return (
-    <div className="pb-20 sm:pb-6">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-heading font-bold text-gray-900">Audience Insights</h1>
-        <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
-          {[7, 30, 90].map((d) => (
+    <motion.div
+      initial="hidden"
+      animate="show"
+      variants={{ show: { transition: { staggerChildren: 0.07 } } }}
+      className="pb-10"
+    >
+      <BackButton to="/vendor/dashboard" />
+
+      {/* Header */}
+      <motion.div variants={fadeUp} className="flex items-start justify-between mb-6 mt-1 flex-wrap gap-3">
+        <div>
+          <h1 className="page-title">Audience Insights</h1>
+          <p className="page-subtitle">Who engages with your offers and when</p>
+        </div>
+        <div className="flex gap-1 bg-[var(--surface-2)] p-1 rounded-xl border border-[var(--border)]">
+          {[7, 30, 90].map(d => (
             <button key={d} onClick={() => setDays(d)}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${days === d ? 'bg-white shadow text-primary' : 'text-gray-500'}`}>
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${days === d
+                ? 'bg-[var(--surface)] shadow-sm text-[var(--text)] border border-[var(--border)]'
+                : 'text-[var(--text-secondary)] hover:text-[var(--text)]'
+              }`}>
               {d}d
             </button>
           ))}
         </div>
-      </div>
+      </motion.div>
 
       {/* KPI row */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-        {[
-          { label: 'Total Reach',     value: data.totalImpressions?.toLocaleString() ?? '0' },
-          { label: 'Total Clicks',    value: data.totalClicks?.toLocaleString() ?? '0' },
-          { label: 'Total Saves',     value: data.totalSaves?.toLocaleString() ?? '0' },
-          { label: 'Engagement Rate', value: `${data.engagementRate ?? 0}%` },
-        ].map((k) => (
-          <div key={k.label} className="bg-white rounded-2xl shadow-sm p-4">
-            <div className="font-heading font-bold text-xl text-gray-900">{k.value}</div>
-            <div className="text-xs text-gray-500 mt-0.5">{k.label}</div>
+      <motion.div variants={fadeUp} className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+        {kpis.map(({ label, value, icon: Icon, accent }) => (
+          <div key={label} className="card p-5">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-3" style={{ background: `${accent}18` }}>
+              <Icon size={17} style={{ color: accent }} />
+            </div>
+            <div className="font-heading font-bold text-2xl text-[var(--text)]">{value}</div>
+            <div className="text-xs text-[var(--text-muted)] mt-0.5">{label}</div>
           </div>
         ))}
-      </div>
+      </motion.div>
 
-      {/* Subscriber card */}
-      <div className="bg-white rounded-2xl shadow-sm p-5 mb-6 flex items-center gap-4">
-        <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-          <Users size={22} className="text-primary" />
-        </div>
-        <div className="flex-1">
-          <div className="font-heading font-bold text-2xl text-gray-900">{followers.total.toLocaleString()}</div>
-          <div className="text-xs text-gray-500">Total Subscribers</div>
-        </div>
-        <div className="text-right">
-          <div className={`font-semibold text-sm ${followers.growth_pct >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-            {followers.growth_pct >= 0 ? '+' : ''}{followers.growth_pct}%
-          </div>
-          <div className="text-xs text-gray-400">{followers.this_month} this month</div>
-        </div>
-      </div>
+      {/* Charts grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Device breakdown */}
-        <div className="bg-white rounded-2xl shadow-sm p-5">
-          <h3 className="font-heading font-semibold text-gray-800 mb-4">Device Breakdown</h3>
+        <motion.div variants={fadeUp} className="card p-5">
+          <h3 className="font-heading font-semibold text-[var(--text)] text-sm mb-1">Device Breakdown</h3>
+          <p className="text-xs text-[var(--text-muted)] mb-4">Which devices your audience uses</p>
           {deviceData.length > 0 ? (
             <div className="flex items-center gap-4">
-              <ResponsiveContainer width="50%" height={160}>
-                <PieChart>
-                  <Pie data={deviceData} cx="50%" cy="50%" innerRadius={40} outerRadius={65} dataKey="value">
-                    {deviceData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="space-y-2">
-                {deviceData.map((d) => (
-                  <div key={d.name} className="flex items-center gap-2 text-sm">
-                    <div className="w-3 h-3 rounded-full" style={{ background: d.color }} />
-                    <span className="text-gray-600">{d.name}</span>
-                    <span className="font-semibold ml-auto">{d.value}%</span>
-                  </div>
-                ))}
+              <div className="flex-shrink-0">
+                <ResponsiveContainer width={140} height={140}>
+                  <PieChart>
+                    <Pie data={deviceData} cx="50%" cy="50%" innerRadius={38} outerRadius={60} dataKey="value" strokeWidth={0}>
+                      {deviceData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="flex-1 space-y-3">
+                {deviceData.map(d => {
+                  const Icon = deviceIcons[d.name] as React.ElementType ?? Smartphone;
+                  return (
+                    <div key={d.name} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: `${d.color}18` }}>
+                          <Icon size={13} style={{ color: d.color }} />
+                        </div>
+                        <span className="text-sm text-[var(--text-secondary)]">{d.name}</span>
+                      </div>
+                      <span className="font-semibold text-sm text-[var(--text)]">{d.value}%</span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ) : (
-            <div className="text-center py-10 text-gray-400 text-sm">No data yet</div>
+            <div className="h-36 flex items-center justify-center text-sm text-[var(--text-muted)]">No device data yet</div>
           )}
-        </div>
+        </motion.div>
 
         {/* Top cities */}
-        <div className="bg-white rounded-2xl shadow-sm p-5">
-          <h3 className="font-heading font-semibold text-gray-800 mb-4">Top Cities</h3>
+        <motion.div variants={fadeUp} className="card p-5">
+          <h3 className="font-heading font-semibold text-[var(--text)] text-sm mb-1">Top Cities</h3>
+          <p className="text-xs text-[var(--text-muted)] mb-4">Where your audience is located</p>
           {cityData.length > 0 ? (
             <ResponsiveContainer width="100%" height={160}>
               <BarChart data={cityData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="city" tick={{ fontSize: 10 }} />
-                <YAxis tick={{ fontSize: 10 }} />
-                <Tooltip />
-                <Bar dataKey="count" fill="#1A73E8" radius={[4, 4, 0, 0]} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                <XAxis dataKey="city" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '0.75rem', fontSize: '0.75rem', color: 'var(--text)' }} />
+                <Bar dataKey="count" fill="#3B82F6" radius={[4, 4, 0, 0]} name="Users" />
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <div className="text-center py-10 text-gray-400 text-sm">No city data yet</div>
+            <div className="h-36 flex items-center justify-center text-sm text-[var(--text-muted)]">
+              <div className="text-center">
+                <MapPin size={28} className="mx-auto mb-2 text-[var(--text-muted)]" />
+                <p>No city data yet</p>
+              </div>
+            </div>
           )}
-        </div>
-
-        {/* Peak hours */}
-        <div className="bg-white rounded-2xl shadow-sm p-5 lg:col-span-2">
-          <h3 className="font-heading font-semibold text-gray-800 mb-4">Peak Engagement by Hour</h3>
-          <ResponsiveContainer width="100%" height={180}>
-            <AreaChart data={hourData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-              <defs>
-                <linearGradient id="hourGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="#34A853" stopOpacity={0.15} />
-                  <stop offset="95%" stopColor="#34A853" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="hour" tick={{ fontSize: 10 }} interval={3} />
-              <YAxis tick={{ fontSize: 10 }} />
-              <Tooltip />
-              <Area type="monotone" dataKey="users" stroke="#34A853" fill="url(#hourGrad)" strokeWidth={2} />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
+        </motion.div>
       </div>
-    </div>
+
+      {/* Peak hours */}
+      <motion.div variants={fadeUp} className="card p-5">
+        <h3 className="font-heading font-semibold text-[var(--text)] text-sm mb-1">Peak Engagement Hours</h3>
+        <p className="text-xs text-[var(--text-muted)] mb-4">User activity across the day — post offers when they're most active</p>
+        <ResponsiveContainer width="100%" height={180}>
+          <AreaChart data={hourData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+            <defs>
+              <linearGradient id="hourGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%"  stopColor="#10B981" stopOpacity={0.20} />
+                <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+            <XAxis dataKey="hour" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} interval={3} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
+            <Tooltip contentStyle={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '0.75rem', fontSize: '0.75rem', color: 'var(--text)' }} />
+            <Area type="monotone" dataKey="users" stroke="#10B981" fill="url(#hourGrad)" strokeWidth={2.5} dot={false} name="Active users" />
+          </AreaChart>
+        </ResponsiveContainer>
+      </motion.div>
+    </motion.div>
   );
 }

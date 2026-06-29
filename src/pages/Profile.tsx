@@ -101,7 +101,7 @@ function Step4({ selectedPlanId, onSelect, plans, loadingPlans }: {
             className={`relative text-left p-5 rounded-3xl border-2 transition-all duration-300 ${PLAN_COLORS[plan.slug] ?? 'border-[var(--border)]'} ${
               selectedPlanId === plan.id
                 ? 'ring-2 ring-[var(--primary)] bg-[var(--primary-light)] border-[var(--primary)]'
-                : 'bg-[var(--surface)] hover:bg-[var(--surface-2)] border-[var(--border)] hover:border-gray-300'
+                : 'bg-[var(--surface)] hover:bg-[var(--surface-2)] border-[var(--border)] hover:border-[var(--primary-border)]'
             }`}
           >
             {PLAN_BADGES[plan.slug] && (
@@ -1204,8 +1204,8 @@ export default function Profile() {
               <h3 className="font-heading font-extrabold text-base text-[var(--text)] mb-1.5">Welcome back, {user.name?.split(' ')[0]}!</h3>
               <p className="text-xs text-[var(--text-secondary)] mb-6 font-medium">Here's a quick look at your platform activities and details.</p>
               
-              <div className="grid grid-cols-3 gap-4">
-                <button onClick={() => setTab('saved')} className="bg-[var(--surface-2)] border border-[var(--border)] hover:border-[var(--primary)]/30 rounded-2xl p-4 flex flex-col items-center justify-center text-center transition-all cursor-pointer hover:shadow-sm">
+              <div className="grid grid-cols-3 gap-2 sm:gap-4">
+                <button onClick={() => setTab('saved')} className="bg-[var(--surface-2)] border border-[var(--border)] hover:border-[var(--primary)]/30 rounded-2xl p-3 sm:p-4 flex flex-col items-center justify-center text-center transition-all cursor-pointer hover:shadow-sm">
                   <Bookmark size={18} className="text-[var(--primary)] mb-2" />
                   <span className="text-xs font-semibold text-[var(--text-secondary)]">Saved Offers</span>
                   <span className="text-base font-extrabold text-[var(--text)] mt-1">{savedOffers.length}</span>

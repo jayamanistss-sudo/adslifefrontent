@@ -50,7 +50,7 @@ export default function FraudDashboard() {
     <div className="pb-20 sm:pb-6">
       <div className="flex items-center gap-3 mb-6">
         <ShieldAlert size={24} className="text-danger" />
-        <h1 className="text-2xl font-heading font-bold text-gray-900">Fraud Detection</h1>
+        <h1 className="text-2xl font-heading font-bold text-[var(--text)]">Fraud Detection</h1>
       </div>
 
       {/* Filters */}
@@ -58,7 +58,7 @@ export default function FraudDashboard() {
         <select
           value={filter.status}
           onChange={(e) => setFilter((f) => ({ ...f, status: e.target.value }))}
-          className="border border-gray-200 rounded-xl px-3 py-1.5 text-sm bg-white"
+          className="border border-[var(--border)] rounded-xl px-3 py-1.5 text-sm bg-[var(--surface)]"
         >
           <option value="">All Status</option>
           <option value="pending">Pending</option>
@@ -69,7 +69,7 @@ export default function FraudDashboard() {
         <select
           value={filter.type}
           onChange={(e) => setFilter((f) => ({ ...f, type: e.target.value }))}
-          className="border border-gray-200 rounded-xl px-3 py-1.5 text-sm bg-white"
+          className="border border-[var(--border)] rounded-xl px-3 py-1.5 text-sm bg-[var(--surface)]"
         >
           <option value="">All Types</option>
           <option value="vendor">Vendor</option>
@@ -83,18 +83,18 @@ export default function FraudDashboard() {
           {[1,2,3].map((i) => <div key={i} className="skeleton h-20 rounded-2xl" />)}
         </div>
       ) : flags.length === 0 ? (
-        <div className="text-center py-16 text-gray-400">
+        <div className="text-center py-16 text-[var(--text-muted)]">
           <ShieldAlert size={32} className="mx-auto mb-3 opacity-30" />
           <p>No flagged items found</p>
         </div>
       ) : (
         <div className="space-y-3">
           {flags.map((flag) => (
-            <div key={flag.id} className="bg-white rounded-2xl shadow-sm p-4">
+            <div key={flag.id} className="card p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-2 flex-wrap">
-                    <span className="text-xs font-bold bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full capitalize">
+                    <span className="text-xs font-bold bg-[var(--surface-2)] text-[var(--text-secondary)] px-2 py-0.5 rounded-full capitalize">
                       {flag.entity_type} #{flag.entity_id}
                     </span>
                     <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${riskColor(flag.confidence_score)}`}>
@@ -103,14 +103,14 @@ export default function FraudDashboard() {
                     <span className={`text-xs px-2 py-0.5 rounded-full capitalize ${
                       flag.status === 'pending' ? 'bg-yellow-50 text-yellow-700' :
                       flag.status === 'actioned' ? 'bg-danger/10 text-danger' :
-                      'bg-gray-100 text-gray-500'
+                      'bg-[var(--surface-2)] text-[var(--text-muted)]'
                     }`}>
                       {flag.status}
                     </span>
                   </div>
-                  <p className="text-sm text-gray-600 mb-2">{flag.flag_reason}</p>
+                  <p className="text-sm text-[var(--text-secondary)] mb-2">{flag.flag_reason}</p>
                   <div className="flex items-center gap-2">
-                    <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
+                    <div className="flex-1 bg-[var(--surface-2)] rounded-full h-2 overflow-hidden">
                       <div
                         className={`h-full rounded-full transition-all ${
                           flag.confidence_score >= 85 ? 'bg-danger' :
@@ -119,9 +119,9 @@ export default function FraudDashboard() {
                         style={{ width: `${flag.confidence_score}%` }}
                       />
                     </div>
-                    <span className="text-xs font-bold text-gray-500">{flag.confidence_score}%</span>
+                    <span className="text-xs font-bold text-[var(--text-muted)]">{flag.confidence_score}%</span>
                   </div>
-                  <div className="text-xs text-gray-400 mt-1">{new Date(flag.flagged_at).toLocaleString()}</div>
+                  <div className="text-xs text-[var(--text-muted)] mt-1">{new Date(flag.flagged_at).toLocaleString()}</div>
                 </div>
 
                 {flag.status === 'pending' && (
@@ -134,7 +134,7 @@ export default function FraudDashboard() {
                     </button>
                     <button
                       onClick={() => handleAction(flag.id, 'dismiss')}
-                      className="flex items-center gap-1 text-xs bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors px-3 py-1.5 rounded-xl font-medium"
+                      className="flex items-center gap-1 text-xs bg-[var(--surface-2)] text-[var(--text-secondary)] hover:bg-[var(--border)] transition-colors px-3 py-1.5 rounded-xl font-medium"
                     >
                       <CheckCircle size={12} /> Dismiss
                     </button>

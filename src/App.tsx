@@ -13,10 +13,10 @@ class ErrorBoundary extends Component<{ children: React.ReactNode }, { hasError:
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen flex flex-col items-center justify-center p-8 text-center bg-white">
+        <div className="min-h-screen flex flex-col items-center justify-center p-8 text-center bg-[var(--surface)]">
           <div className="text-5xl mb-4">⚠️</div>
-          <h2 className="text-xl font-bold text-gray-800 mb-2">Something went wrong</h2>
-          <p className="text-sm text-gray-500 mb-6 max-w-sm">{this.state.message || "An unexpected error occurred."}</p>
+          <h2 className="text-xl font-bold text-[var(--text)] mb-2">Something went wrong</h2>
+          <p className="text-sm text-[var(--text-muted)] mb-6 max-w-sm">{this.state.message || "An unexpected error occurred."}</p>
           <button
             onClick={() => {
               this.setState({ hasError: false, message: "" });
@@ -75,6 +75,7 @@ import AdminBannerAds from "./pages/admin/AdminBannerAds";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminOffers from "./pages/admin/AdminOffers";
 import AdminVendors from "./pages/admin/AdminVendors";
+import AdminVendorDetail from "./pages/admin/AdminVendorDetail";
 import AdminSpotlight from "./pages/admin/AdminSpotlight";
 import AdminCategories from "./pages/admin/AdminCategories";
 import AdminSubscriptions from "./pages/admin/AdminSubscriptions";
@@ -130,6 +131,12 @@ export default function App() {
           avatarUrl: u.avatar_url ?? undefined,
           role:      u.role,
         });
+        // Backend returns a new token when role has changed (e.g. user → vendor).
+        // Update localStorage and the store so subsequent API calls use the new role.
+        if (res.data.token) {
+          localStorage.setItem("adslife_token", res.data.token);
+          useUserStore.setState({ token: res.data.token });
+        }
       }
     }).catch(() => {});
   }, [isAuthenticated]);
@@ -164,27 +171,25 @@ export default function App() {
             }
           />
 
-          {/* Protected routes — login required */}
+          {/* Public routes — no login needed */}
           <Route
             path="/offer/:id"
             element={
-              <ProtectedRoute>
-                <Layout>
-                  <OfferDetail />
-                </Layout>
-              </ProtectedRoute>
+              <Layout>
+                <OfferDetail />
+              </Layout>
             }
           />
           <Route
             path="/leaderboard"
             element={
-              <ProtectedRoute>
-                <Layout>
-                  <Leaderboard />
-                </Layout>
-              </ProtectedRoute>
+              <Layout>
+                <Leaderboard />
+              </Layout>
             }
           />
+
+          {/* Protected routes — login required */}
           <Route
             path="/profile"
             element={
@@ -423,6 +428,16 @@ export default function App() {
               <ProtectedRoute roles={["admin"]}>
                 <Layout>
                   <AdminVendors />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/vendors/:id"
+            element={
+              <ProtectedRoute roles={["admin"]}>
+                <Layout>
+                  <AdminVendorDetail />
                 </Layout>
               </ProtectedRoute>
             }

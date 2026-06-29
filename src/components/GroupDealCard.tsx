@@ -53,7 +53,7 @@ export default function GroupDealCard({ deal, onJoined }: Props) {
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+    <div className="card overflow-hidden">
       <div className="relative h-32 bg-gradient-to-br from-accent/20 to-primary/20">
         {deal.imageUrl && (
           <img src={deal.imageUrl} alt={deal.title} className="w-full h-full object-cover" />
@@ -67,16 +67,16 @@ export default function GroupDealCard({ deal, onJoined }: Props) {
       </div>
 
       <div className="p-4">
-        <h3 className="font-heading font-semibold text-gray-900 mb-1 line-clamp-1">{deal.title}</h3>
-        <p className="text-xs text-gray-500 mb-3">{deal.businessName}</p>
+        <h3 className="font-heading font-semibold text-[var(--text)] mb-1 line-clamp-1">{deal.title}</h3>
+        <p className="text-xs text-[var(--text-muted)] mb-3">{deal.businessName}</p>
 
         {/* Progress */}
         <div className="mb-3">
-          <div className="flex justify-between text-xs text-gray-500 mb-1.5">
+          <div className="flex justify-between text-xs text-[var(--text-muted)] mb-1.5">
             <span className="flex items-center gap-1"><Users size={11} /> {deal.currentParticipants} joined</span>
             <span>{deal.remaining} more needed</span>
           </div>
-          <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
+          <div className="h-2.5 bg-[var(--surface-2)] rounded-full overflow-hidden">
             <div
               className="h-full bg-gradient-to-r from-accent to-primary rounded-full transition-all duration-500"
               style={{ width: `${deal.progressPercent ?? 0}%` }}
@@ -94,7 +94,7 @@ export default function GroupDealCard({ deal, onJoined }: Props) {
                 </div>
               ))}
             </div>
-            <span className="text-xs text-gray-400">{deal.currentParticipants} people joined</span>
+            <span className="text-xs text-[var(--text-muted)]">{deal.currentParticipants} people joined</span>
           </div>
         )}
 

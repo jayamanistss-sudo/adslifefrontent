@@ -49,14 +49,14 @@ export default function BecomeVendor() {
   };
 
   if (done) return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
-      <div className="bg-white rounded-3xl shadow-xl p-10 text-center max-w-md w-full">
-        <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+    <div className="flex items-center justify-center min-h-screen p-6 bg-[var(--surface-2)]">
+      <div className="w-full max-w-md p-10 text-center card rounded-3xl">
+        <div className="flex items-center justify-center w-20 h-20 mx-auto mb-4 bg-green-100 rounded-full">
           <CheckCircle size={40} className="text-green-500" />
         </div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Application Submitted!</h2>
-        <p className="text-gray-500 mb-6">Our team will review your application and notify you within 24–48 hours.</p>
-        <button onClick={() => navigate('/feed')} className="w-full bg-primary text-white py-3 rounded-xl font-semibold hover:opacity-90">
+        <h2 className="mb-2 text-2xl font-bold text-[var(--text)]">Application Submitted!</h2>
+        <p className="mb-6 text-[var(--text-muted)]">Our team will review your application and notify you within 24–48 hours.</p>
+        <button onClick={() => navigate('/feed')} className="w-full py-3 font-semibold text-white bg-primary rounded-xl hover:opacity-90">
           Back to AdsLife
         </button>
       </div>
@@ -64,58 +64,58 @@ export default function BecomeVendor() {
   );
 
   if (step === 'form') return (
-    <div className="min-h-screen bg-gray-50 py-10 px-4">
+    <div className="min-h-screen px-4 py-10 bg-[var(--surface-2)]">
       <div className="max-w-lg mx-auto">
-        <button onClick={() => setStep('landing')} className="flex items-center gap-1 text-gray-500 text-sm mb-6 hover:text-primary">
+        <button onClick={() => setStep('landing')} className="flex items-center gap-1 mb-6 text-sm text-[var(--text-muted)] hover:text-primary">
           ← Back
         </button>
-        <div className="bg-white rounded-3xl shadow-xl p-8">
+        <div className="p-8 card rounded-3xl">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center">
+            <div className="flex items-center justify-center w-12 h-12 bg-primary/10 rounded-2xl">
               <Store size={24} className="text-primary" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-gray-900">Tell us about your business</h2>
-              <p className="text-sm text-gray-400">Takes less than 2 minutes</p>
+              <h2 className="text-xl font-bold text-[var(--text)]">Tell us about your business</h2>
+              <p className="text-sm text-[var(--text-muted)]">Takes less than 2 minutes</p>
             </div>
           </div>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Business Name *</label>
-              <input className="input w-full" placeholder="e.g. Sharma Electronics" value={form.business_name} onChange={e => set('business_name', e.target.value)} required />
+              <label className="block mb-1 text-sm font-medium text-[var(--text-secondary)]">Business Name *</label>
+              <input className="w-full input" placeholder="e.g. Sharma Electronics" value={form.business_name} onChange={e => set('business_name', e.target.value)} required />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-              <select className="input w-full" value={form.category} onChange={e => set('category', e.target.value)}>
+              <label className="block mb-1 text-sm font-medium text-[var(--text-secondary)]">Category</label>
+              <select className="w-full input" value={form.category} onChange={e => set('category', e.target.value)}>
                 <option value="">Select category</option>
                 {CATEGORIES.map(c => <option key={c} value={c.toLowerCase().replace(/\s+&\s+/, '-').replace(/\s+/g, '-')}>{c}</option>)}
               </select>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
-                <input className="input w-full" placeholder="Chennai" value={form.city} onChange={e => set('city', e.target.value)} />
+                <label className="block mb-1 text-sm font-medium text-[var(--text-secondary)]">City</label>
+                <input className="w-full input" placeholder="Chennai" value={form.city} onChange={e => set('city', e.target.value)} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                <input className="input w-full" placeholder="9876543210" type="tel" value={form.phone} onChange={e => set('phone', e.target.value)} />
+                <label className="block mb-1 text-sm font-medium text-[var(--text-secondary)]">Phone</label>
+                <input className="w-full input" placeholder="9876543210" type="tel" value={form.phone} onChange={e => set('phone', e.target.value)} />
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-              <input className="input w-full" placeholder="Shop address" value={form.address} onChange={e => set('address', e.target.value)} />
+              <label className="block mb-1 text-sm font-medium text-[var(--text-secondary)]">Address</label>
+              <input className="w-full input" placeholder="Shop address" value={form.address} onChange={e => set('address', e.target.value)} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Website (optional)</label>
-              <input className="input w-full" placeholder="https://yourshop.com" type="url" value={form.website} onChange={e => set('website', e.target.value)} />
+              <label className="block mb-1 text-sm font-medium text-[var(--text-secondary)]">Website (optional)</label>
+              <input className="w-full input" placeholder="https://yourshop.com" type="url" value={form.website} onChange={e => set('website', e.target.value)} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">About your business</label>
-              <textarea className="input w-full" rows={3} placeholder="What do you sell? What makes you special?" value={form.description} onChange={e => set('description', e.target.value)} />
+              <label className="block mb-1 text-sm font-medium text-[var(--text-secondary)]">About your business</label>
+              <textarea className="w-full input" rows={3} placeholder="What do you sell? What makes you special?" value={form.description} onChange={e => set('description', e.target.value)} />
             </div>
             {!user && (
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-700">
-                You'll need to <button type="button" onClick={() => navigate('/login?redirect=/become-vendor')} className="underline font-semibold">sign in</button> before submitting.
+              <div className="p-3 text-sm border bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900/30 rounded-xl text-amber-700 dark:text-amber-300">
+                You'll need to <button type="button" onClick={() => navigate('/login?redirect=/become-vendor')} className="font-semibold underline">sign in</button> before submitting.
               </div>
             )}
             <button
@@ -132,50 +132,50 @@ export default function BecomeVendor() {
   );
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[var(--surface)]">
       {/* Hero */}
-      <div className="bg-gradient-to-br from-primary to-orange-400 text-white py-16 px-6 text-center">
-        <div className="max-w-2xl mx-auto">
+      <div className="px-6 py-16 text-center text-white bg-gradient-to-br from-primary to-orange-400">
+        <div className="mx-auto max-w-2xxl">
           <div className="inline-flex items-center gap-2 bg-white/20 rounded-full px-4 py-1.5 text-sm font-medium mb-6">
             <Store size={14} /> List your business on AdsLife
           </div>
-          <h1 className="text-4xl sm:text-5xl font-bold mb-4 leading-tight">
+          <h1 className="mb-4 text-4xl font-bold leading-tight sm:text-5xl">
             Reach More Customers.<br />Grow Your Business.
           </h1>
-          <p className="text-lg opacity-90 mb-8 max-w-xl mx-auto">
+          <p className="max-w-xl mx-auto mb-8 text-lg opacity-90">
             Join hundreds of local businesses already using AdsLife to post offers, attract foot traffic, and build loyal customers — all for free.
           </p>
           <button
             onClick={() => setStep('form')}
-            className="inline-flex items-center gap-2 bg-white text-primary font-bold text-lg px-8 py-4 rounded-2xl hover:shadow-xl transition-shadow"
+            className="inline-flex items-center gap-2 px-8 py-4 text-lg font-bold transition-shadow bg-white text-primary rounded-2xl hover:shadow-xl"
           >
             Get Listed Free <ChevronRight size={20} />
           </button>
-          <p className="text-xs opacity-70 mt-3">No credit card required · Free for 30 days</p>
+          <p className="mt-3 text-xs opacity-70">No credit card required · Free for 30 days</p>
         </div>
       </div>
 
       {/* Benefits */}
-      <div className="max-w-4xl mx-auto px-6 py-16">
-        <h2 className="text-3xl font-bold text-gray-900 text-center mb-10">Everything you need to grow locally</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="max-w-4xl px-6 py-16 mx-auto">
+        <h2 className="mb-10 text-3xl font-bold text-center text-[var(--text)]">Everything you need to grow locally</h2>
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {BENEFITS.map((b, i) => (
-            <div key={i} className="bg-gray-50 rounded-2xl p-5 hover:shadow-md transition-shadow">
-              <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center mb-3">{b.icon}</div>
-              <h3 className="font-bold text-gray-900 mb-1">{b.title}</h3>
-              <p className="text-sm text-gray-500">{b.desc}</p>
+            <div key={i} className="p-5 transition-shadow bg-[var(--surface-2)] rounded-2xl hover:shadow-md">
+              <div className="flex items-center justify-center w-10 h-10 mb-3 bg-primary/10 rounded-xl">{b.icon}</div>
+              <h3 className="mb-1 font-bold text-[var(--text)]">{b.title}</h3>
+              <p className="text-sm text-[var(--text-muted)]">{b.desc}</p>
             </div>
           ))}
         </div>
       </div>
 
       {/* CTA */}
-      <div className="bg-gray-50 py-16 px-6 text-center">
-        <h2 className="text-3xl font-bold text-gray-900 mb-4">Ready to get started?</h2>
-        <p className="text-gray-500 mb-8">It takes less than 2 minutes to list your business.</p>
+      <div className="px-6 py-16 text-center bg-[var(--surface-2)]">
+        <h2 className="mb-4 text-3xl font-bold text-[var(--text)]">Ready to get started?</h2>
+        <p className="mb-8 text-[var(--text-muted)]">It takes less than 2 minutes to list your business.</p>
         <button
           onClick={() => setStep('form')}
-          className="inline-flex items-center gap-2 bg-primary text-white font-bold text-lg px-8 py-4 rounded-2xl hover:opacity-90 transition-opacity"
+          className="inline-flex items-center gap-2 px-8 py-4 text-lg font-bold text-white transition-opacity bg-primary rounded-2xl hover:opacity-90"
         >
           Apply Now — It's Free <ChevronRight size={20} />
         </button>

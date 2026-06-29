@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Search, CheckCircle, XCircle, PauseCircle, Tag, Eye } from "lucide-react";
 import BackButton from "../../components/BackButton";
+import { useNavigate } from "react-router-dom";
 import { api, endpoints } from "../../utils/api";
 import toast from "react-hot-toast";
 import { DataTable, Pagination } from "../../components";
@@ -30,6 +31,7 @@ interface VendorRow {
 
 
 export default function AdminVendors() {
+  const navigate = useNavigate();
   const [vendors, setVendors] = useState<VendorRow[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -114,11 +116,11 @@ export default function AdminVendors() {
 
   const statusColor = (s: string) =>
     ({
-      approved: "bg-emerald-50 text-emerald-600",
-      pending_review: "bg-amber-50 text-amber-600",
-      suspended: "bg-orange-50 text-orange-600",
-      rejected: "bg-red-50 text-red-500",
-    })[s] ?? "bg-gray-100 text-gray-500";
+      approved:       "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-300",
+      pending_review: "bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-300",
+      suspended:      "bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-300",
+      rejected:       "bg-red-50 dark:bg-red-950/30 text-red-500 dark:text-red-400",
+    })[s] ?? "bg-[var(--surface-2)] text-[var(--text-muted)]";
 
   const columnDefs = useMemo<ColDef<VendorRow>[]>(
     () => [
@@ -142,7 +144,7 @@ export default function AdminVendors() {
           if (!v) return null;
           return (
             <div className="flex items-center gap-2 h-full py-1">
-              <div className="w-7 h-7 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 font-bold text-xs flex-shrink-0">
+              <div className="w-7 h-7 rounded-full bg-[var(--primary-light)] flex items-center justify-center text-[var(--primary)] font-bold text-xs flex-shrink-0">
                 {v.business_name[0]?.toUpperCase()}
               </div>
               <div className="min-w-0 leading-tight">
@@ -257,6 +259,13 @@ export default function AdminVendors() {
           if (!v) return null;
           return (
             <div className="flex items-center gap-1 h-full py-1">
+              <button
+                onClick={() => navigate(`/admin/vendors/${v.id}`)}
+                title="View details"
+                className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-600 transition-colors"
+              >
+                <Eye size={14} />
+              </button>
               {v.status !== "approved" && (
                 <button
                   onClick={() => action(v.id, "approve")}
@@ -415,7 +424,8 @@ export default function AdminVendors() {
         </div>
       </div>
 
-      <div className="card overflow-hidden">
+      <div className="overflow-x-auto">
+      <div className="card overflow-hidden min-w-[600px]">
         <DataTable
           rowData={vendors}
           columnDefs={columnDefs}
@@ -427,6 +437,7 @@ export default function AdminVendors() {
           suppressRowClickSelection={true}
           onSelection={handleSelection}
         />
+      </div>
       </div>
     </div>
   );

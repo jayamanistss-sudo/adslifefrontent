@@ -41,10 +41,10 @@ export default function AdminSpotlight() {
   };
 
   const statusColor = (s: string) => ({
-    pending:  'bg-amber-50 text-amber-600',
-    approved: 'bg-emerald-50 text-emerald-600',
-    rejected: 'bg-red-50 text-red-500',
-  }[s] ?? 'bg-gray-100 text-gray-500');
+    pending:  'bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-300',
+    approved: 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-300',
+    rejected: 'bg-red-50 dark:bg-red-950/30 text-red-500 dark:text-red-400',
+  }[s] ?? 'bg-[var(--surface-2)] text-[var(--text-muted)]');
 
   return (
     <div className="pb-8">
@@ -54,10 +54,10 @@ export default function AdminSpotlight() {
           <h1 className="page-title">Spotlight Requests</h1>
           <p className="page-subtitle">{total} {filter} requests</p>
         </div>
-        <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
+        <div className="flex gap-1 bg-[var(--surface-2)] p-1 rounded-xl">
           {['pending', 'approved', 'rejected', ''].map((s) => (
             <button key={s} onClick={() => setFilter(s)}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${filter === s ? 'bg-white shadow text-primary' : 'text-gray-500'}`}>
+              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${filter === s ? 'bg-[var(--surface)] shadow text-[var(--primary)]' : 'text-[var(--text-muted)]'}`}>
               {s || 'All'}
             </button>
           ))}
@@ -175,7 +175,7 @@ export default function AdminSpotlight() {
             </div>
 
             {r.review_note && (
-              <p className="text-xs bg-gray-50 rounded-lg p-2 text-gray-500">Note: {r.review_note}</p>
+              <p className="text-xs bg-[var(--surface-2)] rounded-lg p-2 text-[var(--text-muted)]">Note: {r.review_note}</p>
             )}
 
             <div className="flex gap-2 mt-auto">

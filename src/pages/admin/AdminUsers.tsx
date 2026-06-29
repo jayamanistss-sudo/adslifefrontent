@@ -146,7 +146,7 @@ export default function AdminUsers() {
           return (
             <div className="flex items-center h-full py-1">
               <span
-                className={`text-xs font-semibold px-2 py-0.5 rounded-full ${u.is_active ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-500"}`}
+                className={`text-xs font-semibold px-2 py-0.5 rounded-full ${u.is_active ? "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-300" : "bg-red-50 dark:bg-red-950/30 text-red-500 dark:text-red-400"}`}
               >
                 {u.is_active ? "Active" : "Banned"}
               </span>
@@ -186,7 +186,7 @@ export default function AdminUsers() {
                   if (window.confirm(`Delete ${u.name}?`)) action(u.id, "delete");
                 }}
                 title="Delete"
-                className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
+                className="p-1.5 rounded-lg hover:bg-[rgba(239,68,68,0.08)] text-[var(--text-muted)] hover:text-red-500 transition-colors"
               >
                 <Trash2 size={14} />
               </button>
@@ -265,7 +265,8 @@ export default function AdminUsers() {
       </div>
 
       {/* Table */}
-      <div className="card overflow-hidden">
+      <div className="overflow-x-auto">
+      <div className="card overflow-hidden min-w-[600px]">
         <DataTable
           rowData={users}
           columnDefs={columnDefs}
@@ -280,6 +281,7 @@ export default function AdminUsers() {
             return "";
           }}
         />
+      </div>
       </div>
     </div>
   );

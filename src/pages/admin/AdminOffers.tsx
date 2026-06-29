@@ -177,7 +177,7 @@ export default function AdminOffers() {
             <div className="flex items-center h-full py-1">
               <span
                 className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                  o.is_active ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-100 text-gray-500'
+                  o.is_active ? 'bg-[var(--accent-light)] text-emerald-700 dark:text-emerald-400' : 'bg-[var(--surface-2)] text-[var(--text-muted)]'
                 }`}
               >
                 {o.is_active ? 'Active' : 'Off'}
@@ -199,21 +199,21 @@ export default function AdminOffers() {
               <button
                 onClick={() => action(o.id, o.is_active ? 'deactivate' : 'activate')}
                 title={o.is_active ? 'Deactivate' : 'Activate'}
-                className="p-1.5 rounded-lg hover:bg-gray-100 text-[var(--text-muted)] transition-colors"
+                className="p-1.5 rounded-lg hover:bg-[var(--surface-2)] text-[var(--text-muted)] transition-colors"
               >
                 {o.is_active ? <ToggleRight size={15} className="text-emerald-500" /> : <ToggleLeft size={15} />}
               </button>
               <button
                 onClick={() => action(o.id, 'feature', { featured: o.is_active ? 0 : 1 })}
                 title="Feature/Unfeature"
-                className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-500 transition-colors"
+                className="p-1.5 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-950/30 text-amber-500 transition-colors"
               >
                 <Star size={14} />
               </button>
               <button
                 onClick={() => action(o.id, 'delete')}
                 title="Delete"
-                className="p-1.5 rounded-lg hover:bg-red-50 text-red-500 transition-colors"
+                className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 text-red-500 transition-colors"
               >
                 <Trash2 size={14} />
               </button>
@@ -319,7 +319,8 @@ export default function AdminOffers() {
       </div>
 
       {/* Table */}
-      <div className="card overflow-hidden">
+      <div className="overflow-x-auto">
+      <div className="card overflow-hidden min-w-[600px]">
         <DataTable
           rowData={offers}
           columnDefs={columnDefs}
@@ -328,6 +329,7 @@ export default function AdminOffers() {
           headerHeight={44}
           loading={loading}
         />
+      </div>
       </div>
     </div>
   );
