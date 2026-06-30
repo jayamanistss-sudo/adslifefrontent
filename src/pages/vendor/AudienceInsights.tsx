@@ -1,23 +1,56 @@
 import BackButton from '../../components/BackButton';
 import { DashboardSkeleton } from '../../components/ui/Skeleton';
 import { ErrorState } from '../../components/ui/EmptyState';
-import { useState } from 'react';
-import { Users, Smartphone, Monitor, Tablet, MapPin, TrendingUp, MousePointer, Bookmark } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Users, Smartphone, Monitor, Tablet, MapPin, TrendingUp, MousePointer, Bookmark, Star } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { PieChart, Pie, Cell, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import type { AudienceData } from '../../types';
 import { useUserStore } from '../../store/useUserStore';
 import { useVendorDashboardPS } from '../../powersync/queries';
 import { useCachedApi } from '../../hooks/useCachedApi';
-import { endpoints } from '../../utils/api';
+import { api, endpoints } from '../../utils/api';
 
 const fadeUp = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] as const } } };
 
 const DEVICE_COLORS = { Mobile: '#3B82F6', Desktop: '#10B981', Tablet: '#F59E0B' };
 
+interface Review {
+  id: number; rating: number; comment: string | null;
+  createdAt: string; userName: string; userAvatar: string | null; offerTitle: string;
+}
+
+function StarRow({ rating }: { rating: number }) {
+  return (
+    <div className="flex gap-0.5">
+      {[1,2,3,4,5].map((s) => (
+        <Star key={s} size={12} className={s <= rating ? 'text-amber-400 fill-amber-400' : 'text-[var(--border)]'} />
+      ))}
+    </div>
+  );
+}
+
 export default function AudienceInsights() {
   const { user } = useUserStore();
   const [days, setDays] = useState(30);
+  const [reviewPage, setReviewPage] = useState(1);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviewTotal, setReviewTotal] = useState(0);
+  const [reviewLoading, setReviewLoading] = useState(false);
+
+  const loadReviews = (page: number) => {
+    setReviewLoading(true);
+    api.get(endpoints.vendorReviews(page)).then((r) => {
+      if (r.data.success) {
+        setReviews(r.data.data);
+        setReviewTotal(r.data.total ?? 0);
+        setReviewPage(page);
+      }
+    }).finally(() => setReviewLoading(false));
+  };
+
+  // Load reviews once on mount
+  useEffect(() => { loadReviews(1); }, []);
 
   const ps = useVendorDashboardPS(user?.id ?? 0);
   const vendorId = ps.vendorId > 0 ? ps.vendorId : 0;
@@ -193,6 +226,59 @@ export default function AudienceInsights() {
             <Area type="monotone" dataKey="users" stroke="#10B981" fill="url(#hourGrad)" strokeWidth={2.5} dot={false} name="Active users" />
           </AreaChart>
         </ResponsiveContainer>
+      </motion.div>
+
+      {/* Customer Feedback */}
+      <motion.div variants={fadeUp} className="card p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="font-heading font-semibold text-[var(--text)] text-sm">Customer Feedback</h3>
+            <p className="text-xs text-[var(--text-muted)]">{reviewTotal} review{reviewTotal !== 1 ? 's' : ''} across all offers</p>
+          </div>
+          <Star size={18} className="text-amber-400 fill-amber-400" />
+        </div>
+        {reviewLoading ? (
+          <div className="space-y-3">{[1,2,3].map((i) => <div key={i} className="skeleton h-16 rounded-xl" />)}</div>
+        ) : reviews.length === 0 ? (
+          <div className="text-center py-10 text-sm text-[var(--text-muted)]">
+            <Star size={32} className="mx-auto mb-2 opacity-20" />
+            No customer reviews yet — they appear after users rate your offers
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {reviews.map((r) => (
+              <div key={r.id} className="p-3 bg-[var(--surface-2)] rounded-xl">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-full bg-[var(--primary)]/15 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    {r.userAvatar
+                      ? <img src={r.userAvatar} alt="" className="w-full h-full object-cover" />
+                      : <span className="text-xs font-bold text-[var(--primary)]">{r.userName?.[0] ?? '?'}</span>}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
+                      <span className="text-sm font-semibold text-[var(--text)]">{r.userName}</span>
+                      <StarRow rating={r.rating} />
+                    </div>
+                    {r.offerTitle && (
+                      <p className="text-[10px] text-[var(--text-muted)] mb-1 truncate">on "{r.offerTitle}"</p>
+                    )}
+                    {r.comment && (
+                      <p className="text-xs text-[var(--text-secondary)] leading-relaxed">{r.comment}</p>
+                    )}
+                    <p className="text-[10px] text-[var(--text-muted)] mt-1">
+                      {new Date(r.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {reviewTotal > reviews.length && (
+              <button onClick={() => loadReviews(reviewPage + 1)} className="w-full text-sm text-[var(--primary)] font-medium py-2 hover:bg-[var(--surface-2)] rounded-xl transition-colors">
+                Load more
+              </button>
+            )}
+          </div>
+        )}
       </motion.div>
     </motion.div>
   );

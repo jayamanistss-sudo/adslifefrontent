@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   Tag, Plus, Upload, X, Eye, MousePointer, Bookmark,
   ToggleLeft, ToggleRight, Pencil, ArrowLeft, Trash2, TrendingUp,
-  Sparkles, Globe, Loader2, ImageIcon,
+  Sparkles, Globe, Loader2, ImageIcon, Copy,
 } from 'lucide-react';
 import BackButton from '../../components/BackButton';
 import { api, endpoints } from '../../utils/api';
@@ -12,19 +12,25 @@ import toast from 'react-hot-toast';
 interface Offer {
   id: number; title: string; category: string; description: string;
   discount_percent: number | null; original_price: number | null;
-  offer_price: number | null; image_url: string; coupon_code: string;
-  redeem_url: string | null;
+  offer_price: number | null; image_url: string; images: string[] | null;
+  coupon_code: string; redeem_url: string | null;
   max_redemptions: number; current_redemptions: number;
-  valid_from: string; valid_until: string; is_active: number;
+  valid_from: string; valid_until: string; is_active: number | boolean;
   views: number; clicks: number; saves: number; created_at: string;
 }
 
 interface Category { slug: string; name: string; }
 
+const MIN_IMG_SIZE = 400; // px — minimum width & height for offer images
+
 const emptyForm = {
   title: '', description: '', category: '', image_url: '',
+  images: [] as string[],
   discount_percent: '', original_price: '', offer_price: '',
-  coupon_code: '', redeem_url: '', max_redemptions: '', valid_from: '', valid_until: '', is_active: '1',
+  coupon_code: '', redeem_url: '', max_redemptions: '100',
+  valid_from: new Date().toISOString().slice(0, 10),
+  valid_until: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
+  is_active: '1',
 };
 
 type Mode = 'list' | 'create' | 'view' | 'edit';
@@ -35,6 +41,7 @@ function offerToForm(o: Offer) {
     description:      o.description ?? '',
     category:         o.category,
     image_url:        o.image_url ?? '',
+    images:           Array.isArray(o.images) ? o.images : [],
     discount_percent: o.discount_percent != null ? String(o.discount_percent) : '',
     original_price:   o.original_price  != null ? String(o.original_price)   : '',
     offer_price:      o.offer_price     != null ? String(o.offer_price)      : '',
@@ -43,7 +50,7 @@ function offerToForm(o: Offer) {
     max_redemptions:  String(o.max_redemptions ?? 0),
     valid_from:       o.valid_from  ? o.valid_from.slice(0, 10)  : '',
     valid_until:      o.valid_until ? o.valid_until.slice(0, 10) : '',
-    is_active:        String(o.is_active ?? 1),
+    is_active:        o.is_active ? '1' : '0',
   };
 }
 
@@ -78,26 +85,96 @@ function ImageUploadBox({ imageUrl, uploading, onUpload, onClear, fileRef }: {
         )}
       </div>
       <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={onUpload} />
-      <p className="text-xs text-[var(--text-muted)] mt-1">JPG, PNG or WebP · Max 10 MB</p>
+      <p className="text-xs text-[var(--text-muted)] mt-1">JPG, PNG or WebP · Max 10 MB · Min {MIN_IMG_SIZE}×{MIN_IMG_SIZE}px</p>
     </div>
   );
 }
 
-function OfferForm({ form, setForm, uploading, fileRef, onUpload, onSubmit, submitting, mode, onCancel, categories }: {
+function GalleryUploadBox({ images, onAdd, onRemove, uploadingIdx }: {
+  readonly images: string[];
+  readonly onAdd: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  readonly onRemove: (idx: number) => void;
+  readonly uploadingIdx: boolean;
+}) {
+  const galleryRef = useRef<HTMLInputElement | null>(null);
+  return (
+    <div>
+      <div className="flex flex-wrap gap-2">
+        {images.map((url, idx) => (
+          <div key={idx} className="relative w-20 h-16 rounded-xl overflow-hidden border border-[var(--border)]">
+            <img src={url} alt="" className="w-full h-full object-cover" />
+            <button type="button" onClick={() => onRemove(idx)}
+              className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-black/70 flex items-center justify-center">
+              <X size={9} className="text-white" />
+            </button>
+          </div>
+        ))}
+        {images.length < 5 && (
+          <button type="button" onClick={() => galleryRef.current?.click()}
+            className="w-20 h-16 rounded-xl border-2 border-dashed border-[var(--border)] flex flex-col items-center justify-center gap-0.5 text-[var(--text-muted)] hover:border-[var(--primary)] transition-colors">
+            {uploadingIdx ? <Upload size={14} className="animate-bounce" /> : <Plus size={14} />}
+            <span className="text-[10px]">{uploadingIdx ? '…' : 'Add'}</span>
+          </button>
+        )}
+      </div>
+      <input ref={galleryRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={onAdd} />
+      <p className="text-xs text-[var(--text-muted)] mt-1">Up to 5 extra images</p>
+    </div>
+  );
+}
+
+function OfferForm({ form, setForm, uploading, uploadingGallery, fileRef, onUpload, onGalleryAdd, onSubmit, submitting, mode, onCancel, categories }: {
   readonly form: typeof emptyForm;
   readonly setForm: (fn: (f: typeof emptyForm) => typeof emptyForm) => void;
   readonly uploading: boolean;
+  readonly uploadingGallery: boolean;
   readonly fileRef: React.RefObject<HTMLInputElement | null>;
   readonly onUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  readonly onGalleryAdd: (e: React.ChangeEvent<HTMLInputElement>) => void;
   readonly onSubmit: (e: { preventDefault: () => void }) => void;
   readonly submitting: boolean;
   readonly mode: 'create' | 'edit';
   readonly onCancel: () => void;
   readonly categories: Category[];
 }) {
-  const upd = (k: keyof typeof emptyForm, v: string) => setForm((f) => ({ ...f, [k]: v }));
+  const upd = (k: keyof typeof emptyForm, v: string | string[]) => setForm((f) => ({ ...f, [k]: v }));
+
+  // Auto-calculate discount % when both prices are entered
+  const handleOrigPrice = (v: string) => {
+    upd('original_price', v);
+    const orig = parseFloat(v);
+    const offer = parseFloat(form.offer_price);
+    if (orig > 0 && offer >= 0 && offer < orig) {
+      upd('discount_percent', Math.round(((orig - offer) / orig) * 100).toString());
+    }
+  };
+  const handleOfferPrice = (v: string) => {
+    upd('offer_price', v);
+    const orig = parseFloat(form.original_price);
+    const offer = parseFloat(v);
+    if (orig > 0 && offer >= 0 && offer < orig) {
+      upd('discount_percent', Math.round(((orig - offer) / orig) * 100).toString());
+    }
+  };
+
+  const applyBOGO = () => {
+    setForm((f) => ({
+      ...f,
+      title: f.title || 'Buy 1 Get 1 Free',
+      description: f.description || 'Buy any 1 item and get the second one absolutely free! Limited time offer.',
+      coupon_code: 'BOGO',
+      discount_percent: '50',
+      offer_price: f.original_price ? String(Math.round(parseFloat(f.original_price) / 2)) : f.offer_price,
+    }));
+  };
+
+  const dateError = form.valid_from && form.valid_until && form.valid_until < form.valid_from
+    ? 'Valid Until must be after Valid From'
+    : null;
+
   return (
     <form onSubmit={onSubmit} className="space-y-4">
+      {/* Title + Category */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label htmlFor="of-title" className="block text-sm font-medium text-[var(--text)] mb-1.5">Title *</label>
@@ -113,12 +190,14 @@ function OfferForm({ form, setForm, uploading, fileRef, onUpload, onSubmit, subm
         </div>
       </div>
 
+      {/* Description */}
       <div>
         <label htmlFor="of-desc" className="block text-sm font-medium text-[var(--text)] mb-1.5">Description *</label>
         <textarea id="of-desc" className="input h-20 resize-none" placeholder="Describe your offer…" required
           value={form.description} onChange={(e) => upd('description', e.target.value)} />
       </div>
 
+      {/* Primary image */}
       <div>
         <label className="block text-sm font-medium text-[var(--text)] mb-1.5">Offer Image *</label>
         <ImageUploadBox
@@ -127,6 +206,20 @@ function OfferForm({ form, setForm, uploading, fileRef, onUpload, onSubmit, subm
         />
       </div>
 
+      {/* Gallery images */}
+      <div>
+        <label className="block text-sm font-medium text-[var(--text)] mb-1.5">
+          Gallery Images <span className="text-[var(--text-muted)] font-normal">(optional)</span>
+        </label>
+        <GalleryUploadBox
+          images={form.images}
+          uploadingIdx={uploadingGallery}
+          onAdd={onGalleryAdd}
+          onRemove={(idx) => upd('images', form.images.filter((_, i) => i !== idx))}
+        />
+      </div>
+
+      {/* Coupon + Redeem URL */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label htmlFor="of-coupon" className="block text-sm font-medium text-[var(--text)] mb-1.5">
@@ -139,62 +232,76 @@ function OfferForm({ form, setForm, uploading, fileRef, onUpload, onSubmit, subm
           <label htmlFor="of-redeem-url" className="block text-sm font-medium text-[var(--text)] mb-1.5">
             Redeem Page URL <span className="text-[var(--text-secondary)] font-normal">(optional)</span>
           </label>
-          <input
-            id="of-redeem-url"
-            className="input"
-            type="url"
-            placeholder="https://yoursite.com/offer-page"
-            value={form.redeem_url}
-            onChange={(e) => upd('redeem_url', e.target.value)}
-          />
+          <input id="of-redeem-url" className="input" type="url" placeholder="https://yoursite.com/offer-page"
+            value={form.redeem_url} onChange={(e) => upd('redeem_url', e.target.value)} />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div>
-          <label htmlFor="of-disc" className="block text-sm font-medium text-[var(--text)] mb-1.5">Discount % *</label>
-          <input id="of-disc" className="input" type="number" min="0" max="100" placeholder="30" required
-            value={form.discount_percent} onChange={(e) => upd('discount_percent', e.target.value)} />
+      {/* Pricing — auto-discount */}
+      <div>
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-sm font-medium text-[var(--text)]">Pricing *</span>
+          <button type="button" onClick={applyBOGO}
+            className="flex items-center gap-1 text-xs font-semibold text-[var(--primary)] bg-[var(--primary)]/10 px-2.5 py-1 rounded-lg hover:bg-[var(--primary)]/20 transition-colors">
+            <Copy size={11} /> BOGO Template
+          </button>
         </div>
-        <div>
-          <label htmlFor="of-orig" className="block text-sm font-medium text-[var(--text)] mb-1.5">Original Price (₹) *</label>
-          <input id="of-orig" className="input" type="number" min="0" placeholder="500" required
-            value={form.original_price} onChange={(e) => upd('original_price', e.target.value)} />
-        </div>
-        <div>
-          <label htmlFor="of-price" className="block text-sm font-medium text-[var(--text)] mb-1.5">Offer Price (₹) *</label>
-          <input id="of-price" className="input" type="number" min="0" placeholder="350" required
-            value={form.offer_price} onChange={(e) => upd('offer_price', e.target.value)} />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label htmlFor="of-orig" className="block text-xs text-[var(--text-muted)] mb-1">Original Price (₹) *</label>
+            <input id="of-orig" className="input" type="number" min="0" placeholder="500" required
+              value={form.original_price} onChange={(e) => handleOrigPrice(e.target.value)} />
+          </div>
+          <div>
+            <label htmlFor="of-price" className="block text-xs text-[var(--text-muted)] mb-1">Offer Price (₹) *</label>
+            <input id="of-price" className="input" type="number" min="0" placeholder="350" required
+              value={form.offer_price} onChange={(e) => handleOfferPrice(e.target.value)} />
+          </div>
+          <div>
+            <label htmlFor="of-disc" className="block text-xs text-[var(--text-muted)] mb-1">
+              Discount % * <span className="text-[var(--primary)]">(auto-calculated)</span>
+            </label>
+            <input id="of-disc" className="input" type="number" min="0" max="100" placeholder="30" required
+              value={form.discount_percent} onChange={(e) => upd('discount_percent', e.target.value)} />
+          </div>
         </div>
       </div>
 
+      {/* Dates */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
           <label htmlFor="of-from" className="block text-sm font-medium text-[var(--text)] mb-1.5">Valid From *</label>
-          <input id="of-from" className="input" type="date" required
+          <input id="of-from" className={`input ${dateError ? 'border-red-400' : ''}`} type="date" required
             value={form.valid_from} onChange={(e) => upd('valid_from', e.target.value)} />
         </div>
         <div>
           <label htmlFor="of-until" className="block text-sm font-medium text-[var(--text)] mb-1.5">Valid Until *</label>
-          <input id="of-until" className="input" type="date" required
+          <input id="of-until" className={`input ${dateError ? 'border-red-400' : ''}`} type="date" required
+            min={form.valid_from || undefined}
             value={form.valid_until} onChange={(e) => upd('valid_until', e.target.value)} />
+          {dateError && <p className="text-xs text-red-500 mt-1">{dateError}</p>}
         </div>
         <div>
-          <label htmlFor="of-max" className="block text-sm font-medium text-[var(--text)] mb-1.5">Max Redemptions *</label>
-          <input id="of-max" className="input" type="number" min="0" placeholder="0 = unlimited" required
+          <label htmlFor="of-max" className="block text-sm font-medium text-[var(--text)] mb-1.5">Max Redemptions</label>
+          <input id="of-max" className="input" type="number" min="0" placeholder="100 (0 = unlimited)"
             value={form.max_redemptions} onChange={(e) => upd('max_redemptions', e.target.value)} />
         </div>
       </div>
 
-      {mode === 'edit' && (
-        <div className="flex items-center gap-3 p-3 bg-[var(--surface-2)] rounded-xl">
-          <label htmlFor="of-active" className="text-sm font-medium text-[var(--text)]">Active</label>
-          <input id="of-active" type="checkbox" className="w-4 h-4 accent-[var(--primary)]"
-            checked={form.is_active === '1'}
-            onChange={(e) => upd('is_active', e.target.checked ? '1' : '0')} />
-          <span className="text-xs text-[var(--text-muted)]">Uncheck to hide this offer from the feed</span>
+      {/* Active toggle — shown in both create and edit */}
+      <div className="flex items-center justify-between p-3 bg-[var(--surface-2)] rounded-xl border border-[var(--border)]">
+        <div>
+          <p className="text-sm font-medium text-[var(--text)]">Offer Status</p>
+          <p className="text-xs text-[var(--text-muted)]">
+            {form.is_active === '1' ? 'Visible to customers in the feed' : 'Hidden from the feed (draft)'}
+          </p>
         </div>
-      )}
+        <button type="button" onClick={() => upd('is_active', form.is_active === '1' ? '0' : '1')}>
+          {form.is_active === '1'
+            ? <ToggleRight size={34} className="text-emerald-500" />
+            : <ToggleLeft  size={34} className="text-[var(--text-muted)]" />}
+        </button>
+      </div>
 
       <div className="flex gap-3 pt-1">
         <button type="submit" disabled={submitting} className="btn btn-primary">
@@ -211,8 +318,9 @@ export default function ManageOffers() {
   const [loading, setLoading]   = useState(true);
   const [mode, setMode]         = useState<Mode>('list');
   const [selected, setSelected] = useState<Offer | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [uploading, setUploading]   = useState(false);
+  const [submitting, setSubmitting]         = useState(false);
+  const [uploading, setUploading]           = useState(false);
+  const [uploadingGallery, setUploadingGallery] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState(emptyForm);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -246,9 +354,28 @@ export default function ManageOffers() {
     }).catch(() => toast.error('Failed to load categories'));
   }, []);
 
+  const checkImgDimensions = (file: File): Promise<boolean> =>
+    new Promise((resolve) => {
+      const url = URL.createObjectURL(file);
+      const img = new window.Image();
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        if (img.naturalWidth < MIN_IMG_SIZE || img.naturalHeight < MIN_IMG_SIZE) {
+          toast.error(`Image too small — minimum ${MIN_IMG_SIZE}×${MIN_IMG_SIZE}px (yours is ${img.naturalWidth}×${img.naturalHeight}px)`);
+          resolve(false);
+        } else {
+          resolve(true);
+        }
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(true); };
+      img.src = url;
+    });
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const ok = await checkImgDimensions(file);
+    if (!ok) { e.target.value = ''; return; }
     setUploading(true);
     try {
       const fd = new FormData();
@@ -256,10 +383,34 @@ export default function ManageOffers() {
       const res = await api.post(endpoints.uploadImage, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
       if (res.data.success) { setForm((f) => ({ ...f, image_url: res.data.data.url as string })); toast.success('Image uploaded!'); }
     } catch { toast.error('Upload failed — max 10 MB'); }
-    finally { setUploading(false); }
+    finally { setUploading(false); e.target.value = ''; }
   };
 
-  const openCreate = () => { setForm({ ...emptyForm, category: '' }); setMode('create'); };
+  const handleGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const ok = await checkImgDimensions(file);
+    if (!ok) { e.target.value = ''; return; }
+    setUploadingGallery(true);
+    try {
+      const fd = new FormData();
+      fd.append('image', file);
+      const res = await api.post(endpoints.uploadImage, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      if (res.data.success) {
+        const url = res.data.data.url as string;
+        setForm((f) => ({ ...f, images: [...(f.images ?? []), url] }));
+        toast.success('Image added to gallery!');
+      }
+    } catch { toast.error('Upload failed — max 10 MB'); }
+    finally { setUploadingGallery(false); e.target.value = ''; }
+  };
+
+  const openCreate = () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const in30  = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+    setForm({ ...emptyForm, category: categories[0]?.slug ?? '', valid_from: today, valid_until: in30 });
+    setMode('create');
+  };
   const openView   = (o: Offer) => { setSelected(o); setMode('view'); };
   const openEdit   = (o: Offer) => { setSelected(o); setForm(offerToForm(o)); setMode('edit'); };
   const backToList = () => { setMode('list'); setSelected(null); };
@@ -295,6 +446,7 @@ export default function ManageOffers() {
       description:      aiResult.description,
       category:         aiResult.category,
       image_url:        aiResult.image_url,
+      images:           [],
       discount_percent: String(aiResult.discount_percent),
       original_price:   String(aiResult.original_price),
       offer_price:      String(aiResult.offer_price),
@@ -310,26 +462,40 @@ export default function ManageOffers() {
     setMode('create');
   };
 
+  const validateOfferForm = () => {
+    if (!form.title.trim())        { toast.error('Title is required'); return false; }
+    if (!form.category)            { toast.error('Category is required'); return false; }
+    if (!form.description.trim())  { toast.error('Description is required'); return false; }
+    if (!form.image_url)           { toast.error('Offer image is required'); return false; }
+    if (!form.discount_percent)    { toast.error('Discount % is required'); return false; }
+    if (!form.original_price)      { toast.error('Original price is required'); return false; }
+    if (!form.offer_price)         { toast.error('Offer price is required'); return false; }
+    if (!form.valid_from)          { toast.error('Valid From date is required'); return false; }
+    if (!form.valid_until)         { toast.error('Valid Until date is required'); return false; }
+    if (form.valid_until < form.valid_from) { toast.error('Valid Until must be after Valid From'); return false; }
+    return true;
+  };
+
   const handleCreate = async (e: { preventDefault: () => void }) => {
     e.preventDefault();
-    if (!form.title.trim()) { toast.error('Title is required'); return; }
-    if (!form.category) { toast.error('Category is required'); return; }
-    if (!form.description.trim()) { toast.error('Description is required'); return; }
-    if (!form.image_url) { toast.error('Offer image is required'); return; }
-    if (!form.discount_percent) { toast.error('Discount % is required'); return; }
-    if (!form.original_price) { toast.error('Original price is required'); return; }
-    if (!form.offer_price) { toast.error('Offer price is required'); return; }
-    if (!form.valid_from) { toast.error('Valid From date is required'); return; }
-    if (!form.valid_until) { toast.error('Valid Until date is required'); return; }
-    if (form.max_redemptions === '') { toast.error('Max Redemptions is required'); return; }
+    if (!validateOfferForm()) return;
     setSubmitting(true);
     try {
       const res = await api.post(endpoints.offerCreate, {
-        ...form,
-        discount_percent: form.discount_percent ? parseFloat(form.discount_percent) : null,
-        original_price:   form.original_price   ? parseFloat(form.original_price)   : null,
-        offer_price:      form.offer_price       ? parseFloat(form.offer_price)      : null,
-        max_redemptions:  form.max_redemptions   ? Number.parseInt(form.max_redemptions) : 0,
+        title:            form.title.trim(),
+        description:      form.description.trim(),
+        category:         form.category,
+        image_url:        form.image_url,
+        images:           form.images.length > 0 ? form.images : null,
+        coupon_code:      form.coupon_code || null,
+        redeem_url:       form.redeem_url || null,
+        discount_percent: parseFloat(form.discount_percent),
+        original_price:   parseFloat(form.original_price),
+        offer_price:      parseFloat(form.offer_price),
+        max_redemptions:  form.max_redemptions ? Number.parseInt(form.max_redemptions) : 0,
+        valid_from:       form.valid_from,
+        valid_until:      form.valid_until,
+        is_active:        form.is_active === '1',
       });
       if (res.data.success) { toast.success('Offer created!'); backToList(); load(); }
     } catch (err: any) {
@@ -371,24 +537,23 @@ export default function ManageOffers() {
   const handleUpdate = async (e: { preventDefault: () => void }) => {
     e.preventDefault();
     if (!selected) return;
-    if (!form.title.trim()) { toast.error('Title is required'); return; }
-    if (!form.category) { toast.error('Category is required'); return; }
-    if (!form.description.trim()) { toast.error('Description is required'); return; }
-    if (!form.image_url) { toast.error('Offer image is required'); return; }
-    if (!form.discount_percent) { toast.error('Discount % is required'); return; }
-    if (!form.original_price) { toast.error('Original price is required'); return; }
-    if (!form.offer_price) { toast.error('Offer price is required'); return; }
-    if (!form.valid_from) { toast.error('Valid From date is required'); return; }
-    if (!form.valid_until) { toast.error('Valid Until date is required'); return; }
-    if (form.max_redemptions === '') { toast.error('Max Redemptions is required'); return; }
+    if (!validateOfferForm()) return;
     setSubmitting(true);
     try {
       const res = await api.put(endpoints.offerUpdate(selected.id), {
-        ...form,
-        discount_percent: form.discount_percent ? parseFloat(form.discount_percent) : null,
-        original_price:   form.original_price   ? parseFloat(form.original_price)   : null,
-        offer_price:      form.offer_price       ? parseFloat(form.offer_price)      : null,
-        max_redemptions:  form.max_redemptions   ? Number.parseInt(form.max_redemptions) : 0,
+        title:            form.title.trim(),
+        description:      form.description.trim(),
+        category:         form.category,
+        image_url:        form.image_url,
+        images:           form.images.length > 0 ? form.images : null,
+        coupon_code:      form.coupon_code || null,
+        redeem_url:       form.redeem_url || null,
+        discount_percent: parseFloat(form.discount_percent),
+        original_price:   parseFloat(form.original_price),
+        offer_price:      parseFloat(form.offer_price),
+        max_redemptions:  form.max_redemptions ? Number.parseInt(form.max_redemptions) : 0,
+        valid_from:       form.valid_from,
+        valid_until:      form.valid_until,
         is_active:        form.is_active === '1',
       });
       if (res.data.success) { toast.success('Offer updated!'); backToList(); load(); }
@@ -504,7 +669,9 @@ export default function ManageOffers() {
           </h3>
           <OfferForm
             form={form} setForm={setForm} uploading={uploading}
+            uploadingGallery={uploadingGallery}
             fileRef={fileRef} onUpload={handleImageUpload}
+            onGalleryAdd={handleGalleryUpload}
             onSubmit={mode === 'create' ? handleCreate : handleUpdate}
             submitting={submitting} mode={mode} onCancel={backToList}
             categories={categories}

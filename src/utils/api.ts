@@ -218,6 +218,9 @@ export const endpoints = {
   adminSpotlight: (status = "") => (status ? `/spotlight/list?status=${status}` : "/spotlight/list"),
   adminSpotlightAction: (id: number) => `/spotlight/${id}/approve`,
 
+  // Vendor reviews
+  vendorReviews: (page = 1) => `/vendor/reviews?page=${page}`,
+
   // Referral
   feedCount: "/feed/count",
   referralMy: "/referral/my",

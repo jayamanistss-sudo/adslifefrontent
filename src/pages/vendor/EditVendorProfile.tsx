@@ -109,7 +109,13 @@ export default function EditVendorProfile() {
         `https://nominatim.openstreetmap.org/reverse?format=json&lat=${la}&lon=${lo}&zoom=18&addressdetails=1`,
       );
       const data = await res.json();
-      if (data.display_name) setForm((f) => ({ ...f, address: data.display_name }));
+      const addr = data?.address ?? {};
+      const city = addr.city ?? addr.town ?? addr.village ?? addr.county ?? addr.state ?? '';
+      setForm((f) => ({
+        ...f,
+        address: data.display_name ?? f.address,
+        ...(city ? { city } : {}),
+      }));
     } catch {}
   };
 
@@ -160,7 +166,16 @@ export default function EditVendorProfile() {
 
   const handleSubmit = async (e: { preventDefault: () => void }) => {
     e.preventDefault();
-    if (!form.business_name.trim()) return;
+    if (!form.business_name.trim()) { toast.error('Business name is required'); return; }
+    if (form.phone && !/^[6-9]\d{9}$/.test(form.phone.replace(/\s|-/g, ''))) {
+      toast.error('Phone must be a valid 10-digit Indian mobile number (starts with 6–9)'); return;
+    }
+    if (form.gst_number && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(form.gst_number)) {
+      toast.error('GST Number format is invalid (e.g. 22AAAAA0000A1Z5)'); return;
+    }
+    if (!form.lat || !form.lng) {
+      toast.error('Please pin your business location on the map'); return;
+    }
     setSaving(true);
     try {
       const res = await api.put(endpoints.vendorProfile, {
