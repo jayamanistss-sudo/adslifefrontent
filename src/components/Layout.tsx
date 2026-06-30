@@ -11,6 +11,7 @@ import { useSiteSettings } from '../store/useSiteSettings';
 import { useSavedStore } from '../store/useSavedStore';
 import NotificationPanel from './NotificationPanel';
 import { api, endpoints } from '../utils/api';
+import { haptic } from '../utils/haptics';
 
 interface Props { readonly children: React.ReactNode }
 
@@ -37,6 +38,26 @@ export default function Layout({ children }: Props) {
   const [searchQuery, setSearchQuery] = useState('');
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
+
+  // Collapsible mobile app bar — hide on scroll down, reveal on scroll up
+  const [headerHidden, setHeaderHidden] = useState(false);
+  const lastScrollY = useRef(0);
+  const mobileMainRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const el = mobileMainRef.current;
+    if (!el) return;
+    const handleScroll = () => {
+      const y = el.scrollTop;
+      const delta = y - lastScrollY.current;
+      if (y < 8) setHeaderHidden(false);
+      else if (delta > 6) setHeaderHidden(true);
+      else if (delta < -6) setHeaderHidden(false);
+      lastScrollY.current = y;
+    };
+    el.addEventListener('scroll', handleScroll, { passive: true });
+    return () => el.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // Toggle dark mode
   const toggleDark = () => {
@@ -305,8 +326,12 @@ export default function Layout({ children }: Props) {
 
       {/* ── Mobile layout ── */}
       <div className="md:hidden flex flex-col flex-1 min-h-screen">
-        {/* Mobile header */}
-        <header className="sticky top-0 z-40 h-14 bg-[var(--surface)] border-b border-[var(--border)] flex items-center gap-3 px-4">
+        {/* Mobile header — collapses on scroll down, reveals on scroll up */}
+        <motion.header
+          animate={{ y: headerHidden ? '-100%' : 0 }}
+          transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] as const }}
+          className="fixed top-0 left-0 right-0 z-40 h-[calc(3.5rem+env(safe-area-inset-top,0px))] pt-[env(safe-area-inset-top,0px)] bg-[var(--surface)] border-b border-[var(--border)] flex items-center gap-3 px-4"
+        >
           <Link to="/feed" className="flex items-center gap-2 flex-shrink-0">
             <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#FF7420] to-[#B04200] flex items-center justify-center text-white font-bold text-xs overflow-hidden">
               {site.site_logo_url
@@ -334,17 +359,17 @@ export default function Layout({ children }: Props) {
               </>
             )}
           </div>
-        </header>
+        </motion.header>
 
         {/* Mobile content */}
-        <main className="flex-1 pb-20 overflow-x-hidden overflow-y-auto">
+        <main ref={mobileMainRef} className="flex-1 pt-[calc(3.5rem+env(safe-area-inset-top,0px))] pb-[calc(76px+env(safe-area-inset-bottom,0px))] overflow-x-hidden overflow-y-auto">
           <AnimatePresence mode="wait">
             <motion.div
               key={location.pathname}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] as const }}
+              initial={{ opacity: 0, x: 12 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -8 }}
+              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] as const }}
             >
               {children}
             </motion.div>
@@ -353,7 +378,7 @@ export default function Layout({ children }: Props) {
 
         {/* Mobile bottom nav */}
         <nav className="fixed bottom-0 left-0 right-0 z-40 bg-[var(--surface)] border-t border-[var(--border)] safe-area-pb">
-          <div className="flex items-center justify-around h-16">
+          <div className="flex items-center justify-around h-[60px]">
             {isAuthenticated ? (
               mobileNav.slice(0, 5).map(({ to, icon: Icon, label }) => {
                 const active = isActive(to);
@@ -361,15 +386,20 @@ export default function Layout({ children }: Props) {
                   <Link
                     key={to}
                     to={to}
-                    className={`relative flex flex-col items-center gap-0.5 px-3 py-1 transition-colors ${
+                    onClick={() => haptic('light')}
+                    className={`relative flex flex-col items-center justify-center gap-0.5 min-w-[56px] min-h-[44px] py-1 transition-colors ${
                       active ? 'text-[var(--primary)]' : 'text-[var(--text-muted)]'
                     }`}
                   >
                     {active && (
-                      <span className="absolute -top-px inset-x-2 h-[2.5px] rounded-full bg-[var(--primary)]" />
+                      <motion.span
+                        layoutId="bottomNavIndicator"
+                        className="absolute -top-px inset-x-3 h-[2.5px] rounded-full bg-[var(--primary)]"
+                        transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                      />
                     )}
-                    <div className={`p-1.5 rounded-xl transition-all ${active ? 'bg-[var(--primary-light)]' : ''}`}>
-                      <Icon size={17} />
+                    <div className={`p-1.5 rounded-xl transition-all ${active ? 'bg-[var(--primary-light)] scale-105' : ''}`}>
+                      <Icon size={18} />
                     </div>
                     <span className="text-[9px] font-medium">{label}</span>
                   </Link>
@@ -377,17 +407,17 @@ export default function Layout({ children }: Props) {
               })
             ) : (
               <>
-                <Link to="/feed" className={`relative flex flex-col items-center gap-0.5 px-3 py-1 transition-colors ${isActive('/feed') ? 'text-[var(--primary)]' : 'text-[var(--text-muted)]'}`}>
-                  {isActive('/feed') && <span className="absolute -top-px inset-x-2 h-[2.5px] rounded-full bg-[var(--primary)]" />}
-                  <div className={`p-1.5 rounded-xl ${isActive('/feed') ? 'bg-[var(--primary-light)]' : ''}`}><Home size={17} /></div>
+                <Link to="/feed" onClick={() => haptic('light')} className={`relative flex flex-col items-center justify-center gap-0.5 min-w-[56px] min-h-[44px] py-1 transition-colors ${isActive('/feed') ? 'text-[var(--primary)]' : 'text-[var(--text-muted)]'}`}>
+                  {isActive('/feed') && <span className="absolute -top-px inset-x-3 h-[2.5px] rounded-full bg-[var(--primary)]" />}
+                  <div className={`p-1.5 rounded-xl ${isActive('/feed') ? 'bg-[var(--primary-light)]' : ''}`}><Home size={18} /></div>
                   <span className="text-[9px] font-medium">Discover</span>
                 </Link>
-                <Link to="/login" className="flex flex-col items-center gap-0.5 px-5 py-2 bg-[var(--primary)] text-white rounded-xl mx-2">
-                  <User size={17} />
+                <Link to="/login" onClick={() => haptic('medium')} className="flex flex-col items-center justify-center gap-0.5 min-w-[56px] min-h-[44px] px-5 py-2 bg-[var(--primary)] text-white rounded-xl mx-2">
+                  <User size={18} />
                   <span className="text-[9px] font-semibold">Login</span>
                 </Link>
-                <Link to="/register" className="flex flex-col items-center gap-0.5 px-3 py-1 transition-colors text-[var(--text-muted)]">
-                  <div className="p-1.5 rounded-xl"><Zap size={17} /></div>
+                <Link to="/register" onClick={() => haptic('light')} className="flex flex-col items-center justify-center gap-0.5 min-w-[56px] min-h-[44px] py-1 transition-colors text-[var(--text-muted)]">
+                  <div className="p-1.5 rounded-xl"><Zap size={18} /></div>
                   <span className="text-[9px] font-medium">Sign Up</span>
                 </Link>
               </>

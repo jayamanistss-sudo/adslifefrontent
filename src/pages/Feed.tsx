@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { TrendingUp, Zap, Clock, SlidersHorizontal, WifiOff, LogIn, ChevronLeft, ChevronRight, X, LayoutGrid } from 'lucide-react';
 import { OfferCardSkeleton } from '../components/ui/Skeleton';
 import { EmptyState } from '../components/ui/EmptyState';
+import PullToRefresh from '../components/ui/PullToRefresh';
 import NearbyDropdown from '../components/NearbyDropdown';
 import SpotlightHero from '../components/SpotlightHero';
 import OfferCard from '../components/OfferCard';
@@ -81,23 +82,31 @@ export default function Feed() {
   const allOffers  = psOffers.length > 0 ? psOffers : apiOffers;
   const categories = psCategories.length > 0 ? psCategories : apiCategories;
 
-  // API fallback — only fires when PowerSync has no data yet
-  useEffect(() => {
-    if (psOffers.length > 0) return;
+  const fetchOffers = async () => {
     setLoading(true);
     setError(null);
     const cityParam = user?.city || 'Chennai';
-    const feedPromise = user
-      ? api.get(endpoints.feed(user.id, lat || 13.08, lng || 80.27, 1, 50, ''))
-      : api.get(endpoints.trending(cityParam, 1, 50, ''));
-    feedPromise
-      .then(r => { if (r.data.success) setApiOffers((r.data.data ?? []).map(mapApiOffer)); })
-      .catch((err) => {
-        console.error('[Feed] Failed to load offers:', err);
-        setError('Failed to load offers. Please check your connection and try again.');
-      })
-      .finally(() => setLoading(false));
+    try {
+      const r = user
+        ? await api.get(endpoints.feed(user.id, lat || 13.08, lng || 80.27, 1, 50, ''))
+        : await api.get(endpoints.trending(cityParam, 1, 50, ''));
+      if (r.data.success) setApiOffers((r.data.data ?? []).map(mapApiOffer));
+    } catch (err) {
+      console.error('[Feed] Failed to load offers:', err);
+      setError('Failed to load offers. Please check your connection and try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // API fallback — only fires when PowerSync has no data yet
+  useEffect(() => {
+    if (psOffers.length > 0) return;
+    fetchOffers();
   }, [psOffers.length, user?.id]);
+
+  // Pull-to-refresh — force a fresh fetch regardless of PowerSync cache state
+  const handleRefresh = async () => { await fetchOffers(); };
 
   useEffect(() => {
     if (psCategories.length > 0) return;
@@ -156,6 +165,7 @@ export default function Feed() {
   };
 
   return (
+    <PullToRefresh onRefresh={handleRefresh}>
     <div className="pb-20 sm:pb-6">
 
       {/* Guest banner */}
@@ -496,5 +506,6 @@ export default function Feed() {
         </div>
       )}
     </div>
+    </PullToRefresh>
   );
 }
