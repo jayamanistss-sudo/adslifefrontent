@@ -1,14 +1,17 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { TrendingUp, Zap, Clock, SlidersHorizontal, WifiOff, LogIn, ChevronLeft, ChevronRight, LayoutGrid, X, Sparkles } from 'lucide-react';
-import { OfferCardSkeleton } from '../components/ui/Skeleton';
+import {
+  TrendingUp, Zap, Clock, WifiOff, LogIn, ChevronLeft, ChevronRight,
+  LayoutGrid, List, X, SlidersHorizontal, ChevronDown, Eye, Bookmark, MapPin,
+  Flame, Tag, Plus,
+} from 'lucide-react';
 import { EmptyState } from '../components/ui/EmptyState';
 import PullToRefresh from '../components/ui/PullToRefresh';
 import NearbyDropdown from '../components/NearbyDropdown';
-import SpotlightHero from '../components/SpotlightHero';
 import OfferCard from '../components/OfferCard';
 import CategoryIcon from '../components/CategoryIcon';
+import SpotlightHero from '../components/SpotlightHero';
 import { useUserStore } from '../store/useUserStore';
 import { useGeolocation } from '../hooks/useGeolocation';
 import { useOffers, useCategories, type Category } from '../powersync/queries';
@@ -22,13 +25,17 @@ const CATEGORY_GRADIENTS = [
 ];
 const gradientFor = (i: number) => CATEGORY_GRADIENTS[i % CATEGORY_GRADIENTS.length];
 
-const PER_PAGE_OPTIONS = [10, 20, 50, 100];
-
 const FILTER_TABS = [
-  { key: 'all',       label: 'All',         icon: null },
-  { key: 'trending',  label: 'Trending',    icon: TrendingUp },
-  { key: 'flash',     label: 'Flash Sales', icon: Zap },
-  { key: 'ending',    label: 'Ending Soon', icon: Clock },
+  { key: 'all',      label: 'All',         icon: LayoutGrid },
+  { key: 'trending', label: 'Trending',    icon: TrendingUp },
+  { key: 'flash',    label: 'Flash Sales', icon: Zap },
+  { key: 'ending',   label: 'Ending Soon', icon: Clock },
+];
+
+const SORT_OPTIONS = [
+  { key: 'default',  label: 'Recommended' },
+  { key: 'discount', label: 'Highest Discount' },
+  { key: 'views',    label: 'Most Popular' },
 ];
 
 function mapApiOffer(o: any): Offer {
@@ -47,56 +54,61 @@ function mapApiOffer(o: any): Offer {
   };
 }
 
+function timeLeft(until: string | undefined): string | null {
+  if (!until) return null;
+  const ms = new Date(until).getTime() - Date.now();
+  if (ms <= 0) return 'Expired';
+  const h = Math.floor(ms / 3600000);
+  if (h < 24) return `${h}h left`;
+  return `${Math.floor(h / 24)}d left`;
+}
+
 export default function Feed() {
   const { user } = useUserStore();
   const { lat, lng } = useGeolocation();
   const [searchParams] = useSearchParams();
   const urlQuery = searchParams.get('q') ?? '';
 
-  const [isOnline, setIsOnline]               = useState(globalThis.navigator.onLine);
-  const [activeFilter, setActiveFilter]       = useState('all');
-  const [nearbyRadius, setNearbyRadius]       = useState(0);
-  const [search, setSearch]                   = useState(urlQuery);
-  const [perPage, setPerPage]                 = useState(20);
-  const [page, setPage]                       = useState(1);
-  const [loading, setLoading]                 = useState(false);
-  const [error, setError]                     = useState<string | null>(null);
-  const [activeCategory, setActiveCategory]   = useState<string | null>(null);
-  const [apiOffers, setApiOffers]             = useState<Offer[]>([]);
-  const [apiCategories, setApiCategories]     = useState<Category[]>([]);
+  const [isOnline, setIsOnline]             = useState(globalThis.navigator.onLine);
+  const [activeFilter, setActiveFilter]     = useState('all');
+  const [nearbyRadius, setNearbyRadius]     = useState(0);
+  const [search, setSearch]                 = useState(urlQuery);
+  const [sortKey, setSortKey]               = useState('default');
+  const [page, setPage]                     = useState(1);
+  const [perPage]                           = useState(20);
+  const [loading, setLoading]               = useState(false);
+  const [error, setError]                   = useState<string | null>(null);
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [apiOffers, setApiOffers]           = useState<Offer[]>([]);
+  const [apiCategories, setApiCategories]   = useState<Category[]>([]);
+  const [sortOpen, setSortOpen]             = useState(false);
+  const [viewMode, setViewMode]             = useState<'list' | 'grid'>('grid');
+  const [showMoreCats, setShowMoreCats]     = useState(false);
+
+  const CATS_LIMIT = 8;
+
   const psOffers     = useOffers(activeCategory);
   const psCategories = useCategories();
 
-  // Use PowerSync data if available, fallback to API
-  const allOffers  = psOffers.length > 0 ? psOffers : apiOffers;
-  const [showAllCategories, setShowAllCategories] = useState(false);
+  const allOffers     = psOffers.length > 0 ? psOffers : apiOffers;
   const allCategories = psCategories.length > 0 ? psCategories : apiCategories;
-  const categories = allCategories.slice(0, 10);
 
   const fetchOffers = async () => {
-    setLoading(true);
-    setError(null);
+    setLoading(true); setError(null);
     const cityParam = user?.city || 'Chennai';
     try {
       const r = user
         ? await api.get(endpoints.feed(user.id, lat || 13.08, lng || 80.27, 1, 50, ''))
         : await api.get(endpoints.trending(cityParam, 1, 50, ''));
       if (r.data.success) setApiOffers((r.data.data ?? []).map(mapApiOffer));
-    } catch (err) {
-      console.error('[Feed] Failed to load offers:', err);
-      setError('Failed to load offers. Please check your connection and try again.');
+    } catch {
+      setError('Failed to load offers. Please check your connection.');
     } finally {
       setLoading(false);
     }
   };
 
-  // API fallback — only fires when PowerSync has no data yet
-  useEffect(() => {
-    if (psOffers.length > 0) return;
-    fetchOffers();
-  }, [psOffers.length, user?.id]);
-
-  // Pull-to-refresh — force a fresh fetch regardless of PowerSync cache state
+  useEffect(() => { if (psOffers.length > 0) return; fetchOffers(); }, [psOffers.length, user?.id]);
   const handleRefresh = async () => { await fetchOffers(); };
 
   useEffect(() => {
@@ -109,33 +121,33 @@ export default function Feed() {
     const goOffline = () => setIsOnline(false);
     globalThis.addEventListener('online',  goOnline);
     globalThis.addEventListener('offline', goOffline);
-    return () => {
-      globalThis.removeEventListener('online',  goOnline);
-      globalThis.removeEventListener('offline', goOffline);
-    };
+    return () => { globalThis.removeEventListener('online', goOnline); globalThis.removeEventListener('offline', goOffline); };
   }, []);
 
   useEffect(() => { setSearch(urlQuery); setPage(1); }, [urlQuery]);
 
-  const displayOffers = allOffers.filter((o: Offer) => {
-    if (activeCategory && o.category !== activeCategory) return false;
-    if (search && !o.title.toLowerCase().includes(search.toLowerCase()) &&
-        !o.description?.toLowerCase().includes(search.toLowerCase())) return false;
-    if (nearbyRadius > 0 && lat && lng) {
-      if (o.vendorLat && o.vendorLng) {
+  const displayOffers = allOffers
+    .filter((o: Offer) => {
+      if (activeCategory && o.category !== activeCategory) return false;
+      if (search && !o.title.toLowerCase().includes(search.toLowerCase()) &&
+          !o.description?.toLowerCase().includes(search.toLowerCase())) return false;
+      if (nearbyRadius > 0 && lat && lng && o.vendorLat && o.vendorLng) {
         const d = Math.sqrt(Math.pow((o.vendorLat - lat) * 111, 2) + Math.pow((o.vendorLng - lng) * 111, 2));
         if (d > nearbyRadius) return false;
       }
-    }
-    if (activeFilter === 'flash' && (o.discountPercent ?? 0) < 30) return false;
-    if (activeFilter === 'ending') {
-      if (!o.validUntil) return false;
-      const diff = new Date(o.validUntil).getTime() - Date.now();
-      if (diff > 86400000 * 2) return false;
-    }
-    if (activeFilter === 'trending') return (o.views ?? 0) > 100;
-    return true;
-  });
+      if (activeFilter === 'flash'   && (o.discountPercent ?? 0) < 30) return false;
+      if (activeFilter === 'trending') return (o.views ?? 0) > 100;
+      if (activeFilter === 'ending') {
+        if (!o.validUntil) return false;
+        if (new Date(o.validUntil).getTime() - Date.now() > 86400000 * 2) return false;
+      }
+      return true;
+    })
+    .sort((a: Offer, b: Offer) => {
+      if (sortKey === 'discount') return (b.discountPercent ?? 0) - (a.discountPercent ?? 0);
+      if (sortKey === 'views')    return (b.views ?? 0) - (a.views ?? 0);
+      return 0;
+    });
 
   const totalOffers = displayOffers.length;
   const totalPages  = Math.max(1, Math.ceil(totalOffers / perPage));
@@ -147,350 +159,373 @@ export default function Feed() {
     setPage(p);
   };
 
-  const changePerPage = (n: number) => {
-    setPerPage(n);
-    setPage(1);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+  const currentSort = SORT_OPTIONS.find(s => s.key === sortKey)!;
+  const activeCatObj = allCategories.find(c => c.slug === activeCategory);
 
   return (
     <PullToRefresh onRefresh={handleRefresh}>
 
-      {/* Guest banner — these have their own px-4 */}
+      {/* ── System banners ── */}
       {!user && (
-        <div className="flex items-center justify-between gap-2 sm:gap-3 px-4 py-3 sm:py-3.5 mb-3 sm:mb-5 border-b sm:border sm:rounded-xl border-[var(--primary-border)] bg-[var(--primary-light)]">
+        <div className="flex items-center justify-between gap-3 px-4 sm:px-0 py-3 mb-4 rounded-xl border border-[var(--primary-border)] bg-[var(--primary-light)]">
           <div className="min-w-0">
-            <p className="text-xs sm:text-sm font-semibold text-[var(--text)] leading-snug">Sign in to save offers &amp; earn rewards</p>
-            <p className="text-[10px] sm:text-xs text-[var(--text-muted)] mt-0.5 hidden sm:block">Join free — unlock saves, coins &amp; leaderboard</p>
+            <p className="text-sm font-semibold text-[var(--text)]">Sign in to save offers &amp; earn rewards</p>
+            <p className="text-xs text-[var(--text-muted)] mt-0.5 hidden sm:block">Join free — unlock saves, coins &amp; leaderboard</p>
           </div>
-          <div className="flex flex-shrink-0 gap-1.5 sm:gap-2">
-            <Link to="/login" className="btn btn-primary btn-sm text-xs sm:text-sm">
-              <LogIn size={12} /> Login
-            </Link>
-            <Link to="/register" className="btn btn-secondary btn-sm text-xs sm:text-sm">
-              Sign Up
-            </Link>
+          <div className="flex flex-shrink-0 gap-2">
+            <Link to="/login"    className="btn btn-primary btn-sm"><LogIn size={13} /> Login</Link>
+            <Link to="/register" className="btn btn-secondary btn-sm hidden sm:inline-flex">Sign Up</Link>
           </div>
         </div>
       )}
-
-      {/* Offline banner */}
       {!isOnline && (
-        <div className="mb-3 sm:mb-4 bg-[var(--warning-light)] border-b sm:border border-[rgba(245,158,11,0.2)] sm:rounded-xl px-4 py-2.5 flex items-center gap-2 text-[var(--text-secondary)] text-sm">
-          <WifiOff size={16} className="text-amber-500 flex-shrink-0" />
+        <div className="mb-4 bg-[var(--warning-light)] border border-[rgba(245,158,11,0.2)] rounded-xl px-4 py-2.5 flex items-center gap-2 text-[var(--text-secondary)] text-sm">
+          <WifiOff size={15} className="text-amber-500 flex-shrink-0" />
           <span>You are offline — showing cached data</span>
         </div>
       )}
-
-      {/* API error banner */}
       {error && (
-        <div className="mb-3 sm:mb-4 bg-[var(--danger-light)] border-b sm:border border-[rgba(239,68,68,0.18)] sm:rounded-xl px-4 py-2.5 flex items-center justify-between gap-2 text-sm">
+        <div className="mb-4 bg-[var(--danger-light)] border border-[rgba(239,68,68,0.18)] rounded-xl px-4 py-2.5 flex items-center justify-between gap-2 text-sm">
           <span className="text-[var(--text-secondary)]">{error}</span>
-          <button
-            onClick={() => { setError(null); globalThis.location.reload(); }}
-            className="flex-shrink-0 text-xs font-semibold text-[var(--danger)] underline hover:no-underline"
-          >
-            Retry
-          </button>
+          <button onClick={() => { setError(null); globalThis.location.reload(); }}
+            className="flex-shrink-0 text-xs font-semibold text-[var(--danger)] underline">Retry</button>
         </div>
       )}
 
-      {/* Mobile grand welcome strip */}
-      <motion.div
-        className="sm:hidden mx-4 mb-4 grand-hero px-4 py-4 text-white"
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ type: 'spring', stiffness: 300, damping: 28 }}
-      >
-        <div className="relative z-10 flex items-center justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-1.5 text-white/80 text-[10px] font-semibold uppercase tracking-widest mb-1">
-              <Sparkles size={11} /> Discover Local Deals
-            </div>
-            <h2 className="font-heading font-extrabold text-lg leading-tight">
-              {user ? `Hey ${user.name?.split(' ')[0]}!` : 'Best deals'} <span className="text-white/80">near you</span>
-            </h2>
-          </div>
-          <motion.div
-            animate={{ rotate: [0, 8, -8, 0] }}
-            transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-            className="text-3xl"
-          >
-            🏷️
-          </motion.div>
-        </div>
-      </motion.div>
+      {/* ── Banner ads carousel (vendor-submitted, approved/live) ── */}
+      <SpotlightHero onExplore={() => { window.scrollBy({ top: 400, behavior: 'smooth' }); }} />
 
-      {/* Hero — hidden on mobile, shown on desktop */}
-      <div className="hidden sm:block">
-        <SpotlightHero onExplore={() => setActiveFilter('trending')} />
-      </div>
-
-      {/* Mobile spotlight hero */}
-      <div className="sm:hidden px-0 mb-3">
-        <SpotlightHero onExplore={() => setActiveFilter('trending')} />
-      </div>
-
-      {/* Category carousel — 10 shown, "View All" opens modal */}
-      {categories.length > 0 && (
-        <div className="mt-4 mb-4">
-          <div className="flex items-center justify-between px-4 sm:px-1 mb-2">
-            <h2 className="font-heading font-bold text-[var(--text)] text-sm sm:text-base">Categories</h2>
+      {/* ── Category pills (wrapped, with View More) ── */}
+      {allCategories.length > 0 && (
+        <div className="mb-4">
+          <div className="flex flex-wrap gap-2">
             <button
-              onClick={() => setShowAllCategories(true)}
-              className="flex items-center gap-1 text-xs font-semibold text-[var(--primary)] hover:opacity-75 transition-opacity"
-            >
-              <LayoutGrid size={12} /> View All <ChevronRight size={12} />
-            </button>
-          </div>
-          <div className="flex flex-nowrap gap-3 sm:gap-6 px-4 sm:px-1 pb-2 overflow-x-auto overflow-y-hidden scrollbar-hide">
-            {categories.map((cat, i) => (
-              <motion.button
-                key={cat.slug}
-                onClick={() => { setActiveCategory(activeCategory === cat.slug ? null : cat.slug); setPage(1); }}
-                className="flex flex-col items-center gap-1.5 flex-shrink-0"
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ type: 'spring', stiffness: 320, damping: 24, delay: i * 0.05 }}
-                whileTap={{ scale: 0.9 }}
-                whileHover={{ y: -4 }}
-              >
-                <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br ${gradientFor(i)} flex items-center justify-center shadow-md transition-all duration-300 ${activeCategory === cat.slug ? 'ring-[3px] ring-[var(--primary)] ring-offset-2 scale-110 cat-ring-pulse' : ''}`}>
-                  <CategoryIcon name={cat.icon} size={22} className="text-white/90" />
-                </div>
-                <span className={`text-[10px] font-medium text-center whitespace-nowrap ${activeCategory === cat.slug ? 'text-[var(--primary)] font-semibold' : 'text-[var(--text-secondary)]'}`}>
-                  {cat.name}
-                </span>
-              </motion.button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* All Categories Modal */}
-      <AnimatePresence>
-        {showAllCategories && (
-          <motion.div
-            className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setShowAllCategories(false)}
-          >
-            <div className="absolute inset-0 bg-black/45 backdrop-blur-[6px]" />
-            <motion.div
-              className="relative w-full sm:max-w-2xl bg-[var(--surface)] rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden"
-              initial={{ y: 80, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 80, opacity: 0 }}
-              transition={{ type: 'spring', stiffness: 340, damping: 28 }}
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="flex justify-center pt-3 pb-1 sm:hidden">
-                <div className="w-10 h-1 rounded-full bg-[var(--border-strong)]" />
-              </div>
-              <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border)]">
-                <div>
-                  <h3 className="font-heading font-bold text-[var(--text)] text-lg leading-none">All Categories</h3>
-                  <p className="text-xs text-[var(--text-muted)] mt-0.5">{allCategories.length} categories available</p>
-                </div>
-                <button
-                  onClick={() => setShowAllCategories(false)}
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)] transition-all"
-                >
-                  <X size={17} />
-                </button>
-              </div>
-              {activeCategory && (
-                <div className="flex items-center gap-2 px-6 pt-3">
-                  <span className="text-xs text-[var(--text-muted)]">Active:</span>
-                  <span className="capitalize badge badge-primary">{activeCategory}</span>
-                  <button
-                    onClick={() => { setActiveCategory(null); setPage(1); setShowAllCategories(false); }}
-                    className="text-xs text-[var(--text-muted)] hover:text-[var(--danger)] underline transition-colors"
-                  >Clear</button>
-                </div>
-              )}
-              <div className="px-6 py-5 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4 max-h-[60vh] overflow-y-auto scrollbar-hide">
-                {allCategories.map((cat, i) => {
-                  const isActive = activeCategory === cat.slug;
-                  return (
-                    <motion.button
-                      key={cat.slug}
-                      onClick={() => { setActiveCategory(isActive ? null : cat.slug); setPage(1); setShowAllCategories(false); }}
-                      className="flex flex-col items-center gap-2 group"
-                      whileHover={{ y: -3 }}
-                      whileTap={{ scale: 0.93 }}
-                    >
-                      <div className={`w-16 h-16 rounded-full bg-gradient-to-br ${gradientFor(i)} flex items-center justify-center shadow-md transition-all duration-200 ${isActive ? 'ring-[3px] ring-[var(--primary)] ring-offset-2 scale-110' : 'group-hover:shadow-lg group-hover:scale-105'}`}>
-                        <CategoryIcon name={cat.icon} size={28} className="text-white/90" />
-                      </div>
-                      <span className={`text-[11px] font-medium text-center leading-tight transition-colors ${isActive ? 'text-[var(--primary)] font-semibold' : 'text-[var(--text-secondary)] group-hover:text-[var(--text)]'}`}>
-                        {cat.name}
-                      </span>
-                    </motion.button>
-                  );
-                })}
-              </div>
-              <div className="px-6 py-4 border-t border-[var(--border)] flex justify-end bg-[var(--surface-2)]">
-                <button onClick={() => setShowAllCategories(false)} className="btn btn-primary btn-sm">Done</button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Filter tabs — mobile: horizontal scroll chips, lives outside the px-4 wrapper (same reason as the category carousel: negative-margin bleed inside a padded wrapper breaks horizontal scroll) */}
-      <div className="sm:hidden mb-4">
-        <div className="flex gap-2 px-4 overflow-x-auto overflow-y-hidden scrollbar-hide pb-1">
-          {FILTER_TABS.map(({ key, label, icon: Icon }) => (
-            <button
-              key={key}
-              onClick={() => setActiveFilter(key)}
-              className={`relative flex items-center gap-1.5 whitespace-nowrap px-4 py-2 rounded-full text-xs font-semibold flex-shrink-0 border transition-colors ${
-                activeFilter === key
-                  ? 'text-white border-transparent'
+              onClick={() => { setActiveCategory(null); setPage(1); }}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+                !activeCategory
+                  ? 'bg-[var(--primary)] text-white border-[var(--primary)] shadow-[var(--shadow-primary)]'
                   : 'bg-[var(--surface)] text-[var(--text-secondary)] border-[var(--border)]'
               }`}
             >
+              <LayoutGrid size={11} /> All
+            </button>
+            {(showMoreCats ? allCategories : allCategories.slice(0, CATS_LIMIT)).map((cat, i) => {
+              const active = activeCategory === cat.slug;
+              return (
+                <button
+                  key={cat.slug}
+                  onClick={() => { setActiveCategory(active ? null : cat.slug); setPage(1); }}
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+                    active
+                      ? 'bg-[var(--primary)] text-white border-[var(--primary)] shadow-[var(--shadow-primary)]'
+                      : 'bg-[var(--surface)] text-[var(--text-secondary)] border-[var(--border)]'
+                  }`}
+                >
+                  <span className={`w-4 h-4 rounded-full bg-gradient-to-br ${gradientFor(i)} flex items-center justify-center flex-shrink-0`}>
+                    <CategoryIcon name={cat.icon} size={9} className="text-white" />
+                  </span>
+                  {cat.name}
+                </button>
+              );
+            })}
+            {allCategories.length > CATS_LIMIT && (
+              <button
+                onClick={() => setShowMoreCats(v => !v)}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold border border-dashed border-[var(--primary)] text-[var(--primary)] hover:bg-[var(--primary-light)] transition-all"
+              >
+                {showMoreCats ? (
+                  <><ChevronLeft size={11} /> View Less</>
+                ) : (
+                  <><Plus size={11} /> {allCategories.length - CATS_LIMIT} more</>
+                )}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Filter + sort bar ── */}
+      <div className="flex items-center gap-2 mb-5">
+        <div className="flex gap-1.5 overflow-x-auto scrollbar-hide flex-1 min-w-0 pb-0.5">
+          {FILTER_TABS.map(({ key, label, icon: Icon }) => (
+            <button key={key}
+              onClick={() => { setActiveFilter(key); setPage(1); }}
+              className={`relative flex items-center gap-1.5 whitespace-nowrap px-3.5 py-1.5 rounded-full text-xs font-semibold flex-shrink-0 border transition-colors ${
+                activeFilter === key
+                  ? 'text-white border-transparent'
+                  : 'bg-[var(--surface)] text-[var(--text-secondary)] border-[var(--border)] hover:border-[var(--primary)] hover:text-[var(--primary)]'
+              }`}>
               {activeFilter === key && (
-                <motion.span
-                  layoutId="feedFilterPill"
+                <motion.span layoutId="feedTabPill"
                   className="absolute inset-0 rounded-full gradient-bg shadow-[var(--shadow-primary)]"
-                  transition={{ type: 'spring', stiffness: 400, damping: 32 }}
-                />
+                  transition={{ type: 'spring', stiffness: 420, damping: 32 }} />
               )}
               <span className="relative z-10 flex items-center gap-1.5">
-                {Icon && <Icon size={11} />} {label}
+                <Icon size={12} /> {label}
               </span>
             </button>
           ))}
-          <div className="flex-shrink-0">
-            <NearbyDropdown radius={nearbyRadius} onChange={setNearbyRadius} />
+        </div>
+
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <NearbyDropdown radius={nearbyRadius} onChange={setNearbyRadius} />
+          <div className="relative">
+            <button
+              onClick={() => setSortOpen(!sortOpen)}
+              className="flex items-center gap-1.5 text-xs font-semibold text-[var(--text-secondary)] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 rounded-full hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors"
+            >
+              <SlidersHorizontal size={12} />
+              <span className="hidden sm:inline">{currentSort.label}</span>
+              <ChevronDown size={11} />
+            </button>
+            <AnimatePresence>
+              {sortOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 6, scale: 0.96 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 4, scale: 0.96 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 28 }}
+                  className="absolute right-0 top-full mt-1.5 w-44 card z-30 py-1.5 overflow-hidden"
+                  style={{ boxShadow: 'var(--shadow-lg)' }}
+                >
+                  {SORT_OPTIONS.map(opt => (
+                    <button key={opt.key}
+                      onClick={() => { setSortKey(opt.key); setSortOpen(false); setPage(1); }}
+                      className={`w-full text-left px-4 py-2 text-sm transition-colors ${
+                        sortKey === opt.key
+                          ? 'text-[var(--primary)] font-semibold bg-[var(--primary-light)]'
+                          : 'text-[var(--text-secondary)] hover:bg-[var(--surface-2)]'
+                      }`}>{opt.label}</button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       </div>
 
-      {/* Padded content: filters, offers, pagination */}
-      <div className="px-4 sm:px-0 pb-6">
-
-      {/* Filter tabs — desktop: existing pill-container layout */}
-      <div className="hidden sm:flex flex-wrap items-center justify-between gap-3 mb-5">
-        <div className="flex items-center gap-2 flex-wrap p-1 bg-[var(--surface-2)] rounded-2xl border border-[var(--border)] relative">
-          {FILTER_TABS.map(({ key, label, icon: Icon }) => (
-            <button
-              key={key}
-              onClick={() => setActiveFilter(key)}
-              className={`filter-tab text-[0.8rem] relative z-10 ${activeFilter === key ? 'active border-transparent bg-transparent text-white' : 'border-transparent bg-transparent'}`}
-            >
-              {activeFilter === key && (
-                <motion.span
-                  layoutId="feedFilterDesktop"
-                  className="absolute inset-0 rounded-full gradient-bg shadow-[var(--shadow-primary)]"
-                  transition={{ type: 'spring', stiffness: 400, damping: 32 }}
-                />
-              )}
-              <span className="relative z-10 flex items-center gap-1.5">
-                {Icon && <Icon size={13} />}
-                {label}
-              </span>
-            </button>
-          ))}
+      {/* ── Result header ── */}
+      <div className="flex items-center gap-2 mb-4 px-0.5">
+        {activeCategory && (
+          <button
+            onClick={() => { setActiveCategory(null); setPage(1); }}
+            className="w-7 h-7 rounded-full flex items-center justify-center border border-[var(--border)] text-[var(--text-muted)] hover:bg-[var(--surface-2)] transition-all flex-shrink-0"
+          >
+            <ChevronLeft size={14} />
+          </button>
+        )}
+        <div className="flex-1 min-w-0">
+          <span className="font-heading font-bold text-[var(--text)] text-sm truncate capitalize">
+            {search
+              ? `Results for "${search}"`
+              : activeCatObj?.name ?? FILTER_TABS.find(f => f.key === activeFilter)?.label}
+          </span>
+          <span className="text-xs text-[var(--text-muted)] ml-2">{totalOffers} offers</span>
         </div>
-        <div className="flex items-center gap-2">
-          <NearbyDropdown radius={nearbyRadius} onChange={setNearbyRadius} />
-          <button className="filter-tab">
-            <SlidersHorizontal size={13} />
-            All Offers
+        {search && (
+          <button
+            onClick={() => { setSearch(''); window.history.pushState({}, '', '/feed'); }}
+            className="flex-shrink-0 flex items-center gap-1 text-xs font-semibold text-[var(--danger)] bg-[var(--danger-light)] border border-[rgba(239,68,68,0.2)] px-2.5 py-1 rounded-full"
+          >
+            <X size={10} /> Clear
+          </button>
+        )}
+
+        {/* View toggle */}
+        <div className="flex-shrink-0 flex items-center border border-[var(--border)] rounded-lg overflow-hidden">
+          <button
+            onClick={() => setViewMode('grid')}
+            className={`p-1.5 transition-colors ${viewMode === 'grid' ? 'bg-[var(--primary)] text-white' : 'text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]'}`}
+            title="Card view"
+          >
+            <LayoutGrid size={14} />
+          </button>
+          <button
+            onClick={() => setViewMode('list')}
+            className={`p-1.5 transition-colors ${viewMode === 'list' ? 'bg-[var(--primary)] text-white' : 'text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]'}`}
+            title="List view"
+          >
+            <List size={14} />
           </button>
         </div>
       </div>
 
-      {/* Offers heading + per-page selector */}
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <h2 className="font-heading font-bold text-[var(--text)] text-base sm:text-lg">
-            {search ? `Results for "${search}"` : <span className="title-shimmer">All Offers</span>}
-          </h2>
-          <span className="badge badge-primary">{totalOffers} offers</span>
-          {search && (
-            <button
-              onClick={() => { setSearch(''); window.history.pushState({}, '', '/feed'); }}
-              className="text-xs text-[var(--text-muted)] hover:text-[var(--danger)] underline"
-            >
-              Clear search
-            </button>
-          )}
-        </div>
-        {/* Per-page selector — desktop only */}
-        <div className="hidden sm:flex items-center gap-2 text-sm text-[var(--text-secondary)]">
-          <span className="hidden sm:inline">Show</span>
-          <div className="flex gap-1">
-            {PER_PAGE_OPTIONS.map(n => (
-              <button
-                key={n}
-                onClick={() => changePerPage(n)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-colors ${
-                  perPage === n
-                    ? 'bg-[var(--primary)] text-white border-[var(--primary)]'
-                    : 'border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)]'
-                }`}
-              >
-                {n}
-              </button>
-            ))}
-          </div>
-          <span className="hidden sm:inline">per page</span>
-        </div>
-      </div>
-
-      {/* Skeleton */}
-      {loading && pagedOffers.length === 0 && (
-        <div className="grid grid-cols-1 gap-4 mt-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      {/* ── Loading skeletons ── */}
+      {loading && (
+        <div className="flex flex-col gap-3">
           {Array.from({ length: 6 }).map((_, i) => (
-            <OfferCardSkeleton key={i} />
+            <div key={i} className="card p-3 sm:p-4 flex items-center gap-3 sm:gap-4 animate-pulse">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-[var(--surface-2)] flex-shrink-0" />
+              <div className="flex-1 space-y-2">
+                <div className="h-3 bg-[var(--surface-2)] rounded w-1/3" />
+                <div className="h-4 bg-[var(--surface-2)] rounded w-3/4" />
+                <div className="h-3 bg-[var(--surface-2)] rounded w-1/2" />
+              </div>
+              <div className="flex-shrink-0 space-y-2 text-right">
+                <div className="h-8 w-14 bg-[var(--surface-2)] rounded" />
+                <div className="h-3 w-16 bg-[var(--surface-2)] rounded" />
+              </div>
+            </div>
           ))}
         </div>
       )}
 
-      {/* Offers grid */}
-      {!loading && pagedOffers.length === 0 ? (
+      {/* ── Empty state ── */}
+      {!loading && pagedOffers.length === 0 && (
         <EmptyState
           icon="🎁"
           title="No offers found"
-          description={search ? `No results for "${search}". Try a different keyword or clear the filter.` : 'No offers match your current filters. Try a different category.'}
+          description={search ? `No results for "${search}".` : 'No offers match your current filters.'}
           action={
             (activeCategory || search) ? (
-              <button
-                className="btn btn-secondary text-sm"
-                onClick={() => { setActiveCategory(null); setSearch(''); window.history.pushState({}, '', '/feed'); }}
-              >
+              <button className="btn btn-secondary text-sm"
+                onClick={() => { setActiveCategory(null); setSearch(''); window.history.pushState({}, '', '/feed'); }}>
                 Clear filters
               </button>
             ) : undefined
           }
         />
-      ) : !loading && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      )}
+
+      {/* ── Card grid ── */}
+      {!loading && pagedOffers.length > 0 && viewMode === 'grid' && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
           {pagedOffers.map((offer: Offer, i: number) => (
             <OfferCard key={offer.id} offer={offer} index={i} />
           ))}
         </div>
       )}
 
-      {/* Pagination bar */}
+      {/* ── Horizontal list ── */}
+      {!loading && pagedOffers.length > 0 && viewMode === 'list' && (
+        <div className="flex flex-col gap-3">
+          {pagedOffers.map((offer: Offer, i: number) => {
+            const discount = Math.round(offer.discountPercent ?? 0);
+            const expiry   = timeLeft(offer.validUntil);
+            const isFlash  = discount >= 40;
+            return (
+              <motion.div key={offer.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 28, delay: Math.min(i * 0.03, 0.25) }}
+              >
+                <Link to={`/offer/${offer.id}`}
+                  className="card card-hover flex items-stretch gap-0 overflow-hidden group">
+
+                  {/* ── Discount strip (left edge) ── */}
+                  <div className="w-1.5 flex-shrink-0 gradient-bg" />
+
+                  {/* ── Thumbnail ── */}
+                  <div className="w-16 h-16 sm:w-24 sm:h-24 flex-shrink-0 overflow-hidden bg-[var(--surface-2)] m-3 sm:m-4 rounded-xl self-center">
+                    {(offer.imageUrl || offer.bannerUrl) ? (
+                      <img
+                        src={offer.imageUrl || offer.bannerUrl}
+                        alt={offer.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                      />
+                    ) : (
+                      <div className={`w-full h-full bg-gradient-to-br ${gradientFor(i)} flex items-center justify-center`}>
+                        <Tag size={22} className="text-white/80" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* ── Info ── */}
+                  <div className="flex-1 min-w-0 py-3 sm:py-4 pr-1">
+                    {/* Badges row */}
+                    <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
+                      {offer.category && (
+                        <span className="badge badge-secondary text-[10px] capitalize">{offer.category}</span>
+                      )}
+                      {isFlash && (
+                        <span className="badge badge-warning text-[10px] flex items-center gap-0.5">
+                          <Flame size={9} /> Hot
+                        </span>
+                      )}
+                      {offer.isFeatured && (
+                        <span className="badge badge-accent text-[10px]">Featured</span>
+                      )}
+                    </div>
+
+                    {/* Title */}
+                    <h3 className="font-heading font-semibold text-sm sm:text-base text-[var(--text)] line-clamp-1 leading-snug">
+                      {offer.title}
+                    </h3>
+
+                    {/* Business + location */}
+                    <p className="text-xs text-[var(--text-muted)] mt-0.5 flex items-center gap-1 line-clamp-1">
+                      {offer.vendorCity && <><MapPin size={10} className="flex-shrink-0" /> {offer.vendorCity} · </>}
+                      {offer.businessName}
+                    </p>
+
+                    {/* Description (desktop) */}
+                    {offer.description && (
+                      <p className="text-xs text-[var(--text-secondary)] mt-1 line-clamp-1 hidden sm:block leading-relaxed">
+                        {offer.description}
+                      </p>
+                    )}
+
+                    {/* Stats row (desktop) */}
+                    <div className="hidden sm:flex items-center gap-3 mt-1.5">
+                      {(offer.views ?? 0) > 0 && (
+                        <span className="flex items-center gap-1 text-[11px] text-[var(--text-muted)]">
+                          <Eye size={11} /> {offer.views?.toLocaleString()}
+                        </span>
+                      )}
+                      {(offer.saves ?? 0) > 0 && (
+                        <span className="flex items-center gap-1 text-[11px] text-[var(--text-muted)]">
+                          <Bookmark size={11} /> {offer.saves}
+                        </span>
+                      )}
+                      {expiry && (
+                        <span className={`flex items-center gap-1 text-[11px] font-medium ${
+                          expiry === 'Expired' ? 'text-[var(--danger)]' : 'text-amber-500'
+                        }`}>
+                          <Clock size={11} /> {expiry}
+                        </span>
+                      )}
+                      {offer.couponCode && (
+                        <span className="text-[11px] font-mono font-bold text-[var(--primary)] bg-[var(--primary-light)] px-1.5 py-0.5 rounded border border-[var(--primary-border)]">
+                          {offer.couponCode}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* ── Price + CTA ── */}
+                  <div className="flex flex-col items-end justify-center gap-1.5 px-3 sm:px-4 py-3 sm:py-4 flex-shrink-0 min-w-[80px] sm:min-w-[110px]">
+                    {/* Discount % */}
+                    <div className="text-xl sm:text-3xl font-extrabold font-heading text-[var(--primary)] leading-none">
+                      {discount}%
+                    </div>
+                    <div className="text-[10px] sm:text-xs text-[var(--text-muted)] text-right leading-tight">
+                      {(offer.originalPrice ?? 0) > 0 && (
+                        <span className="line-through block">₹{(offer.originalPrice ?? 0).toLocaleString()}</span>
+                      )}
+                      {(offer.offerPrice ?? 0) > 0 && (
+                        <span className="font-bold text-[var(--text)] text-xs sm:text-sm">₹{(offer.offerPrice ?? 0).toLocaleString()}</span>
+                      )}
+                    </div>
+                    <span className="hidden sm:inline-flex btn btn-primary btn-sm text-xs mt-1 group-hover:shadow-[var(--shadow-primary)] transition-shadow">
+                      Get Deal
+                    </span>
+                  </div>
+
+                </Link>
+              </motion.div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── Pagination ── */}
       {totalPages > 1 && (
         <div className="flex flex-wrap items-center justify-center gap-2 mt-8">
-          {/* Prev */}
-          <button
-            onClick={() => goToPage(page - 1)}
-            disabled={page === 1}
-            className="flex items-center gap-1 px-3 py-2 rounded-xl border border-[var(--border)] text-sm font-medium disabled:opacity-40 hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors"
-          >
-            <ChevronLeft size={16} /> Prev
+          <button onClick={() => goToPage(page - 1)} disabled={page === 1}
+            className="flex items-center gap-1 px-3 py-2 rounded-xl border border-[var(--border)] text-sm font-medium disabled:opacity-40 hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors">
+            <ChevronLeft size={15} /> Prev
           </button>
-
-          {/* Page numbers */}
           {Array.from({ length: totalPages }, (_, i) => i + 1)
             .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 2)
             .reduce<(number | '...')[]>((acc, p, i, arr) => {
@@ -502,37 +537,21 @@ export default function Feed() {
               p === '...' ? (
                 <span key={`ellipsis-${i}`} className="px-2 text-[var(--text-muted)]">…</span>
               ) : (
-                <button
-                  key={p}
-                  onClick={() => goToPage(p as number)}
+                <button key={p} onClick={() => goToPage(p as number)}
                   className={`w-9 h-9 rounded-xl text-sm font-semibold border transition-colors ${
                     p === page
                       ? 'bg-[var(--primary)] text-white border-[var(--primary)]'
                       : 'border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)]'
-                  }`}
-                >
-                  {p}
-                </button>
+                  }`}>{p}</button>
               )
             )}
-
-          {/* Next */}
-          <button
-            onClick={() => goToPage(page + 1)}
-            disabled={page === totalPages}
-            className="flex items-center gap-1 px-3 py-2 rounded-xl border border-[var(--border)] text-sm font-medium disabled:opacity-40 hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors"
-          >
-            Next <ChevronRight size={16} />
+          <button onClick={() => goToPage(page + 1)} disabled={page === totalPages}
+            className="flex items-center gap-1 px-3 py-2 rounded-xl border border-[var(--border)] text-sm font-medium disabled:opacity-40 hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors">
+            Next <ChevronRight size={15} />
           </button>
-
-          {/* Page info */}
-          <span className="text-xs text-[var(--text-muted)] ml-2">
-            Page {page} of {totalPages}
-          </span>
         </div>
       )}
 
-      </div>{/* end padded content wrapper */}
     </PullToRefresh>
   );
 }

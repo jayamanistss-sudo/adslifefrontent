@@ -184,41 +184,26 @@ export default function VendorDashboard() {
   ];
 
   return (
-    <div className="pb-10 flex gap-6 items-start">
+    <div className="pb-10">
 
-      {/* ── Manage Sidebar ───────────────────────────── */}
-      <aside className="hidden lg:flex flex-col w-52 flex-shrink-0 sticky top-6">
-        <div className="card p-4">
-          <h2 className="font-heading font-semibold text-xs uppercase tracking-widest text-[var(--text-muted)] mb-3">Manage</h2>
-          <nav className="flex flex-col gap-1">
-            {manageLinks.map(({ to, icon: Icon, label, gradient }) => (
-              <Link key={to} to={to}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--surface-2)] group transition-colors">
-                <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center flex-shrink-0 shadow-sm group-hover:scale-110 transition-transform`}>
-                  <Icon size={15} className="text-white" />
-                </div>
-                <span className="text-sm font-medium text-[var(--text)] group-hover:text-[var(--primary)] transition-colors">{label}</span>
-              </Link>
-            ))}
-          </nav>
+      {/* ── Manage Quick Links — top bar ─────────────── */}
+      <div className="mb-5">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)] mb-2.5 px-0.5">Manage</p>
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+          {manageLinks.map(({ to, icon: Icon, label, gradient }) => (
+            <Link key={to} to={to}
+              className="card card-hover flex flex-col items-center gap-2 p-3 sm:p-4 text-center group">
+              <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-200`}>
+                <Icon size={16} className="text-white" />
+              </div>
+              <span className="text-[11px] sm:text-xs font-semibold text-[var(--text)] group-hover:text-[var(--primary)] transition-colors leading-tight">{label}</span>
+            </Link>
+          ))}
         </div>
-      </aside>
+      </div>
 
       {/* ── Main content ─────────────────────────────── */}
-      <div className="flex-1 min-w-0">
-
-      {/* Mobile manage strip */}
-      <div className="lg:hidden flex gap-2 overflow-x-auto overflow-y-hidden scrollbar-hide pb-1 mb-5">
-        {manageLinks.map(({ to, icon: Icon, label, gradient }) => (
-          <Link key={to} to={to}
-            className="flex flex-col items-center gap-1.5 flex-shrink-0 p-3 card text-center min-w-[72px]">
-            <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center shadow-sm`}>
-              <Icon size={15} className="text-white" />
-            </div>
-            <span className="text-[10px] font-semibold text-[var(--text)] leading-tight">{label}</span>
-          </Link>
-        ))}
-      </div>
+      <div className="min-w-0">
 
       {/* ── Hero Banner ─────────────────────────────── */}
       <div className="relative rounded-2xl overflow-hidden mb-6"
@@ -435,4 +420,5 @@ export default function VendorDashboard() {
       </div>{/* end main content */}
     </div>
   );
+
 }
