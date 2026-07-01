@@ -49,6 +49,21 @@ self.addEventListener('fetch', (event) => {
           caches.match(event.request).then((r) => r ?? new Response('', { status: 503 }))
         )
     );
+  } else if (event.request.mode === 'navigate') {
+    // Network first for page navigations — guarantees a fresh index.html
+    // (and therefore fresh hashed JS/CSS references) on every deploy,
+    // instead of being stuck on a cached shell until the SW happens to cycle.
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          }
+          return response;
+        })
+        .catch(() => caches.match(event.request).then((r) => r ?? caches.match('/index.html')))
+    );
   } else if (event.request.method === 'GET') {
     // Cache first for static GET requests only
     event.respondWith(

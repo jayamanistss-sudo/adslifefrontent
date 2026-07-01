@@ -95,12 +95,11 @@
   top: 0;
   z-index: 20;
   height: 14px;
-  /* Must NOT be wider than the host container – let the host clip it */
   width: 100%;
   max-width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
-  background: #fff;
+  background: var(--surface);
   box-sizing: border-box;
 }
 

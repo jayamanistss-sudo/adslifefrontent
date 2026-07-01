@@ -272,7 +272,7 @@ export default function AdminOffers() {
         </div>
 
         {/* Status filter (segmented tab bar) */}
-        <div className="flex items-center gap-1 bg-[var(--surface-2)] p-1 rounded-xl border border-[var(--border)] overflow-x-auto scrollbar-none max-w-full">
+        <div className="flex items-center gap-1 bg-[var(--surface-2)] p-1 rounded-xl border border-[var(--border)] overflow-x-auto overflow-y-hidden scrollbar-none max-w-full">
           {[
             { value: "", label: "All Status" },
             { value: "active", label: "Active" },
@@ -319,7 +319,7 @@ export default function AdminOffers() {
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto overflow-y-hidden">
       <div className="card overflow-hidden min-w-[600px]">
         <DataTable
           rowData={offers}

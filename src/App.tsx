@@ -22,7 +22,7 @@ class ErrorBoundary extends Component<{ children: React.ReactNode }, { hasError:
               this.setState({ hasError: false, message: "" });
               globalThis.location.href = "/feed";
             }}
-            className="px-5 py-2.5 bg-orange-500 text-white rounded-xl font-semibold hover:bg-orange-600 transition-colors"
+            className="btn btn-primary"
           >
             Go back to Feed
           </button>
@@ -145,7 +145,30 @@ export default function App() {
     <ErrorBoundary>
       <BrowserRouter>
         <PowerSyncProvider>
-        <Toaster position="top-right" toastOptions={{ duration: 3000 }} containerStyle={{ zIndex: 10001 }} />
+        <Toaster
+          position="top-center"
+          containerStyle={{ zIndex: 10001 }}
+          toastOptions={{
+            duration: 3500,
+            style: {
+              background: 'var(--surface)',
+              color: 'var(--text)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius)',
+              boxShadow: 'var(--shadow-lg)',
+              fontSize: '0.875rem',
+              fontWeight: 500,
+              padding: '12px 16px',
+              maxWidth: '420px',
+            },
+            success: {
+              iconTheme: { primary: 'var(--accent)', secondary: '#fff' },
+            },
+            error: {
+              iconTheme: { primary: 'var(--danger)', secondary: '#fff' },
+            },
+          }}
+        />
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />

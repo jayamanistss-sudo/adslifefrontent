@@ -279,7 +279,7 @@ export default function AdminVendors() {
                 <button
                   onClick={() => action(v.id, "suspend")}
                   title="Suspend"
-                  className="p-1.5 rounded-lg hover:bg-orange-50 text-orange-500 transition-colors"
+                  className="p-1.5 rounded-lg hover:bg-[var(--primary-light)] text-[var(--primary)] transition-colors"
                 >
                   <PauseCircle size={14} />
                 </button>
@@ -347,7 +347,7 @@ export default function AdminVendors() {
         </div>
 
         {/* Status filter (segmented tab bar) */}
-        <div className="flex items-center gap-1 bg-[var(--surface-2)] p-1 rounded-xl border border-[var(--border)] overflow-x-auto scrollbar-none max-w-full">
+        <div className="flex items-center gap-1 bg-[var(--surface-2)] p-1 rounded-xl border border-[var(--border)] overflow-x-auto overflow-y-hidden scrollbar-none max-w-full">
           {[
             { value: "", label: "All Status" },
             { value: "approved", label: "Approved" },
@@ -424,7 +424,7 @@ export default function AdminVendors() {
         </div>
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto overflow-y-hidden">
       <div className="card overflow-hidden min-w-[600px]">
         <DataTable
           rowData={vendors}

@@ -1,7 +1,7 @@
 import BackButton from '../../components/BackButton';
 import React, { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { ChevronRight, CheckCircle } from 'lucide-react';
+import { ChevronRight, CheckCircle, Wallet } from 'lucide-react';
 import { api, endpoints } from '../../utils/api';
 
 type Goal = 'reach' | 'conversions' | 'awareness';
@@ -56,8 +56,17 @@ export default function BudgetSuggester() {
   return (
     <div className="max-w-lg mx-auto pb-20 sm:pb-6">
       <BackButton to="/vendor/dashboard" />
-      <h1 className="text-2xl font-heading font-bold text-[var(--text)] mb-2">Budget Suggester</h1>
-      <p className="text-[var(--text-muted)] text-sm mb-8">Get a data-driven plan for your next campaign</p>
+      <div className="page-header mb-8">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'var(--primary-light)' }}>
+            <Wallet size={20} style={{ color: 'var(--primary)' }} />
+          </div>
+          <div>
+            <h1 className="page-title">Budget Suggester</h1>
+            <p className="page-subtitle">Get a data-driven plan for your next campaign</p>
+          </div>
+        </div>
+      </div>
 
       {/* Step indicator */}
       <div className="flex items-center gap-2 mb-8">

@@ -44,12 +44,14 @@ const cardVariants: Variants = {
 
 function TrendChip({ v }: { v: number }) {
   if (v > 0) return (
-    <span className="flex items-center gap-1 text-xs font-semibold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20 px-2.5 py-1 rounded-full border border-emerald-200/50 dark:border-emerald-900/30">
+    <span className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full border"
+      style={{ color: 'var(--accent)', background: 'var(--accent-light)', borderColor: 'rgba(16,185,129,0.25)' }}>
       <ArrowUpRight size={12} />+{v}%
     </span>
   );
   if (v < 0) return (
-    <span className="flex items-center gap-1 text-xs font-semibold text-red-500 bg-red-50 dark:bg-red-950/20 px-2.5 py-1 rounded-full border border-red-200/50 dark:border-red-900/30">
+    <span className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full border"
+      style={{ color: 'var(--danger)', background: 'var(--danger-light)', borderColor: 'rgba(239,68,68,0.25)' }}>
       <ArrowDownRight size={12} />{v}%
     </span>
   );
@@ -200,7 +202,7 @@ export default function AdminDashboard() {
   const signupData = (stats?.daily_signups ?? []).map((d) => ({ day: d.d.slice(5), users: Number(d.cnt) }));
 
   const pendingAlerts = stats ? [
-    { label: 'Vendor Requests', count: stats.pending.vendors,    to: '/admin/vendor-requests', gradient: 'from-amber-400 to-orange-500',   icon: Store },
+    { label: 'Vendor Requests', count: stats.pending.vendors,    to: '/admin/vendor-requests', gradient: 'from-amber-400 to-primary-400',   icon: Store },
     { label: 'Support Tickets', count: stats.pending.tickets,    to: '/admin/support-tickets', gradient: 'from-sky-400 to-blue-500',       icon: LifeBuoy },
     { label: 'Banner Ads',      count: stats.pending.banners,    to: '/admin/banner-ads',      gradient: 'from-violet-400 to-purple-600',  icon: Image },
     { label: 'Spotlights',      count: stats.pending.spotlights, to: '/admin/spotlight',       gradient: 'from-pink-400 to-rose-500',      icon: Star },
@@ -212,7 +214,7 @@ export default function AdminDashboard() {
       initial="hidden"
       animate="show"
       variants={containerVariants}
-      className="max-w-7xxl mx-auto pb-12 px-4 sm:px-6"
+      className="max-w-7xl mx-auto pb-12 px-4 sm:px-6"
     >
       {/* Page header */}
       <div className="page-header mb-8 mt-2 flex justify-between items-end">
@@ -223,8 +225,9 @@ export default function AdminDashboard() {
           <p className="page-subtitle text-sm text-[var(--text-secondary)] mt-1">Platform overview & operations management · AdsLife</p>
         </div>
         {stats && (
-          <div className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200/50 dark:border-emerald-900/30 px-3.5 py-2 rounded-full text-xs font-semibold text-emerald-600 dark:text-emerald-400 shadow-sm flex-shrink-0">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          <div className="flex items-center gap-2 px-3.5 py-2 rounded-full text-xs font-semibold shadow-sm flex-shrink-0 border"
+            style={{ background: 'var(--accent-light)', borderColor: 'rgba(16,185,129,0.25)', color: 'var(--accent)' }}>
+            <span className="w-2.5 h-2.5 rounded-full animate-pulse" style={{ background: 'var(--accent)' }}></span>
             <span>{stats.users.today_active.toLocaleString()} interactions today</span>
           </div>
         )}
@@ -235,27 +238,22 @@ export default function AdminDashboard() {
         {[
           { label: 'Total Users',   value: stats?.totals.users,        icon: Users,      gradient: 'from-blue-500 to-indigo-600' },
           { label: 'Vendors',       value: stats?.totals.vendors,      icon: Store,      gradient: 'from-emerald-400 to-teal-600' },
-          { label: 'Active Offers', value: stats?.totals.offers,       icon: Tag,        gradient: 'from-amber-400 to-orange-500' },
+          { label: 'Active Offers', value: stats?.totals.offers,       icon: Tag,        gradient: 'from-amber-400 to-primary-400' },
           { label: 'Interactions',  value: stats?.totals.interactions, icon: Activity,   gradient: 'from-purple-500 to-indigo-500' },
-          { label: 'Revenue',       value: stats ? `₹${stats.totals.revenue.toLocaleString()}` : '–', icon: DollarSign, gradient: 'from-orange-500 to-red-600' },
+          { label: 'Revenue',       value: stats ? `₹${stats.totals.revenue.toLocaleString()}` : '–', icon: DollarSign, gradient: 'from-primary to-red-600' },
           { label: 'New Users/mo',  value: stats?.users.this_month,    icon: TrendingUp, gradient: 'from-cyan-400 to-blue-500' },
         ].map(({ label, value, icon: Icon, gradient }) => (
           <motion.div
             key={label}
             variants={cardVariants}
-            className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-5 shadow-sm flex flex-col justify-between"
-            style={{ boxShadow: '0 4px 20px -2px rgba(0,0,0,0.03)' }}
-            whileHover={{ 
-              y: -5, 
-              boxShadow: '0 15px 35px -10px rgba(255,98,0,0.12), 0 4px 12px -5px rgba(255,98,0,0.05)',
-              borderColor: 'rgba(255,98,0,0.25)' 
-            }}
+            className="stat-card stat-card-grand card-hover justify-between"
+            whileHover={{ borderColor: 'rgba(255,98,0,0.25)' }}
           >
-            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center mb-3 bg-gradient-to-br ${gradient} text-white shadow-md`}>
+            <div className={`stat-card-icon mb-3 bg-gradient-to-br ${gradient} text-white shadow-md`}>
               <Icon size={18} />
             </div>
             <div>
-              <div className="font-heading font-extrabold text-2xl text-[var(--text)] tracking-tight">
+              <div className="stat-value">
                 {loading ? (
                   <div className="h-6 w-16 skeleton my-1" />
                 ) : typeof value === 'number' ? (
@@ -275,7 +273,7 @@ export default function AdminDashboard() {
       {/* Main Charts & Demographics Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         {/* Signups chart */}
-        <motion.div variants={cardVariants} className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 lg:col-span-2 shadow-sm">
+        <motion.div variants={cardVariants} className="card p-6 lg:col-span-2">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="font-heading font-bold text-base text-[var(--text)]">User Registration</h3>
@@ -331,7 +329,7 @@ export default function AdminDashboard() {
         </motion.div>
 
         {/* Role breakdown */}
-        <motion.div variants={cardVariants} className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 shadow-sm flex flex-col justify-between">
+        <motion.div variants={cardVariants} className="card p-6 flex flex-col justify-between">
           <div>
             <h3 className="font-heading font-bold text-base text-[var(--text)] mb-1">User Demographics</h3>
             <p className="text-xs text-[var(--text-muted)] mb-6">User role distribution analysis</p>
@@ -395,26 +393,17 @@ export default function AdminDashboard() {
         {pendingAlerts.map(({ label, count, to, gradient, icon: Icon }) => {
           const hasActions = count > 0;
           return (
-            <MotionLink 
-              key={to} 
-              to={to} 
+            <MotionLink
+              key={to}
+              to={to}
               variants={cardVariants}
-              className={`relative bg-[var(--surface)] border rounded-3xl p-5 shadow-sm overflow-hidden flex flex-col justify-between transition-all duration-300 ${
-                hasActions 
-                  ? 'border-red-200/60 dark:border-red-900/30' 
-                  : 'border-[var(--border)]'
+              className={`stat-card stat-card-grand card-hover relative overflow-hidden justify-between ${
+                hasActions ? 'border-[rgba(239,68,68,0.35)]' : ''
               }`}
-              style={{ boxShadow: '0 4px 20px -2px rgba(0,0,0,0.03)' }}
-              whileHover={{ 
-                y: -5, 
-                boxShadow: hasActions 
-                  ? '0 15px 35px -10px rgba(239,68,68,0.15), 0 4px 12px -5px rgba(239,68,68,0.08)'
-                  : '0 15px 35px -10px rgba(0,0,0,0.08), 0 4px 12px -5px rgba(0,0,0,0.03)',
-                borderColor: hasActions ? 'rgba(239,68,68,0.3)' : 'rgba(255,98,0,0.25)'
-              }}
+              whileHover={{ borderColor: hasActions ? 'rgba(239,68,68,0.4)' : 'rgba(255,98,0,0.25)' }}
             >
               {hasActions && (
-                <span className="absolute top-0 right-0 w-3.5 h-3.5 bg-red-500 rounded-bl-xl border-l border-b border-[var(--surface)]" />
+                <span className="absolute top-0 right-0 w-3.5 h-3.5 rounded-bl-xl border-l border-b border-[var(--surface)]" style={{ background: 'var(--danger)' }} />
               )}
               <div className="flex items-center justify-between mb-4">
                 <div className={`w-9 h-9 rounded-xl flex items-center justify-center bg-gradient-to-br ${gradient} text-white shadow-md`}>
@@ -427,7 +416,7 @@ export default function AdminDashboard() {
                 )}
               </div>
               <div>
-                <div className="font-heading font-extrabold text-2xl text-[var(--text)] tracking-tight">
+                <div className="stat-value text-2xl">
                   {count}
                 </div>
                 <div className="text-xs font-bold text-[var(--text-secondary)] mt-1 truncate">
@@ -442,7 +431,7 @@ export default function AdminDashboard() {
       {/* Recents row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* Recent users */}
-        <motion.div variants={cardVariants} className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 shadow-sm">
+        <motion.div variants={cardVariants} className="card p-6">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="font-heading font-bold text-base text-[var(--text)]">Newly Joined Users</h3>
@@ -496,7 +485,7 @@ export default function AdminDashboard() {
         </motion.div>
 
         {/* Recent vendors */}
-        <motion.div variants={cardVariants} className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 shadow-sm">
+        <motion.div variants={cardVariants} className="card p-6">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="font-heading font-bold text-base text-[var(--text)]">Recently Onboarded Vendors</h3>
@@ -550,9 +539,9 @@ export default function AdminDashboard() {
       </div>
 
       {/* Broadcast Section */}
-      <motion.div variants={cardVariants} className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 shadow-sm mb-8">
+      <motion.div variants={cardVariants} className="card p-6 mb-8">
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-gradient-to-br from-orange-400 to-red-500 text-white shadow-md">
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center gradient-bg text-white shadow-md">
             <Bell size={16} />
           </div>
           <div>
@@ -577,10 +566,10 @@ export default function AdminDashboard() {
             </select>
           </div>
           <div className="flex flex-col gap-1.5 justify-end">
-            <button 
-              onClick={handleBroadcast} 
-              disabled={sending} 
-              className="btn btn-primary w-full bg-gradient-to-r from-orange-500 to-[#FF6200] hover:from-orange-600 hover:to-[#E55800] text-white shadow-[0_4px_14px_rgba(255,98,0,0.3)] font-semibold transition-all duration-300"
+            <button
+              onClick={handleBroadcast}
+              disabled={sending}
+              className="btn btn-primary w-full"
             >
               {sending ? 'Processing...' : 'Dispatch Broadcast'}
             </button>
@@ -602,9 +591,9 @@ export default function AdminDashboard() {
         {[
           { to: '/admin/users',           icon: Users,       label: 'User Directory',       gradient: 'from-blue-500 to-indigo-600' },
           { to: '/admin/vendors',         icon: Store,       label: 'Vendor Registry',      gradient: 'from-emerald-400 to-teal-600' },
-          { to: '/admin/all-offers',      icon: Tag,         label: 'Offer Management',     gradient: 'from-amber-400 to-orange-500' },
+          { to: '/admin/all-offers',      icon: Tag,         label: 'Offer Management',     gradient: 'from-amber-400 to-primary-400' },
           { to: '/admin/spotlight',       icon: Star,        label: 'Spotlight Content',    gradient: 'from-pink-400 to-rose-500' },
-          { to: '/admin/vendor-requests', icon: Store,       label: 'Vendor Applications',  gradient: 'from-orange-400 to-red-500' },
+          { to: '/admin/vendor-requests', icon: Store,       label: 'Vendor Applications',  gradient: 'from-primary-400 to-red-500' },
           { to: '/admin/support-tickets', icon: LifeBuoy,    label: 'Help Desk Tickets',    gradient: 'from-sky-400 to-blue-500' },
           { to: '/admin/banner-ads',      icon: Image,       label: 'Billboard Banners',    gradient: 'from-violet-400 to-purple-600' },
           { to: '/admin/fraud',           icon: ShieldAlert, label: 'Risk & Fraud Center',  gradient: 'from-red-500 to-rose-600' },
@@ -612,8 +601,7 @@ export default function AdminDashboard() {
           <Link
             key={to}
             to={to}
-            className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-5 shadow-sm flex items-center gap-4 group"
-            style={{ boxShadow: '0 4px 20px -2px rgba(0,0,0,0.03)' }}
+            className="card card-hover p-5 flex items-center gap-4 group"
           >
             <div className={`w-10 h-10 rounded-2xl flex items-center justify-center bg-gradient-to-br ${gradient} text-white shadow-md flex-shrink-0`}>
               <Icon size={18} />

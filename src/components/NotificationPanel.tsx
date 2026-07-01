@@ -9,7 +9,7 @@ import type { Notification } from '../types';
 const TYPE_ICON: Record<string, { icon: React.ReactNode; color: string }> = {
   offer_match:        { icon: <Tag size={14} />,    color: 'bg-[var(--primary-light)] text-[var(--primary)]' },
   badge:              { icon: <Trophy size={14} />, color: 'bg-amber-50 dark:bg-amber-950/20 text-amber-500' },
-  streak:             { icon: <Flame size={14} />,  color: 'bg-orange-50 dark:bg-orange-950/20 text-orange-500' },
+  streak:             { icon: <Flame size={14} />,  color: 'bg-[var(--primary-light)] text-[var(--primary)]' },
   spotlight_approved: { icon: <Star size={14} />,   color: 'bg-purple-50 dark:bg-purple-950/20 text-purple-600' },
   vendor_approved:    { icon: <Star size={14} />,   color: 'bg-[var(--accent-light)] text-emerald-600 dark:text-emerald-400' },
 };

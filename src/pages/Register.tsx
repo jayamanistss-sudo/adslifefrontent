@@ -37,29 +37,18 @@ const AD_FLOATERS = [
 
 function LeftPanel() {
   return (
-    <div className="hidden lg:flex relative flex-col justify-between overflow-hidden h-full"
-      style={{ background: 'linear-gradient(145deg,#FF7420 0%,#C84E00 50%,#8B3200 100%)' }}>
-      <style>{`
-        @keyframes adFloat{0%{transform:translateY(0) rotate(0deg);opacity:.92}33%{transform:translateY(-14px) rotate(1deg);opacity:1}66%{transform:translateY(-6px) rotate(-1deg);opacity:.95}100%{transform:translateY(0) rotate(0deg);opacity:.92}}
-        @keyframes orbPulse{0%,100%{transform:scale(1);opacity:var(--op)}50%{transform:scale(1.08);opacity:calc(var(--op)*1.4)}}
-        @keyframes shimmerL{0%{background-position:-200% center}100%{background-position:200% center}}
-        .ad-floater{animation:adFloat var(--dur) ease-in-out infinite;animation-delay:var(--delay)}
-        .lp-orb{animation:orbPulse var(--dur) ease-in-out infinite;animation-delay:var(--delay)}
-        .shimmer-bar{background:linear-gradient(90deg,rgba(255,255,255,.05) 0%,rgba(255,255,255,.18) 50%,rgba(255,255,255,.05) 100%);background-size:200% auto;animation:shimmerL 3s linear infinite}
-      `}</style>
-
+    <div className="hidden lg:flex auth-panel-left relative flex-col justify-between overflow-hidden h-full">
       {[{w:340,h:340,x:-8,y:-10,op:.18,d:0,dur:20},{w:260,h:260,x:55,y:60,op:.14,d:4,dur:16},{w:180,h:180,x:70,y:-5,op:.12,d:8,dur:22},{w:140,h:140,x:20,y:75,op:.10,d:2,dur:18}].map((o,i)=>(
-        <div key={i} className="lp-orb absolute rounded-full" style={{width:o.w,height:o.h,left:`${o.x}%`,top:`${o.y}%`,background:'radial-gradient(circle,rgba(255,255,255,.22) 0%,rgba(255,255,255,0) 70%)',['--op' as string]:o.op,['--dur' as string]:`${o.dur}s`,['--delay' as string]:`${o.d}s`}}/>
+        <div key={i} className="auth-orb absolute rounded-full" style={{width:o.w,height:o.h,left:`${o.x}%`,top:`${o.y}%`,background:'radial-gradient(circle,rgba(255,255,255,.22) 0%,rgba(255,255,255,0) 70%)',['--op' as string]:o.op,['--dur' as string]:`${o.dur}s`,['--delay' as string]:`${o.d}s`}}/>
       ))}
-      <div className="shimmer-bar absolute inset-0 pointer-events-none" style={{transform:'rotate(-12deg) scaleX(2)',transformOrigin:'center'}}/>
 
       {AD_FLOATERS.map((f,i)=>(
-        <div key={i} className="ad-floater absolute z-10" style={{left:`${f.x}%`,top:`${f.y}%`,['--dur' as string]:`${f.dur}s`,['--delay' as string]:`${f.delay}s`}}>
-          <div style={{background:'rgba(255,255,255,.15)',backdropFilter:'blur(10px)',border:'1px solid rgba(255,255,255,.28)',borderRadius:14,padding:'8px 13px',display:'flex',alignItems:'center',gap:8,boxShadow:'0 4px 20px rgba(0,0,0,.15)',minWidth:110}}>
-            <span style={{fontSize:18,lineHeight:1}}>{f.emoji}</span>
+        <div key={i} className="auth-float absolute z-10" style={{left:`${f.x}%`,top:`${f.y}%`,['--dur' as string]:`${f.dur}s`,['--delay' as string]:`${f.delay}s`}}>
+          <div className="auth-floater-card">
+            <span className="text-lg leading-none">{f.emoji}</span>
             <div>
-              <div style={{color:'#fff',fontSize:12,fontWeight:700,lineHeight:1.2}}>{f.label}</div>
-              <div style={{color:'rgba(255,255,255,.65)',fontSize:10,lineHeight:1.3}}>{f.sub}</div>
+              <div className="text-white text-xs font-bold leading-tight">{f.label}</div>
+              <div className="text-white/65 text-[10px] leading-snug">{f.sub}</div>
             </div>
           </div>
         </div>
@@ -67,7 +56,7 @@ function LeftPanel() {
 
       <div className="relative z-20 flex flex-col justify-between h-full p-8 xl:p-10">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center text-white font-bold text-lg border border-white/30">A</div>
+          <div className="brand-mark brand-mark-lg bg-white/20 backdrop-blur-sm border-white/30">A</div>
           <span className="text-white font-bold text-xl tracking-tight">AdsLife</span>
         </div>
         <div className="space-y-5 my-auto py-8">
@@ -106,7 +95,7 @@ function PasswordStrength({ value }: { value: string }) {
       {checks.map(({ label, ok }) => (
         <span key={label} className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border transition-all ${
           ok
-            ? 'bg-[var(--accent-light)] border-[rgba(16,185,129,0.2)] text-emerald-700 dark:text-emerald-400'
+            ? 'bg-[var(--accent-light)] border-[rgba(16,185,129,0.2)] text-[var(--accent)]'
             : 'bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-muted)]'
         }`}>
           {ok ? <CheckCircle2 size={9} /> : <XCircle size={9} />}
@@ -147,8 +136,8 @@ function InputField({ id, label, icon: Icon, error, touched, children }: {
         {touched && (
           <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
             {error
-              ? <XCircle size={13} className="text-red-400" />
-              : <CheckCircle2 size={13} className="text-emerald-500" />
+              ? <XCircle size={13} style={{ color: 'var(--danger)' }} />
+              : <CheckCircle2 size={13} style={{ color: 'var(--accent)' }} />
             }
           </span>
         )}
@@ -222,49 +211,19 @@ export default function Register() {
 
   return (
     <div className="h-screen w-screen overflow-hidden grid lg:grid-cols-[0.82fr_1.18fr]">
-      <style>{`
-        @keyframes rSlide{from{opacity:0;transform:translateX(28px)}to{opacity:1;transform:translateX(0)}}
-        @keyframes rUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
-        @keyframes accentShimmer{0%{background-position:-200% center}100%{background-position:200% center}}
-        .r-enter{animation:rSlide .6s cubic-bezier(.22,1,.36,1) both}
-        .r-f1{animation:rUp .5s cubic-bezier(.22,1,.36,1) .06s both}
-        .r-f2{animation:rUp .5s cubic-bezier(.22,1,.36,1) .12s both}
-        .r-f3{animation:rUp .5s cubic-bezier(.22,1,.36,1) .18s both}
-        .r-f4{animation:rUp .5s cubic-bezier(.22,1,.36,1) .24s both}
-        .r-f5{animation:rUp .5s cubic-bezier(.22,1,.36,1) .30s both}
-        .r-f6{animation:rUp .5s cubic-bezier(.22,1,.36,1) .36s both}
-        .r-f7{animation:rUp .5s cubic-bezier(.22,1,.36,1) .42s both}
-        .accent-bar{background:linear-gradient(90deg,#FF7420,#FFB347,#FF7420);background-size:200% auto;animation:accentShimmer 3s linear infinite}
-        .btn-reg{transition:transform .18s ease,box-shadow .18s ease}
-        .btn-reg:not(:disabled):hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(255,116,32,.28)}
-        .btn-reg:not(:disabled):active{transform:translateY(0)}
-      `}</style>
-
       <LeftPanel />
 
-      {/* Right panel */}
-      <div className="relative flex flex-col justify-center overflow-hidden h-full px-8 py-5 xl:px-14 bg-[var(--surface)]"
-        style={{ backgroundImage: 'radial-gradient(var(--border) 1px, transparent 1px)', backgroundSize: '22px 22px' }}>
+      <div className="auth-form-panel relative flex flex-col justify-center overflow-hidden h-full px-6 py-5 sm:px-8 xl:px-14">
+        <div className="auth-accent-bar" />
 
-        {/* Ambient orbs */}
-        <div className="absolute pointer-events-none rounded-full"
-          style={{ width: 260, height: 260, top: -60, right: -55, background: 'radial-gradient(circle,rgba(255,116,32,.07) 0%,transparent 65%)', animation: 'orbFloat 10s ease-in-out infinite' }} />
-        <div className="absolute pointer-events-none rounded-full"
-          style={{ width: 180, height: 180, bottom: -45, left: -35, background: 'radial-gradient(circle,rgba(255,150,50,.05) 0%,transparent 65%)', animation: 'orbFloat 13s ease-in-out infinite reverse' }} />
-
-        {/* Top accent shimmer */}
-        <div className="accent-bar absolute top-0 left-0 right-0 h-[3px] pointer-events-none" />
-
-        <div className="r-enter relative z-10 w-full max-w-[420px] mx-auto">
-
-          {/* Brand */}
-          <div className="r-f1 flex items-center gap-2.5 mb-4">
-            <div className="w-9 h-9 bg-gradient-to-br from-[#FF7420] to-[#C84E00] rounded-[11px] flex items-center justify-center text-white font-bold text-sm shadow-md">A</div>
+        <div className="auth-enter relative z-10 w-full max-w-[420px] mx-auto">
+          <div className="auth-stagger-1 flex items-center gap-2.5 mb-4">
+            <div className="brand-mark brand-mark-md">A</div>
             <span className="font-bold text-[var(--text)] text-[15px] tracking-tight">AdsLife</span>
           </div>
 
           {/* Heading */}
-          <div className="r-f1 mb-4">
+          <div className="auth-stagger-1 mb-4">
             <p className="text-[11px] font-semibold text-[var(--primary)] uppercase tracking-widest mb-0.5">Start for free</p>
             <h1 className="font-heading font-black text-[26px] text-[var(--text)] leading-tight">Create account</h1>
             <p className="text-[var(--text-muted)] text-sm mt-0.5">Join AdsLife and start discovering local deals</p>
@@ -272,8 +231,8 @@ export default function Register() {
 
           {/* Referral bonus */}
           {refCode && (
-            <div className="r-f2 flex items-start gap-2.5 bg-[var(--warning-light)] border border-[rgba(245,158,11,0.2)] rounded-xl px-3 py-2.5 mb-3">
-              <Gift size={13} className="text-amber-500 flex-shrink-0 mt-0.5" />
+            <div className="auth-stagger-2 flex items-start gap-2.5 bg-[var(--warning-light)] border border-[rgba(245,158,11,0.2)] rounded-xl px-3 py-2.5 mb-3">
+              <Gift size={13} style={{ color: 'var(--warning)' }} className="flex-shrink-0 mt-0.5" />
               <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
                 Invited with <strong>{refCode}</strong> — get <strong>20 bonus coins</strong> on signup!
               </p>
@@ -281,12 +240,12 @@ export default function Register() {
           )}
 
           {/* Google */}
-          <div className="r-f2">
+          <div className="auth-stagger-2">
             <GoogleAuthButton label="Sign up with Google" />
           </div>
 
           {/* Divider */}
-          <div className="r-f3 flex items-center gap-3 my-3.5">
+          <div className="auth-stagger-3 flex items-center gap-3 my-3.5">
             <div className="flex-1 h-px bg-[var(--border)]" />
             <span className="text-[10px] text-[var(--text-muted)] font-semibold tracking-widest uppercase">or</span>
             <div className="flex-1 h-px bg-[var(--border)]" />
@@ -295,7 +254,7 @@ export default function Register() {
           {/* Form */}
           <form onSubmit={handleSubmit} noValidate className="space-y-3">
 
-            <div className="r-f3">
+            <div className="auth-stagger-3">
               <InputField id="name" label="Full name" icon={User} error={isErr('name')} touched={!!touched.name}>
                 <input id="reg-name" type="text" required autoComplete="name" className={inp}
                   placeholder="Enter your full name"
@@ -303,7 +262,7 @@ export default function Register() {
               </InputField>
             </div>
 
-            <div className="r-f4">
+            <div className="auth-stagger-4">
               <InputField id="email" label="Email" icon={Mail} error={isErr('email')} touched={!!touched.email}>
                 <input id="reg-email" type="email" required autoComplete="email" className={inp}
                   placeholder="you@example.com"
@@ -311,10 +270,10 @@ export default function Register() {
               </InputField>
             </div>
 
-            <div className="r-f5 grid grid-cols-2 gap-3">
+            <div className="auth-stagger-5 grid grid-cols-2 gap-3">
               <InputField id="phone" label="Phone" icon={Phone} error={isErr('phone')} touched={!!touched.phone}>
                 <input id="reg-phone" type="tel" inputMode="numeric" maxLength={10} required className={inp}
-                  placeholder="10-digit number"
+                  placeholder="9876543210"
                   value={form.phone} onChange={e => field('phone', e.target.value)} onBlur={() => blur('phone')} />
               </InputField>
               <InputField id="city" label="City" icon={MapPin} error={isErr('city')} touched={!!touched.city}>
@@ -328,7 +287,7 @@ export default function Register() {
               </InputField>
             </div>
 
-            <div className="r-f6">
+            <div className="auth-stagger-6">
               <InputField id="password" label="Password" icon={Lock} error={isErr('password')} touched={!!touched.password}>
                 <input id="reg-password" type={showPw ? 'text' : 'password'} required autoComplete="new-password"
                   className={inp} style={{ paddingRight: 58 }} placeholder="Create a password"
@@ -341,10 +300,10 @@ export default function Register() {
               <PasswordStrength value={form.password} />
             </div>
 
-            <div className="r-f7">
+            <div className="auth-stagger-6">
               <button type="submit" disabled={loading}
-                className="btn-reg btn btn-primary btn-lg w-full"
-                style={{ marginTop: 4, opacity: (!allValid && Object.keys(touched).length > 0) ? 0.75 : 1 }}>
+                className="btn btn-primary btn-lg btn-shine w-full mt-1"
+                style={{ opacity: (!allValid && Object.keys(touched).length > 0) ? 0.75 : 1 }}>
                 {loading
                   ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Creating account…</>
                   : <>Create Account <span className="text-white/70 text-base ml-1">→</span></>
@@ -353,7 +312,7 @@ export default function Register() {
             </div>
           </form>
 
-          <p className="r-f7 text-center text-sm text-[var(--text-muted)] mt-4">
+          <p className="auth-stagger-6 text-center text-sm text-[var(--text-muted)] mt-4">
             Already have an account?{' '}
             <Link to="/login" className="text-[var(--primary)] font-semibold hover:underline underline-offset-2">Sign in</Link>
           </p>

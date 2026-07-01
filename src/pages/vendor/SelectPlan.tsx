@@ -34,8 +34,8 @@ export default function SelectPlan() {
 
   useEffect(() => {
     Promise.all([
-      api.get(endpoints.plansList),
-      api.get(endpoints.vendorMyPlan),
+      api.get(endpoints.plansList).catch(() => ({ data: { success: false } })),
+      api.get(endpoints.vendorMyPlan).catch(() => ({ data: { success: false } })),
     ]).then(([planRes, vendorRes]) => {
       if (planRes.data.success)   setPlans(planRes.data.data);
       if (vendorRes.data.success) setCurrent(vendorRes.data.data);

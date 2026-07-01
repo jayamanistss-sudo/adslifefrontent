@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import type { GroupDeal } from '../types';
 import { api, endpoints } from '../utils/api';
 import GroupDealCard from '../components/GroupDealCard';
+import { EmptyState } from '../components/ui/EmptyState';
 
 export default function GroupDeals() {
   const [deals, setDeals]   = useState<GroupDeal[]>([]);
@@ -51,7 +52,7 @@ export default function GroupDeals() {
         <select
           value={city}
           onChange={(e) => setCity(e.target.value)}
-          className="border border-[var(--border)] rounded-xl px-3 py-1.5 text-sm bg-[var(--surface)]"
+          className="input w-auto"
         >
           {['Chennai', 'Mumbai', 'Bangalore', 'Delhi'].map((c) => <option key={c}>{c}</option>)}
         </select>
@@ -66,11 +67,11 @@ export default function GroupDeals() {
           {[1,2,3,4].map((i) => <div key={i} className="skeleton rounded-2xl h-72" />)}
         </div>
       ) : deals.length === 0 ? (
-        <div className="text-center py-16 text-[var(--text-muted)]">
-          <div className="text-4xl mb-3">👥</div>
-          <p className="font-heading font-semibold text-[var(--text-secondary)] mb-1">No active group deals</p>
-          <p className="text-sm">Check back soon for group discounts!</p>
-        </div>
+        <EmptyState
+          icon="👥"
+          title="No active group deals"
+          description="Check back soon for group discounts!"
+        />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {deals.map((deal) => (

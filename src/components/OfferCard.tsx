@@ -10,6 +10,7 @@ import { useSavedStore } from '../store/useSavedStore';
 interface Props {
   readonly offer: Offer;
   readonly onSave?: () => void;
+  readonly index?: number;
 }
 
 function timeLeft(until?: string): string {
@@ -29,22 +30,13 @@ const CATEGORY_FALLBACK: Record<string, string> = {
   automotive: '🚗', gifting: '🎁', salon: '✂️',
 };
 
-function SparkleIcon({ size = 10, className = '' }: { size?: number; className?: string }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 20 20" fill="currentColor" className={className}>
-      <path d="M10 0 L11.8 7.2 L19 9 L11.8 10.8 L10 18 L8.2 10.8 L1 9 L8.2 7.2 Z" />
-    </svg>
-  );
-}
-
-export default function OfferCard({ offer, onSave }: Props) {
+export default function OfferCard({ offer, onSave, index = 0 }: Props) {
   const { user } = useUserStore();
   const { recordInteraction } = useFeedStore();
   const { isSaved, save, unsave } = useSavedStore();
   const navigate = useNavigate();
 
   const [videoPlaying, setVideoPlaying] = useState(false);
-  const [isHovered, setIsHovered]       = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const saved = isSaved(offer.id);
 
@@ -77,150 +69,126 @@ export default function OfferCard({ offer, onSave }: Props) {
 
   return (
     <motion.div
-      className="relative bg-[var(--surface)] rounded-3xl overflow-hidden cursor-pointer group h-full flex flex-col border border-[var(--border)]"
-      style={{ boxShadow: '0 4px 28px rgba(0,0,0,0.07)' }}
+      className="card-grand card-shine relative overflow-hidden cursor-pointer group h-full flex flex-col p-0"
       onClick={handleCardClick}
-      onHoverStart={() => setIsHovered(true)}
-      onHoverEnd={() => setIsHovered(false)}
-      whileHover={{ y: -5, boxShadow: '0 20px 52px rgba(255,98,0,0.16), 0 4px 16px rgba(0,0,0,0.08)' }}
-      whileTap={{ scale: 0.985 }}
+      initial={{ opacity: 0, y: 28, scale: 0.96 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ type: 'spring', stiffness: 280, damping: 24, delay: index * 0.04 }}
+      whileHover={{ y: -6, transition: { duration: 0.25 } }}
+      whileTap={{ scale: 0.98 }}
     >
-      {/* TOP — image / media area */}
-      <div className="relative bg-[var(--primary-light)]" style={{ '--primary-light': '#FFF5EE' } as React.CSSProperties}>
+      {/* Image */}
+      <div className="relative h-[108px] sm:h-auto sm:aspect-[4/3] overflow-hidden bg-[var(--surface-2)]">
+        {hasVideo && videoPlaying ? (
+          <video
+            ref={videoRef}
+            src={offer.videoUrl}
+            className="w-full h-full object-cover"
+            autoPlay playsInline
+            onEnded={() => setVideoPlaying(false)}
+          />
+        ) : offer.bannerUrl || offer.imageUrl ? (
+          <img
+            src={offer.bannerUrl || offer.imageUrl}
+            alt={offer.title}
+            className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
+            onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[var(--primary-light)] to-[var(--surface-2)]">
+            <span className="text-5xl opacity-40">{CATEGORY_FALLBACK[offer.category ?? ''] ?? '🏷️'}</span>
+          </div>
+        )}
 
-        <SparkleIcon size={13} className="absolute top-3 left-6 text-orange-300 opacity-80 pointer-events-none z-10" />
-        <SparkleIcon size={8}  className="absolute top-6 left-2 text-orange-200 opacity-55 pointer-events-none z-10" />
-        <SparkleIcon size={10} className="absolute top-3 right-16 text-orange-300 opacity-65 pointer-events-none z-10" />
-        <SparkleIcon size={7}  className="absolute bottom-8 right-3 text-orange-300 opacity-60 pointer-events-none z-10" />
+        {!videoPlaying && (
+          <div className="absolute inset-0 bg-gradient-to-t from-black/15 via-transparent to-transparent pointer-events-none" />
+        )}
+
+        {hasVideo && (
+          <button onClick={toggleVideo} className="absolute inset-0 flex items-center justify-center group/vid">
+            <div className={`w-11 h-11 rounded-full flex items-center justify-center shadow-lg transition-all duration-200 ${
+              videoPlaying
+                ? 'bg-black/60 opacity-0 group-hover/vid:opacity-100'
+                : 'bg-[var(--primary)]/90 group-hover/vid:scale-110'
+            }`}>
+              {videoPlaying ? <Pause size={18} className="text-white" /> : <Play size={18} className="text-white ml-0.5" />}
+            </div>
+          </button>
+        )}
 
         {/* Hot badge */}
         {isHot && !videoPlaying && (
-          <div className="absolute top-3.5 left-4 z-20 flex items-center gap-1.5 bg-red-600 text-white text-[11px] font-bold px-3 py-1.5 rounded-full shadow-md">
-            🔥 Hot
-          </div>
-        )}
-
-        {/* Discount ribbon */}
-        {discount > 0 && !videoPlaying && (
-          <div
-            className="absolute top-0 right-5 z-20 flex flex-col items-center text-white shadow-xl"
-            style={{
-              background: 'linear-gradient(160deg, #FF8534 0%, #E55000 100%)',
-              clipPath: 'polygon(0 0, 100% 0, 100% 80%, 50% 100%, 0 80%)',
-              width: 56,
-              paddingTop: 13,
-              paddingBottom: 24,
-            }}
+          <motion.div
+            initial={{ scale: 0, x: -10 }}
+            animate={{ scale: 1, x: 0 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 18, delay: index * 0.04 + 0.15 }}
+            className="absolute top-1.5 left-1.5 sm:top-3 sm:left-3 z-20 flex items-center gap-1 text-white text-[9px] sm:text-[11px] font-bold px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-full badge-hot"
+            style={{ background: 'var(--danger)' }}
           >
-            <span className="font-black text-[1.2rem] leading-none">{discount}%</span>
-            <span className="font-bold text-[10px] tracking-[0.15em] mt-0.5 opacity-90">OFF</span>
-            {isHovered && (
-              <motion.span
-                className="absolute inset-0 pointer-events-none"
-                style={{ background: 'linear-gradient(110deg, transparent 30%, rgba(255,255,255,0.5) 50%, transparent 70%)' }}
-                initial={{ x: '-150%' }}
-                animate={{ x: '260%' }}
-                transition={{ duration: 0.5, ease: 'easeIn', repeat: Infinity, repeatDelay: 0.9 }}
-              />
-            )}
-          </div>
+            🔥 Hot
+          </motion.div>
         )}
 
-        {/* Image */}
-        <div
-          className="relative overflow-hidden aspect-[16/9] sm:aspect-[4/3]"
-          style={{
-            borderBottomLeftRadius:  isHovered ? '0px' : '50% 56px',
-            borderBottomRightRadius: isHovered ? '0px' : '50% 56px',
-            transition: 'border-bottom-left-radius 0.38s ease, border-bottom-right-radius 0.38s ease',
-          }}
-        >
-          {hasVideo && videoPlaying ? (
-            <video
-              ref={videoRef}
-              src={offer.videoUrl}
-              className="w-full h-full object-cover"
-              autoPlay playsInline
-              onEnded={() => setVideoPlaying(false)}
-            />
-          ) : offer.bannerUrl || offer.imageUrl ? (
-            <img
-              src={offer.bannerUrl || offer.imageUrl}
-              alt={offer.title}
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-              onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-orange-50 to-amber-50">
-              <span className="text-5xl opacity-40">{CATEGORY_FALLBACK[offer.category ?? ''] ?? '🏷️'}</span>
-            </div>
-          )}
-
-          {!videoPlaying && (
-            <div className="absolute inset-0 bg-gradient-to-t from-black/12 via-transparent to-transparent pointer-events-none" />
-          )}
-
-          {hasVideo && (
-            <button onClick={toggleVideo} className="absolute inset-0 flex items-center justify-center group/vid">
-              <div className={`w-11 h-11 rounded-full flex items-center justify-center shadow-lg transition-all duration-200 ${
-                videoPlaying
-                  ? 'bg-black/60 opacity-0 group-hover/vid:opacity-100'
-                  : 'bg-[#FF6200]/90 group-hover/vid:scale-110'
-              }`}>
-                {videoPlaying ? <Pause size={18} className="text-white" /> : <Play size={18} className="text-white ml-0.5" />}
-              </div>
-            </button>
-          )}
-        </div>
+        {/* Discount badge */}
+        {discount > 0 && !videoPlaying && (
+          <motion.div
+            initial={{ scale: 0, rotate: -15 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ type: 'spring', stiffness: 450, damping: 16, delay: index * 0.04 + 0.1 }}
+            className="absolute top-1.5 right-1.5 sm:top-3 sm:right-3 z-20 gradient-bg text-white text-[9px] sm:text-[11px] font-bold px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-full shadow-md badge-shine"
+          >
+            {discount}% OFF
+          </motion.div>
+        )}
 
         {/* Save button */}
         <button
           onClick={handleSave}
           aria-label={saved ? 'Remove from saved' : 'Save offer'}
-          className={`absolute right-4 z-20 w-9 h-9 rounded-full flex items-center justify-center shadow-md transition-all duration-200 ${
+          className={`absolute bottom-1.5 right-1.5 sm:bottom-3 sm:right-3 z-20 w-7 h-7 sm:w-9 sm:h-9 rounded-full flex items-center justify-center shadow-md transition-all duration-300 ${
             saved
-              ? 'bg-[#FF6200] text-white scale-110'
-              : 'bg-[var(--surface)] text-[var(--text-muted)] hover:text-[#FF6200] hover:scale-110'
+              ? 'gradient-bg text-white scale-110'
+              : 'bg-[var(--surface)]/90 text-[var(--text-muted)] hover:text-[var(--primary)] hover:scale-110'
           }`}
-          style={{ bottom: '52px' }}
         >
-          <Bookmark size={15} fill={saved ? 'currentColor' : 'none'} />
+          <Bookmark size={12} className="sm:hidden" fill={saved ? 'currentColor' : 'none'} />
+          <Bookmark size={15} className="hidden sm:block" fill={saved ? 'currentColor' : 'none'} />
         </button>
-
-        <div style={{ height: 22 }} />
       </div>
 
-      {/* BOTTOM — content */}
-      <div className="bg-[var(--surface)] px-4 pt-4 pb-5 flex-grow flex flex-col">
+      {/* Content */}
+      <div className="px-2.5 pt-2.5 pb-2.5 sm:px-4 sm:pt-4 sm:pb-5 flex-grow flex flex-col">
 
         {/* Business row */}
-        <div className="flex items-center justify-between gap-2 mb-3">
-          <div className="flex items-center gap-2.5 min-w-0">
+        <div className="flex items-center justify-between gap-2 mb-1.5 sm:mb-3">
+          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
             {offer.vendorLogo ? (
               <img
                 src={offer.vendorLogo}
                 alt=""
-                className="w-11 h-11 rounded-full object-cover flex-shrink-0 ring-2 ring-orange-100 shadow-sm"
+                className="w-6 h-6 sm:w-11 sm:h-11 rounded-full object-cover flex-shrink-0 ring-2 ring-[var(--primary-light)]"
               />
             ) : (
-              <div className="w-11 h-11 rounded-full bg-gradient-to-br from-orange-100 to-orange-200 flex items-center justify-center flex-shrink-0 ring-2 ring-orange-100 shadow-sm">
-                <span className="text-sm font-extrabold text-[#FF6200]">{offer.businessName?.[0]?.toUpperCase()}</span>
+              <div className="w-6 h-6 sm:w-11 sm:h-11 rounded-full bg-[var(--primary-light)] flex items-center justify-center flex-shrink-0 ring-2 ring-[var(--primary-light)]">
+                <span className="text-[10px] sm:text-xs font-extrabold text-[var(--primary)]">{offer.businessName?.[0]?.toUpperCase()}</span>
               </div>
             )}
             <div className="min-w-0">
               <div className="flex items-center gap-1">
-                <span className="text-[13px] font-bold text-[var(--text)] truncate leading-tight">{offer.businessName}</span>
-                <BadgeCheck size={14} className="text-blue-500 flex-shrink-0" />
+                <span className="text-[11px] sm:text-[13px] font-bold text-[var(--text)] truncate leading-tight">{offer.businessName}</span>
+                <BadgeCheck size={12} style={{ color: 'var(--info)' }} className="flex-shrink-0 sm:hidden" />
+                <BadgeCheck size={14} style={{ color: 'var(--info)' }} className="flex-shrink-0 hidden sm:block" />
               </div>
-              <div className="flex items-center gap-1 text-[11px] text-[var(--text-muted)] mt-0.5">
-                <MapPin size={9} className="flex-shrink-0" />
+              <div className="flex items-center gap-1 text-[9px] sm:text-[11px] text-[var(--text-muted)] mt-0.5">
+                <MapPin size={8} className="flex-shrink-0 sm:hidden" />
+                <MapPin size={9} className="flex-shrink-0 hidden sm:block" />
                 <span className="truncate">{offer.vendorCity || 'Nearby'}</span>
               </div>
             </div>
           </div>
 
           {offer.isFeatured && (
-            <div className="flex items-center gap-1 border border-emerald-400 text-emerald-600 text-[10px] font-semibold px-2.5 py-1.5 rounded-full flex-shrink-0 whitespace-nowrap">
+            <div className="badge badge-accent flex-shrink-0 whitespace-nowrap hidden sm:flex">
               <ShieldCheck size={11} className="flex-shrink-0" />
               Trusted
             </div>
@@ -228,63 +196,66 @@ export default function OfferCard({ offer, onSave }: Props) {
         </div>
 
         {/* Title */}
-        <h3 className="font-heading font-bold text-[var(--text)] text-[0.93rem] leading-snug mb-3 line-clamp-2 group-hover:text-[#FF6200] transition-colors duration-200">
+        <h3 className="font-heading font-bold text-[var(--text)] text-[0.7rem] sm:text-[0.93rem] leading-snug mb-1.5 sm:mb-3 line-clamp-2 group-hover:text-[var(--primary)] transition-colors duration-200">
           {offer.title}
         </h3>
 
         {/* Price */}
         {(offer.offerPrice ?? 0) > 0 ? (
-          <div className="flex items-center gap-2.5 mb-4 flex-wrap">
-            <span className="font-heading font-extrabold text-[#FF6200] text-2xl leading-none">₹{offer.offerPrice}</span>
+          <div className="flex items-center gap-1.5 sm:gap-2.5 mb-1.5 sm:mb-4 flex-wrap">
+            <span className="font-heading font-extrabold text-[var(--primary)] text-base sm:text-2xl leading-none">₹{offer.offerPrice}</span>
             {(offer.originalPrice ?? 0) > 0 && (
-              <span className="text-sm text-[var(--text-muted)] line-through leading-none">₹{offer.originalPrice}</span>
+              <span className="text-xs sm:text-sm text-[var(--text-muted)] line-through leading-none">₹{offer.originalPrice}</span>
             )}
             {savings > 0 && (
-              <span className="flex items-center gap-1 text-[11px] font-semibold text-orange-600 border border-orange-200 bg-orange-50 px-2.5 py-1 rounded-full whitespace-nowrap">
+              <span className="badge badge-primary whitespace-nowrap hidden sm:inline-flex">
                 🏷️ Save ₹{savings}
               </span>
             )}
           </div>
         ) : offer.couponCode ? (
-          <div className="mb-4">
-            <div className="inline-flex items-center gap-1.5 bg-orange-50 border border-dashed border-orange-200 px-2.5 py-1 rounded-lg text-xs font-mono text-orange-700">
+          <div className="mb-1.5 sm:mb-4">
+            <div className="inline-flex items-center gap-1.5 bg-[var(--primary-light)] border border-dashed border-[var(--primary-border)] px-2.5 py-1 rounded-lg text-xs font-mono text-[var(--primary)]">
               🏷️ {offer.couponCode}
             </div>
           </div>
         ) : (
-          <div className="mb-4" />
+          <div className="mb-1.5 sm:mb-4" />
         )}
 
         {/* Stats footer */}
-        <div className="flex items-stretch pt-3 border-t border-[var(--border)] mt-auto">
+        <div className="flex items-stretch pt-1.5 sm:pt-3 border-t border-[var(--border)] mt-auto">
           <div className="flex-1 flex flex-col items-center gap-0.5 py-0.5">
             <div className="flex items-center gap-1">
-              <Eye size={14} className="text-[var(--text-muted)]" />
-              <span className="font-semibold text-[var(--text)] text-[13px]">{offer.views ?? 0}</span>
+              <Eye size={11} className="text-[var(--text-muted)] sm:hidden" />
+              <Eye size={14} className="text-[var(--text-muted)] hidden sm:block" />
+              <span className="font-semibold text-[var(--text)] text-[11px] sm:text-[13px]">{offer.views ?? 0}</span>
             </div>
-            <span className="text-[10px] text-[var(--text-muted)]">Views</span>
+            <span className="text-[8px] sm:text-[10px] text-[var(--text-muted)]">Views</span>
           </div>
 
           <div className="w-px bg-[var(--border)] self-stretch my-0.5" />
 
           <div className="flex-1 flex flex-col items-center gap-0.5 py-0.5">
             <div className="flex items-center gap-1">
-              <Heart size={14} className="text-[var(--text-muted)]" />
-              <span className="font-semibold text-[var(--text)] text-[13px]">{offer.saves ?? 0}</span>
+              <Heart size={11} className="text-[var(--text-muted)] sm:hidden" />
+              <Heart size={14} className="text-[var(--text-muted)] hidden sm:block" />
+              <span className="font-semibold text-[var(--text)] text-[11px] sm:text-[13px]">{offer.saves ?? 0}</span>
             </div>
-            <span className="text-[10px] text-[var(--text-muted)]">Saves</span>
+            <span className="text-[8px] sm:text-[10px] text-[var(--text-muted)]">Saves</span>
           </div>
 
           <div className="w-px bg-[var(--border)] self-stretch my-0.5" />
 
           <div className="flex-1 flex flex-col items-center gap-0.5 py-0.5">
             <div className="flex items-center gap-1">
-              <Clock size={14} className={isExpiring ? 'text-red-500' : 'text-[var(--text-muted)]'} />
-              <span className={`font-semibold text-[13px] ${isExpiring ? 'text-red-500' : 'text-[var(--text)]'}`}>
+              <Clock size={11} className="sm:hidden" style={{ color: isExpiring ? 'var(--danger)' : 'var(--text-muted)' }} />
+              <Clock size={14} className="hidden sm:block" style={{ color: isExpiring ? 'var(--danger)' : 'var(--text-muted)' }} />
+              <span className="font-semibold text-[11px] sm:text-[13px]" style={{ color: isExpiring ? 'var(--danger)' : 'var(--text)' }}>
                 {tl || '--'}
               </span>
             </div>
-            <span className="text-[10px] text-[var(--text-muted)]">Ends</span>
+            <span className="text-[8px] sm:text-[10px] text-[var(--text-muted)]">Ends</span>
           </div>
         </div>
       </div>

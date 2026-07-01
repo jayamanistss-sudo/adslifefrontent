@@ -6,6 +6,7 @@ import {
   Sparkles, Globe, Loader2, ImageIcon, Copy,
 } from 'lucide-react';
 import BackButton from '../../components/BackButton';
+import { EmptyState } from '../../components/ui/EmptyState';
 import { api, endpoints } from '../../utils/api';
 import toast from 'react-hot-toast';
 
@@ -177,12 +178,12 @@ function OfferForm({ form, setForm, uploading, uploadingGallery, fileRef, onUplo
       {/* Title + Category */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label htmlFor="of-title" className="block text-sm font-medium text-[var(--text)] mb-1.5">Title *</label>
+          <label htmlFor="of-title" className="label label-required">Title</label>
           <input id="of-title" className="input" placeholder="e.g. 30% off all pizzas" required
             value={form.title} onChange={(e) => upd('title', e.target.value)} />
         </div>
         <div>
-          <label htmlFor="of-cat" className="block text-sm font-medium text-[var(--text)] mb-1.5">Category *</label>
+          <label htmlFor="of-cat" className="label label-required">Category</label>
           <select id="of-cat" className="input" required value={form.category} onChange={(e) => upd('category', e.target.value)}>
             <option value="">Select category</option>
             {categories.map((c) => <option key={c.slug} value={c.slug}>{c.name}</option>)}
@@ -192,14 +193,14 @@ function OfferForm({ form, setForm, uploading, uploadingGallery, fileRef, onUplo
 
       {/* Description */}
       <div>
-        <label htmlFor="of-desc" className="block text-sm font-medium text-[var(--text)] mb-1.5">Description *</label>
+        <label htmlFor="of-desc" className="label label-required">Description</label>
         <textarea id="of-desc" className="input h-20 resize-none" placeholder="Describe your offer…" required
           value={form.description} onChange={(e) => upd('description', e.target.value)} />
       </div>
 
       {/* Primary image */}
       <div>
-        <label className="block text-sm font-medium text-[var(--text)] mb-1.5">Offer Image *</label>
+        <label className="label label-required">Offer Image</label>
         <ImageUploadBox
           imageUrl={form.image_url} uploading={uploading} fileRef={fileRef}
           onUpload={onUpload} onClear={() => upd('image_url', '')}
@@ -208,7 +209,7 @@ function OfferForm({ form, setForm, uploading, uploadingGallery, fileRef, onUplo
 
       {/* Gallery images */}
       <div>
-        <label className="block text-sm font-medium text-[var(--text)] mb-1.5">
+        <label className="label">
           Gallery Images <span className="text-[var(--text-muted)] font-normal">(optional)</span>
         </label>
         <GalleryUploadBox
@@ -222,14 +223,14 @@ function OfferForm({ form, setForm, uploading, uploadingGallery, fileRef, onUplo
       {/* Coupon + Redeem URL */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label htmlFor="of-coupon" className="block text-sm font-medium text-[var(--text)] mb-1.5">
+          <label htmlFor="of-coupon" className="label">
             Coupon Code <span className="text-[var(--text-secondary)] font-normal">(optional)</span>
           </label>
           <input id="of-coupon" className="input font-mono uppercase tracking-wider" placeholder="SAVE30"
             value={form.coupon_code} onChange={(e) => upd('coupon_code', e.target.value.toUpperCase())} />
         </div>
         <div>
-          <label htmlFor="of-redeem-url" className="block text-sm font-medium text-[var(--text)] mb-1.5">
+          <label htmlFor="of-redeem-url" className="label">
             Redeem Page URL <span className="text-[var(--text-secondary)] font-normal">(optional)</span>
           </label>
           <input id="of-redeem-url" className="input" type="url" placeholder="https://yoursite.com/offer-page"
@@ -270,19 +271,19 @@ function OfferForm({ form, setForm, uploading, uploadingGallery, fileRef, onUplo
       {/* Dates */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
-          <label htmlFor="of-from" className="block text-sm font-medium text-[var(--text)] mb-1.5">Valid From *</label>
-          <input id="of-from" className={`input ${dateError ? 'border-red-400' : ''}`} type="date" required
+          <label htmlFor="of-from" className="label label-required">Valid From</label>
+          <input id="of-from" className="input" style={dateError ? { borderColor: 'var(--danger)' } : undefined} type="date" required
             value={form.valid_from} onChange={(e) => upd('valid_from', e.target.value)} />
         </div>
         <div>
-          <label htmlFor="of-until" className="block text-sm font-medium text-[var(--text)] mb-1.5">Valid Until *</label>
-          <input id="of-until" className={`input ${dateError ? 'border-red-400' : ''}`} type="date" required
+          <label htmlFor="of-until" className="label label-required">Valid Until</label>
+          <input id="of-until" className="input" style={dateError ? { borderColor: 'var(--danger)' } : undefined} type="date" required
             min={form.valid_from || undefined}
             value={form.valid_until} onChange={(e) => upd('valid_until', e.target.value)} />
-          {dateError && <p className="text-xs text-red-500 mt-1">{dateError}</p>}
+          {dateError && <p className="text-xs mt-1" style={{ color: 'var(--danger)' }}>{dateError}</p>}
         </div>
         <div>
-          <label htmlFor="of-max" className="block text-sm font-medium text-[var(--text)] mb-1.5">Max Redemptions</label>
+          <label htmlFor="of-max" className="label">Max Redemptions</label>
           <input id="of-max" className="input" type="number" min="0" placeholder="100 (0 = unlimited)"
             value={form.max_redemptions} onChange={(e) => upd('max_redemptions', e.target.value)} />
         </div>
@@ -324,6 +325,7 @@ export default function ManageOffers() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState(emptyForm);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [vendorCategory, setVendorCategory] = useState<string>('');
 
   // AI generation
   const [aiOpen, setAiOpen]         = useState(false);
@@ -345,11 +347,18 @@ export default function ManageOffers() {
 
   useEffect(() => {
     load();
-    api.get(endpoints.categoriesList(true)).then((r) => {
-      if (r.data.success) {
-        const cats: Category[] = r.data.data ?? [];
+    // load vendor profile (to get their category) and category list in parallel
+    Promise.all([
+      api.get(endpoints.vendorProfile).catch(() => null),
+      api.get(endpoints.categoriesList(true)).catch(() => null),
+    ]).then(([profileRes, catsRes]) => {
+      const vc: string = profileRes?.data?.data?.category ?? '';
+      if (vc) setVendorCategory(vc);
+      if (catsRes?.data?.success) {
+        const cats: Category[] = catsRes.data.data ?? [];
         setCategories(cats);
-        if (cats.length > 0) setForm((f) => ({ ...f, category: cats[0].slug }));
+        const defaultSlug = vc || cats[0]?.slug || '';
+        setForm((f) => ({ ...f, category: defaultSlug }));
       }
     }).catch(() => toast.error('Failed to load categories'));
   }, []);
@@ -408,7 +417,7 @@ export default function ManageOffers() {
   const openCreate = () => {
     const today = new Date().toISOString().slice(0, 10);
     const in30  = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
-    setForm({ ...emptyForm, category: categories[0]?.slug ?? '', valid_from: today, valid_until: in30 });
+    setForm({ ...emptyForm, category: vendorCategory || categories[0]?.slug || '', valid_from: today, valid_until: in30 });
     setMode('create');
   };
   const openView   = (o: Offer) => { setSelected(o); setMode('view'); };
@@ -565,7 +574,7 @@ export default function ManageOffers() {
   /* ── View detail ─────────────────────────────────────────── */
   if (mode === 'view' && selected) {
     return (
-      <div className="max-w-2xxl pb-6">
+      <div className="max-w-3xl mx-auto pb-6">
         <button onClick={backToList} className="flex items-center gap-1.5 text-sm text-[var(--text-secondary)] hover:text-[var(--text)] transition-colors mb-5 group">
           <ArrowLeft size={16} className="group-hover:-translate-x-0.5 transition-transform" /> Back to My Offers
         </button>
@@ -659,7 +668,7 @@ export default function ManageOffers() {
   /* ── Create / Edit form ──────────────────────────────────── */
   if (mode === 'create' || mode === 'edit') {
     return (
-      <div className="max-w-2xxl pb-6">
+      <div className="max-w-3xl mx-auto pb-6">
         <button onClick={backToList} className="flex items-center gap-1.5 text-sm text-[var(--text-secondary)] hover:text-[var(--text)] transition-colors mb-5 group">
           <ArrowLeft size={16} className="group-hover:-translate-x-0.5 transition-transform" /> Back to My Offers
         </button>
@@ -683,7 +692,7 @@ export default function ManageOffers() {
 
   /* ── List ────────────────────────────────────────────────── */
   return (
-    <div className="max-w-4xxl pb-6">
+    <div className="max-w-5xl mx-auto pb-6">
       <BackButton to="/vendor/dashboard" />
       <div className="page-header">
         <div>
@@ -702,25 +711,25 @@ export default function ManageOffers() {
 
       {/* AI Generate Modal */}
       {aiOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={(e) => { if (e.target === e.currentTarget) setAiOpen(false); }}>
-          <div className="w-full max-w-lg bg-[var(--surface)] rounded-2xl shadow-2xl overflow-hidden">
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setAiOpen(false); }}>
+          <div className="modal-content max-w-lg rounded-2xl shadow-2xl">
             {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)]">
+            <div className="modal-header px-5 py-4">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
                   <Sparkles size={15} className="text-white" />
                 </div>
                 <div>
-                  <h3 className="font-heading font-bold text-[var(--text)] text-sm">AI Offer Generator</h3>
+                  <h3 className="modal-title text-sm font-bold">AI Offer Generator</h3>
                   <p className="text-xs text-[var(--text-muted)]">Free · powered by Pollinations AI</p>
                 </div>
               </div>
-              <button onClick={() => setAiOpen(false)} className="text-[var(--text-muted)] hover:text-[var(--text)] transition-colors">
+              <button onClick={() => setAiOpen(false)} className="modal-close">
                 <X size={18} />
               </button>
             </div>
 
-            <div className="p-5 space-y-4">
+            <div className="modal-body space-y-4">
               {/* Inputs */}
               <div>
                 <label className="label">Your Website URL</label>
@@ -807,15 +816,16 @@ export default function ManageOffers() {
       {loading ? (
         <div className="space-y-3">{[1, 2, 3].map((i) => <div key={i} className="skeleton h-20 rounded-xl" />)}</div>
       ) : offers.length === 0 ? (
-        <div className="card p-10 text-center">
-          <Tag size={36} className="mx-auto text-[var(--text-muted)] mb-3" />
-          <p className="font-heading font-semibold text-[var(--text-secondary)]">No offers yet</p>
-          <p className="text-sm text-[var(--text-muted)] mt-1">Click "Add Offer" to create your first promotion</p>
-        </div>
+        <EmptyState
+          icon={<Tag size={28} />}
+          title="No offers yet"
+          description='Click "Add Offer" to create your first promotion'
+          action={<button onClick={openCreate} className="btn btn-primary btn-sm"><Plus size={14} /> Add Offer</button>}
+        />
       ) : (
         <div className="space-y-3">
           {offers.map((o) => (
-            <div key={o.id} className="card p-4 flex flex-col sm:flex-row items-start gap-4">
+            <div key={o.id} className="card card-hover p-4 flex flex-col sm:flex-row items-start gap-4">
               <button onClick={() => openView(o)} className="flex-shrink-0">
                 {o.image_url ? (
                   <img src={o.image_url} alt="" className="w-16 h-12 rounded-lg object-cover hover:opacity-80 transition-opacity" />
@@ -858,7 +868,7 @@ export default function ManageOffers() {
                 <button
                   onClick={() => handleDelete(o)}
                   title="Delete offer"
-                  className="p-1 rounded-lg hover:bg-[var(--danger-light)] text-[var(--text-muted)] hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                  className="p-1 rounded-lg hover:bg-[var(--danger-light)] text-[var(--text-muted)] hover:text-[var(--danger)] transition-colors"
                 >
                   <Trash2 size={15} />
                 </button>

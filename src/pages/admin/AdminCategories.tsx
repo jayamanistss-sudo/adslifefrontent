@@ -123,7 +123,7 @@ export default function AdminCategories() {
         ) : categories.length === 0 ? (
           <div className="p-12 text-center text-[var(--text-secondary)]">No categories yet</div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto overflow-y-hidden">
             <table className="w-full border-collapse text-left">
               <thead>
                 <tr className="border-b border-[var(--border)] bg-[var(--surface-2)]/40 text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">

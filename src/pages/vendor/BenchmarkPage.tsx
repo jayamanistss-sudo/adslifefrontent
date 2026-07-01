@@ -1,9 +1,10 @@
+import { Link } from 'react-router-dom';
 import BackButton from '../../components/BackButton';
 import { DashboardSkeleton } from '../../components/ui/Skeleton';
-import { ErrorState } from '../../components/ui/EmptyState';
+import { ErrorState, EmptyState } from '../../components/ui/EmptyState';
 import { motion } from 'framer-motion';
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import { TrendingUp, Award, Zap, Lightbulb } from 'lucide-react';
+import { TrendingUp, Award, Zap, Lightbulb, Store } from 'lucide-react';
 import { endpoints } from '../../utils/api';
 import type { BenchmarkData } from '../../types';
 import { useUserStore } from '../../store/useUserStore';
@@ -28,7 +29,19 @@ export default function BenchmarkPage() {
     category:    raw.category,
   } : null;
 
-  if (loading || !vendorId) return (
+  if (!vendorId) return (
+    <div className="pb-6">
+      <BackButton to="/vendor/dashboard" />
+      <EmptyState
+        icon="🏪"
+        title="You don't have a vendor account yet"
+        description="Apply as a vendor to see how your offers benchmark against your category."
+        action={<Link to="/become-vendor" className="btn btn-primary btn-sm"><Store size={16} /> Apply as Vendor</Link>}
+      />
+    </div>
+  );
+
+  if (loading) return (
     <div className="pb-6">
       <BackButton to="/vendor/dashboard" />
       <DashboardSkeleton />

@@ -45,12 +45,12 @@ export default function Leaderboard() {
   const medals        = ['🥈', '🥇', '🥉'];
 
   return (
-    <div className="pb-6 max-w-2xxl">
+    <div className="pb-6 max-w-2xl mx-auto">
       {/* Header */}
       <div className="page-header">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-[#FFFBEB] rounded-xl flex items-center justify-center">
-            <Trophy size={20} className="text-[#78350F]" />
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'var(--warning-light)' }}>
+            <Trophy size={20} style={{ color: '#78350F' }} />
           </div>
           <div>
             <h1 className="page-title">Leaderboard</h1>
@@ -69,14 +69,10 @@ export default function Leaderboard() {
           {CITIES.map((c) => <option key={c}>{c}</option>)}
         </select>
 
-        <div className="flex gap-1 bg-[var(--surface-2)] p-1 rounded-xl flex-shrink-0">
+        <div className="segmented-control flex-shrink-0">
           {(['weekly', 'monthly', 'alltime'] as Period[]).map((p) => (
             <button key={p} onClick={() => setPeriod(p)}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all capitalize ${
-                period === p
-                  ? 'bg-[var(--surface)] shadow-sm text-[var(--primary)]'
-                  : 'text-[var(--text-secondary)] hover:text-[var(--text)]'
-              }`}>
+              className={`segmented-item capitalize ${period === p ? 'active' : ''}`}>
               {p === 'alltime' ? 'All Time' : p}
             </button>
           ))}
@@ -91,31 +87,47 @@ export default function Leaderboard() {
         <>
           {/* Podium */}
           {top3.length === 3 && (
-            <div className="card p-6 mb-6">
+            <motion.div
+              className="card-grand p-6 mb-6"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ type: 'spring', stiffness: 280, damping: 24 }}
+            >
               <div className="flex items-end justify-center gap-4">
                 {podiumOrder.map((entry, i) => (
                   <motion.div
                     key={entry.userId}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.1 }}
+                    initial={{ opacity: 0, y: 40, scale: 0.8 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 22, delay: i * 0.12 }}
                     className="flex flex-col items-center gap-2"
                   >
-                    <div className="text-xl">{medals[i]}</div>
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[var(--primary-light)] to-[#ECFDF5] flex items-center justify-center font-heading font-bold text-[var(--primary)] text-lg border-2 border-[var(--surface)] shadow-md">
+                    <motion.div
+                      className="text-xl"
+                      animate={{ y: [0, -6, 0] }}
+                      transition={{ duration: 2, repeat: Infinity, delay: i * 0.3 }}
+                    >
+                      {medals[i]}
+                    </motion.div>
+                    <div className="w-12 h-12 rounded-full gradient-bg flex items-center justify-center font-heading font-bold text-white text-lg border-2 border-[var(--surface)] shadow-lg">
                       {entry.name?.[0]}
                     </div>
                     <div className="text-center">
                       <div className="text-xs font-heading font-semibold text-[var(--text)] max-w-[72px] truncate">{entry.name}</div>
                       <div className="text-[10px] text-[var(--text-muted)]">{entry.score} pts</div>
                     </div>
-                    <div className={`${podiumHeights[i]} w-16 rounded-t-xl flex items-start justify-center pt-2 text-white font-heading font-bold text-base ${podiumColors[i]}`}>
+                    <motion.div
+                      initial={{ height: 0 }}
+                      animate={{ height: 'auto' }}
+                      transition={{ type: 'spring', stiffness: 200, damping: 20, delay: 0.2 + i * 0.1 }}
+                      className={`${podiumHeights[i]} w-16 rounded-t-xl flex items-start justify-center pt-2 text-white font-heading font-bold text-base ${podiumColors[i]} shadow-md`}
+                    >
                       {podiumOrder[i]?.rank ?? i + 1}
-                    </div>
+                    </motion.div>
                   </motion.div>
                 ))}
               </div>
-            </div>
+            </motion.div>
           )}
 
           {/* List */}

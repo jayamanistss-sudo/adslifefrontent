@@ -5,6 +5,7 @@ import {
   CreditCard, Image, Calendar, Tag,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import BackButton from "../../components/BackButton";
 import { api } from "../../utils/api";
 import { usePlansStore, type Plan } from "../../store/usePlansStore";
 
@@ -168,17 +169,21 @@ export default function AdminSubscriptions() {
   // ── Render ─────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
+      <BackButton to="/admin/dashboard" label="Admin Panel" />
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-[var(--text)]">Plans</h1>
-          <p className="text-sm text-[var(--text-secondary)] mt-1">
-            Manage subscription and banner advertising plans
-          </p>
+      <div className="page-header">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'var(--primary-light)' }}>
+            <CreditCard size={20} style={{ color: 'var(--primary)' }} />
+          </div>
+          <div>
+            <h1 className="page-title">Plans</h1>
+            <p className="page-subtitle">Manage subscription and banner advertising plans</p>
+          </div>
         </div>
         <button
           onClick={tab === "subscription" ? openNew : openBannerNew}
-          className="flex items-center gap-2 bg-[var(--primary)] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:opacity-90"
+          className="btn btn-primary btn-sm"
         >
           <Plus size={16} /> {tab === "subscription" ? "Add Plan" : "Add Banner Plan"}
         </button>

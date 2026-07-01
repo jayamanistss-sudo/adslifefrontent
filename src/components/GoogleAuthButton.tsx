@@ -47,7 +47,7 @@ export default function GoogleAuthButton({ label = 'Continue with Google' }: Pro
       type="button"
       onClick={() => login()}
       disabled={loading}
-      className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-2)] transition-colors font-medium text-sm text-[var(--text)] shadow-sm disabled:opacity-60"
+      className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-2)] hover:border-[var(--border-strong)] transition-all font-medium text-sm text-[var(--text)] shadow-[var(--shadow-xs)] disabled:opacity-60"
     >
       {loading ? (
         <span className="w-4 h-4 border-2 border-[var(--border)] border-t-[var(--text)] rounded-full animate-spin" />

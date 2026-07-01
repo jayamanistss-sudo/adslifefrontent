@@ -265,7 +265,7 @@ export default function AdminUsers() {
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto overflow-y-hidden">
       <div className="card overflow-hidden min-w-[600px]">
         <DataTable
           rowData={users}

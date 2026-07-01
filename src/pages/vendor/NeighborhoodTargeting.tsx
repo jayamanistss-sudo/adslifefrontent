@@ -88,7 +88,17 @@ export default function NeighborhoodTargeting() {
   return (
     <div className="pb-20 sm:pb-6">
       <BackButton to="/vendor/dashboard" />
-      <h1 className="text-2xl font-heading font-bold text-[var(--text)] mb-6">Neighborhood Targeting</h1>
+      <div className="page-header">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'var(--primary-light)' }}>
+            <MapPin size={20} style={{ color: 'var(--primary)' }} />
+          </div>
+          <div>
+            <h1 className="page-title">Neighborhood Targeting</h1>
+            <p className="page-subtitle">Reach customers in a specific area</p>
+          </div>
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Controls */}
@@ -166,7 +176,7 @@ export default function NeighborhoodTargeting() {
 
           <button
             onClick={handleSave}
-            className="w-full bg-primary text-white py-3 rounded-xl font-heading font-semibold hover:bg-blue-600 transition-colors"
+            className="w-full bg-primary text-white py-3 rounded-xl font-heading font-semibold hover:opacity-90 transition-colors"
           >
             <MapPin size={16} className="inline mr-2" />
             Save Targeting

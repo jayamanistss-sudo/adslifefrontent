@@ -51,12 +51,12 @@ export default function BecomeVendor() {
   if (done) return (
     <div className="flex items-center justify-center min-h-screen p-6 bg-[var(--surface-2)]">
       <div className="w-full max-w-md p-10 text-center card rounded-3xl">
-        <div className="flex items-center justify-center w-20 h-20 mx-auto mb-4 bg-green-100 rounded-full">
-          <CheckCircle size={40} className="text-green-500" />
+        <div className="flex items-center justify-center w-20 h-20 mx-auto mb-4 rounded-full" style={{ background: 'var(--accent-light)' }}>
+          <CheckCircle size={40} style={{ color: 'var(--accent)' }} />
         </div>
         <h2 className="mb-2 text-2xl font-bold text-[var(--text)]">Application Submitted!</h2>
         <p className="mb-6 text-[var(--text-muted)]">Our team will review your application and notify you within 24–48 hours.</p>
-        <button onClick={() => navigate('/feed')} className="w-full py-3 font-semibold text-white bg-primary rounded-xl hover:opacity-90">
+        <button onClick={() => navigate('/feed')} className="btn btn-primary w-full">
           Back to AdsLife
         </button>
       </div>
@@ -81,11 +81,11 @@ export default function BecomeVendor() {
           </div>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block mb-1 text-sm font-medium text-[var(--text-secondary)]">Business Name *</label>
+              <label className="label label-required">Business Name</label>
               <input className="w-full input" placeholder="e.g. Sharma Electronics" value={form.business_name} onChange={e => set('business_name', e.target.value)} required />
             </div>
             <div>
-              <label className="block mb-1 text-sm font-medium text-[var(--text-secondary)]">Category</label>
+              <label className="label">Category</label>
               <select className="w-full input" value={form.category} onChange={e => set('category', e.target.value)}>
                 <option value="">Select category</option>
                 {CATEGORIES.map(c => <option key={c} value={c.toLowerCase().replace(/\s+&\s+/, '-').replace(/\s+/g, '-')}>{c}</option>)}
@@ -93,35 +93,35 @@ export default function BecomeVendor() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block mb-1 text-sm font-medium text-[var(--text-secondary)]">City</label>
+                <label className="label">City</label>
                 <input className="w-full input" placeholder="Chennai" value={form.city} onChange={e => set('city', e.target.value)} />
               </div>
               <div>
-                <label className="block mb-1 text-sm font-medium text-[var(--text-secondary)]">Phone</label>
+                <label className="label">Phone</label>
                 <input className="w-full input" placeholder="9876543210" type="tel" value={form.phone} onChange={e => set('phone', e.target.value)} />
               </div>
             </div>
             <div>
-              <label className="block mb-1 text-sm font-medium text-[var(--text-secondary)]">Address</label>
+              <label className="label">Address</label>
               <input className="w-full input" placeholder="Shop address" value={form.address} onChange={e => set('address', e.target.value)} />
             </div>
             <div>
-              <label className="block mb-1 text-sm font-medium text-[var(--text-secondary)]">Website (optional)</label>
+              <label className="label">Website (optional)</label>
               <input className="w-full input" placeholder="https://yourshop.com" type="url" value={form.website} onChange={e => set('website', e.target.value)} />
             </div>
             <div>
-              <label className="block mb-1 text-sm font-medium text-[var(--text-secondary)]">About your business</label>
+              <label className="label">About your business</label>
               <textarea className="w-full input" rows={3} placeholder="What do you sell? What makes you special?" value={form.description} onChange={e => set('description', e.target.value)} />
             </div>
             {!user && (
-              <div className="p-3 text-sm border bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900/30 rounded-xl text-amber-700 dark:text-amber-300">
+              <div className="p-3 text-sm border rounded-xl" style={{ background: 'var(--warning-light)', borderColor: 'rgba(245,158,11,0.25)', color: '#78350F' }}>
                 You'll need to <button type="button" onClick={() => navigate('/login?redirect=/become-vendor')} className="font-semibold underline">sign in</button> before submitting.
               </div>
             )}
             <button
               type="submit"
               disabled={submitting}
-              className="w-full bg-primary text-white py-3.5 rounded-xl font-bold text-base hover:opacity-90 disabled:opacity-60 transition-opacity"
+              className="btn btn-primary btn-lg w-full"
             >
               {submitting ? 'Submitting…' : 'Submit Application →'}
             </button>
@@ -134,12 +134,12 @@ export default function BecomeVendor() {
   return (
     <div className="min-h-screen bg-[var(--surface)]">
       {/* Hero */}
-      <div className="px-6 py-16 text-center text-white bg-gradient-to-br from-primary to-orange-400">
-        <div className="mx-auto max-w-2xxl">
+      <div className="px-6 py-16 text-center text-white gradient-bg">
+        <div className="mx-auto max-w-2xl">
           <div className="inline-flex items-center gap-2 bg-white/20 rounded-full px-4 py-1.5 text-sm font-medium mb-6">
             <Store size={14} /> List your business on AdsLife
           </div>
-          <h1 className="mb-4 text-4xl font-bold leading-tight sm:text-5xl">
+          <h1 className="mb-4 text-4xl font-bold leading-tight sm:text-5xl text-white">
             Reach More Customers.<br />Grow Your Business.
           </h1>
           <p className="max-w-xl mx-auto mb-8 text-lg opacity-90">
@@ -156,7 +156,7 @@ export default function BecomeVendor() {
       </div>
 
       {/* Benefits */}
-      <div className="px-6 py-16 mx-auto max-w-4xxl">
+      <div className="px-6 py-16 mx-auto max-w-5xl">
         <h2 className="mb-10 text-3xl font-bold text-center text-[var(--text)]">Everything you need to grow locally</h2>
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {BENEFITS.map((b, i) => (

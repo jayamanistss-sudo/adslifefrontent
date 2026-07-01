@@ -1,6 +1,6 @@
 import BackButton from '../../components/BackButton';
 import { useState, useEffect, useRef } from 'react';
-
+import { Map as MapIcon } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { endpoints } from '../../utils/api';
@@ -61,8 +61,16 @@ export default function HeatmapAnalytics() {
   return (
     <div className="pb-20 sm:pb-6">
       <BackButton to="/vendor/dashboard" />
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-heading font-bold text-[var(--text)]">Customer Heatmap</h1>
+      <div className="page-header flex-wrap gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'var(--primary-light)' }}>
+            <MapIcon size={20} style={{ color: 'var(--primary)' }} />
+          </div>
+          <div>
+            <h1 className="page-title">Customer Heatmap</h1>
+            <p className="page-subtitle">Where your customers are browsing from</p>
+          </div>
+        </div>
         <div className="flex gap-1 bg-[var(--surface-2)] p-1 rounded-xl">
           {([7, 30, 90] as Days[]).map((d) => (
             <button key={d} onClick={() => setDays(d)}
@@ -80,8 +88,8 @@ export default function HeatmapAnalytics() {
           { label: 'Top Area',          value: stats.topArea || '—' },
           { label: 'Peak Hour',         value: stats.peakHour ? `${stats.peakHour}:00` : '—' },
         ].map((s) => (
-          <div key={s.label} className="card p-4 text-center">
-            <div className="font-heading font-bold text-xl text-[var(--text)]">{s.value}</div>
+          <div key={s.label} className="stat-card items-center text-center p-4">
+            <div className="stat-value text-xl">{s.value}</div>
             <div className="text-xs text-[var(--text-muted)]">{s.label}</div>
           </div>
         ))}

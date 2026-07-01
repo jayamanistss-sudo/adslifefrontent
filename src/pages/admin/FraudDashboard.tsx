@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-
+import BackButton from '../../components/BackButton';
 import { ShieldAlert, CheckCircle, XCircle } from 'lucide-react';
 import { api, endpoints } from '../../utils/api';
 import { db } from '../../powersync/database';
@@ -48,9 +48,17 @@ export default function FraudDashboard() {
 
   return (
     <div className="pb-20 sm:pb-6">
-      <div className="flex items-center gap-3 mb-6">
-        <ShieldAlert size={24} className="text-danger" />
-        <h1 className="text-2xl font-heading font-bold text-[var(--text)]">Fraud Detection</h1>
+      <BackButton to="/admin/dashboard" label="Admin Panel" />
+      <div className="page-header">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'var(--danger-light)' }}>
+            <ShieldAlert size={20} style={{ color: 'var(--danger)' }} />
+          </div>
+          <div>
+            <h1 className="page-title">Fraud Detection</h1>
+            <p className="page-subtitle">Review flagged offers and vendors</p>
+          </div>
+        </div>
       </div>
 
       {/* Filters */}
@@ -58,7 +66,7 @@ export default function FraudDashboard() {
         <select
           value={filter.status}
           onChange={(e) => setFilter((f) => ({ ...f, status: e.target.value }))}
-          className="border border-[var(--border)] rounded-xl px-3 py-1.5 text-sm bg-[var(--surface)]"
+          className="input w-auto"
         >
           <option value="">All Status</option>
           <option value="pending">Pending</option>
@@ -69,7 +77,7 @@ export default function FraudDashboard() {
         <select
           value={filter.type}
           onChange={(e) => setFilter((f) => ({ ...f, type: e.target.value }))}
-          className="border border-[var(--border)] rounded-xl px-3 py-1.5 text-sm bg-[var(--surface)]"
+          className="input w-auto"
         >
           <option value="">All Types</option>
           <option value="vendor">Vendor</option>

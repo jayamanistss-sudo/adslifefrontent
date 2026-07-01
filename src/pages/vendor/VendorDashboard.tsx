@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  BarChart2, Map, Users, Target, Tag, Pencil,
-  ShieldAlert, Eye, MousePointer, Bookmark,
+  Tag, Pencil,
+  Eye, MousePointer, Bookmark,
   ArrowUpRight, ArrowDownRight, Minus, Image, LifeBuoy,
   Layers, RefreshCw, Store, CheckCircle2, XCircle, Clock,
 } from 'lucide-react';
@@ -113,13 +113,6 @@ export default function VendorDashboard() {
 
   useEffect(() => { fetchDashboard(); }, []);
 
-  const navLinks = [
-    { to: '/vendor/heatmap',   icon: Map,         label: 'Heatmap',      desc: 'Where your customers are',  color: 'bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300' },
-    { to: '/vendor/audience',  icon: Users,       label: 'Audience',     desc: 'Device & time insights',    color: 'bg-violet-50 dark:bg-violet-950/30 text-violet-700 dark:text-violet-300' },
-    { to: '/vendor/benchmark', icon: BarChart2,   label: 'Benchmark',    desc: 'vs category averages',      color: 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300' },
-    { to: '/vendor/targeting', icon: Target,      label: 'Targeting',    desc: 'Neighborhood reach',        color: 'bg-cyan-50 dark:bg-cyan-950/30 text-cyan-700 dark:text-cyan-300' },
-    { to: '/admin/fraud',      icon: ShieldAlert, label: 'Fraud Center', desc: 'Admin: flagged items',      color: 'bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300', adminOnly: true },
-  ].filter((l: any) => !l.adminOnly || user?.role === 'admin');
 
   if (loading) return (
     <div className="pb-6 max-w-6xxl">
@@ -181,8 +174,51 @@ export default function VendorDashboard() {
     saves: Number(d.saves),
   }));
 
+  const manageLinks = [
+    { to: '/vendor/offers',       icon: Tag,       label: 'My Offers',    gradient: 'from-green-500 to-emerald-600' },
+    { to: '/vendor/edit-profile', icon: Pencil,    label: 'Edit Profile', gradient: 'from-indigo-500 to-violet-600' },
+    { to: '/vendor/banner-ads',   icon: Image,     label: 'Banner Ad',    gradient: 'from-pink-500 to-rose-600'    },
+    { to: '/vendor/support',      icon: LifeBuoy,  label: 'Support',      gradient: 'from-sky-500 to-cyan-600'     },
+    { to: '/vendor/select-plan',  icon: Layers,    label: 'Select Plan',  gradient: 'from-violet-500 to-purple-600' },
+    { to: '/vendor/renew-plan',   icon: RefreshCw, label: 'Renew Plan',   gradient: 'from-emerald-500 to-teal-600' },
+  ];
+
   return (
-    <div className="pb-10">
+    <div className="pb-10 flex gap-6 items-start">
+
+      {/* ── Manage Sidebar ───────────────────────────── */}
+      <aside className="hidden lg:flex flex-col w-52 flex-shrink-0 sticky top-6">
+        <div className="card p-4">
+          <h2 className="font-heading font-semibold text-xs uppercase tracking-widest text-[var(--text-muted)] mb-3">Manage</h2>
+          <nav className="flex flex-col gap-1">
+            {manageLinks.map(({ to, icon: Icon, label, gradient }) => (
+              <Link key={to} to={to}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--surface-2)] group transition-colors">
+                <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center flex-shrink-0 shadow-sm group-hover:scale-110 transition-transform`}>
+                  <Icon size={15} className="text-white" />
+                </div>
+                <span className="text-sm font-medium text-[var(--text)] group-hover:text-[var(--primary)] transition-colors">{label}</span>
+              </Link>
+            ))}
+          </nav>
+        </div>
+      </aside>
+
+      {/* ── Main content ─────────────────────────────── */}
+      <div className="flex-1 min-w-0">
+
+      {/* Mobile manage strip */}
+      <div className="lg:hidden flex gap-2 overflow-x-auto overflow-y-hidden scrollbar-hide pb-1 mb-5">
+        {manageLinks.map(({ to, icon: Icon, label, gradient }) => (
+          <Link key={to} to={to}
+            className="flex flex-col items-center gap-1.5 flex-shrink-0 p-3 card text-center min-w-[72px]">
+            <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center shadow-sm`}>
+              <Icon size={15} className="text-white" />
+            </div>
+            <span className="text-[10px] font-semibold text-[var(--text)] leading-tight">{label}</span>
+          </Link>
+        ))}
+      </div>
 
       {/* ── Hero Banner ─────────────────────────────── */}
       <div className="relative rounded-2xl overflow-hidden mb-6"
@@ -199,7 +235,7 @@ export default function VendorDashboard() {
             <div className="relative flex-shrink-0">
               {v.logo_url
                 ? <img src={v.logo_url} alt="" className="w-16 h-16 rounded-2xl object-cover ring-2 ring-white/20" />
-                : <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-700 flex items-center justify-center font-heading font-bold text-white text-2xl shadow-lg">{v.business_name?.[0]}</div>
+                : <div className="w-16 h-16 rounded-2xl gradient-bg flex items-center justify-center font-heading font-bold text-white text-2xl shadow-lg">{v.business_name?.[0]}</div>
               }
               <span className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-[#0f172a] ${v.status === 'approved' ? 'bg-emerald-400' : 'bg-amber-400'}`} />
             </div>
@@ -276,7 +312,7 @@ export default function VendorDashboard() {
             </div>
             <div className="flex items-center gap-3 text-[10px] text-[var(--text-muted)]">
               <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-400 inline-block" />Impressions</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-orange-500 inline-block" />Clicks</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-primary inline-block" />Clicks</span>
               <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />Saves</span>
             </div>
           </div>
@@ -396,46 +432,7 @@ export default function VendorDashboard() {
         </div>
       </div>
 
-      {/* ── Quick Actions ─────────────────────────────── */}
-      <div className="mb-6">
-        <h2 className="font-heading font-semibold text-[var(--text)] text-sm uppercase tracking-widest text-[var(--text-muted)] mb-3">Manage</h2>
-        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 sm:gap-3">
-          {[
-            { to: '/vendor/offers',       icon: Tag,       label: 'My Offers',    gradient: 'from-green-500 to-emerald-600' },
-            { to: '/vendor/edit-profile', icon: Pencil,    label: 'Edit Profile', gradient: 'from-indigo-500 to-violet-600' },
-            { to: '/vendor/banner-ads',   icon: Image,     label: 'Banner Ad',    gradient: 'from-pink-500 to-rose-600'    },
-            { to: '/vendor/support',      icon: LifeBuoy,  label: 'Support',      gradient: 'from-sky-500 to-cyan-600'     },
-            { to: '/vendor/select-plan',  icon: Layers,    label: 'Select Plan',  gradient: 'from-violet-500 to-purple-600' },
-            { to: '/vendor/renew-plan',   icon: RefreshCw, label: 'Renew Plan',   gradient: 'from-emerald-500 to-teal-600' },
-          ].map(({ to, icon: Icon, label, gradient }) => (
-            <Link key={to} to={to}
-              className="flex flex-col items-center gap-2 sm:gap-2.5 p-3 sm:p-4 card card-hover group text-center">
-              <div className={`w-11 h-11 rounded-2xl bg-gradient-to-br ${gradient} flex items-center justify-center shadow-md group-hover:scale-110 transition-transform`}>
-                <Icon size={19} className="text-white" />
-              </div>
-              <span className="text-xs font-semibold text-[var(--text)] group-hover:text-[var(--primary)] transition-colors">{label}</span>
-            </Link>
-          ))}
-        </div>
-      </div>
-
-      {/* ── Analytics & Tools ──────────────────────────── */}
-      <div>
-        <h2 className="font-heading font-semibold text-sm uppercase tracking-widest text-[var(--text-muted)] mb-3">Analytics</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {navLinks.map(({ to, icon: Icon, label, desc, color }) => (
-            <Link key={to} to={to} className="card card-hover p-4 group flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${color} group-hover:scale-110 transition-transform`}>
-                <Icon size={18} />
-              </div>
-              <div className="min-w-0">
-                <div className="font-heading font-semibold text-[var(--text)] text-sm group-hover:text-[var(--primary)] transition-colors">{label}</div>
-                <div className="text-xs text-[var(--text-muted)] mt-0.5 truncate">{desc}</div>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </div>
+      </div>{/* end main content */}
     </div>
   );
 }

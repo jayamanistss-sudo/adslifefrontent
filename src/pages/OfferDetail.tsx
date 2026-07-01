@@ -88,6 +88,9 @@ export default function OfferDetail() {
   const [myComment, setMyComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  const [heroIdx, setHeroIdx] = useState(0);
+  const [heroPaused, setHeroPaused] = useState(false);
+
   const [reportOpen, setReportOpen]       = useState(false);
   const [reportReason, setReportReason]   = useState(REPORT_REASONS[0].value);
   const [reportDetails, setReportDetails] = useState('');
@@ -228,6 +231,16 @@ export default function OfferDetail() {
     finally { setReportBusy(false); }
   };
 
+  // ─── Hero auto-slider ───────────────────────────────────────────────────
+  const heroSlideCount = offer && !offer.videoUrl
+    ? (offer.bannerUrl || offer.imageUrl ? 1 : 0) + (offer.images?.length ?? 0)
+    : 0;
+  useEffect(() => {
+    if (heroSlideCount <= 1 || heroPaused) return;
+    const t = setInterval(() => setHeroIdx(i => (i + 1) % heroSlideCount), 4000);
+    return () => clearInterval(t);
+  }, [heroSlideCount, heroPaused]);
+
   // ─── Loading ────────────────────────────────────────────────────────────
   if (loading) return (
     <div className="w-full animate-pulse space-y-4">
@@ -255,8 +268,15 @@ export default function OfferDetail() {
   const tl        = timeLeft(offer.validUntil);
   const isUrgent  = tl === 'Ending soon' || tl === '1d left';
   const savings   = (offer.originalPrice ?? 0) - (offer.offerPrice ?? 0);
-  const hasImg    = !!(offer.bannerUrl || offer.imageUrl);
   const hasVid    = !!offer.videoUrl;
+  const imageSlides = [
+    ...(offer.bannerUrl || offer.imageUrl ? [offer.bannerUrl || offer.imageUrl!] : []),
+    ...(offer.images ?? []),
+  ];
+  const hasImg = imageSlides.length > 0;
+  const heroImg = imageSlides[Math.min(heroIdx, imageSlides.length - 1)];
+  const heroPrev = () => setHeroIdx(i => (i - 1 + imageSlides.length) % imageSlides.length);
+  const heroNext = () => setHeroIdx(i => (i + 1) % imageSlides.length);
 
   return (
     <div className="w-full pb-6">
@@ -289,7 +309,11 @@ export default function OfferDetail() {
       </div>
 
       {/* ── Hero image ─────────────────────────────────────────────────── */}
-      <div className="relative w-full aspect-[4/3] md:aspect-[3/1] rounded-3xl overflow-hidden bg-gray-950 mb-5 shadow-xl shadow-black/10">
+      <div
+        className="relative w-full aspect-[4/3] md:aspect-[3/1] rounded-3xl overflow-hidden bg-gray-950 mb-5 shadow-xl shadow-black/10"
+        onMouseEnter={() => setHeroPaused(true)}
+        onMouseLeave={() => setHeroPaused(false)}
+      >
         {hasVid ? (
           <>
             <video ref={videoRef} src={offer.videoUrl} className="w-full h-full object-cover"
@@ -302,16 +326,56 @@ export default function OfferDetail() {
             </button>
           </>
         ) : hasImg ? (
-          <button type="button" onClick={() => setLightbox(true)} className="w-full h-full block group">
-            <img src={offer.bannerUrl || offer.imageUrl} alt={offer.title}
-              className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-            <div className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
-              <div className="bg-black/50 backdrop-blur-sm rounded-full p-2">
-                <ZoomIn size={15} className="text-white" />
-              </div>
-            </div>
-          </button>
+          <>
+            <AnimatePresence mode="wait">
+              <motion.button
+                key={heroIdx}
+                type="button"
+                onClick={() => setLightbox(true)}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="absolute inset-0 w-full h-full block group"
+              >
+                <img src={heroImg} alt={offer.title}
+                  className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="bg-black/50 backdrop-blur-sm rounded-full p-2">
+                    <ZoomIn size={15} className="text-white" />
+                  </div>
+                </div>
+              </motion.button>
+            </AnimatePresence>
+
+            {/* Slider controls — only when there's more than one image */}
+            {imageSlides.length > 1 && (
+              <>
+                <button
+                  onClick={(e) => { e.stopPropagation(); heroPrev(); }}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-sm flex items-center justify-center text-white transition-colors"
+                >
+                  <ChevronRight size={16} className="rotate-180" />
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); heroNext(); }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-sm flex items-center justify-center text-white transition-colors"
+                >
+                  <ChevronRight size={16} />
+                </button>
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 flex gap-1.5">
+                  {imageSlides.map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={(e) => { e.stopPropagation(); setHeroIdx(i); }}
+                      className={`h-1.5 rounded-full transition-all ${i === heroIdx ? 'bg-white w-5' : 'bg-white/40 w-1.5'}`}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+          </>
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[var(--primary)]/20 to-orange-900/30">
             <ShoppingBag size={64} className="text-white/20" />
@@ -342,6 +406,10 @@ export default function OfferDetail() {
           </div>
         )}
       </div>
+
+      {!hasVid && imageSlides.length > 1 && (
+        <p className="text-xs text-[var(--text-muted)] text-center -mt-3 mb-5">{heroIdx + 1} / {imageSlides.length} photos</p>
+      )}
 
       {/* ── Title block ────────────────────────────────────────────────── */}
       <div className="mb-5">
@@ -433,7 +501,7 @@ export default function OfferDetail() {
           {offer.redeemUrl && (
             <a href={offer.redeemUrl} target="_blank" rel="noopener noreferrer"
               onClick={() => { if (offer.couponCode) handleCopy(); }}
-              className="flex items-center gap-4 bg-gradient-to-r from-[var(--primary)] to-orange-500 text-white px-5 py-4 rounded-2xl shadow-lg shadow-[var(--primary)]/20 hover:opacity-95 transition-opacity group">
+              className="flex items-center gap-4 gradient-bg text-white px-5 py-4 rounded-2xl shadow-lg shadow-[var(--primary)]/20 hover:opacity-95 transition-opacity group">
               <div className="flex-1">
                 <p className="font-heading font-bold text-lg leading-tight">Redeem Online</p>
                 <p className="text-xs text-white/75 mt-0.5">
@@ -617,7 +685,7 @@ export default function OfferDetail() {
               <X size={20} className="text-white" />
             </button>
             <motion.img initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }}
-              src={offer.bannerUrl || offer.imageUrl} alt={offer.title}
+              src={heroImg} alt={offer.title}
               className="max-w-full max-h-[90vh] object-contain rounded-2xl shadow-2xl"
               onClick={e => e.stopPropagation()} />
           </motion.div>

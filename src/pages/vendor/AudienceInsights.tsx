@@ -1,8 +1,9 @@
+import { Link } from 'react-router-dom';
 import BackButton from '../../components/BackButton';
 import { DashboardSkeleton } from '../../components/ui/Skeleton';
-import { ErrorState } from '../../components/ui/EmptyState';
+import { ErrorState, EmptyState } from '../../components/ui/EmptyState';
 import { useState, useEffect } from 'react';
-import { Users, Smartphone, Monitor, Tablet, MapPin, TrendingUp, MousePointer, Bookmark, Star } from 'lucide-react';
+import { Users, Smartphone, Monitor, Tablet, MapPin, TrendingUp, MousePointer, Bookmark, Star, Store } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { PieChart, Pie, Cell, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import type { AudienceData } from '../../types';
@@ -69,7 +70,19 @@ export default function AudienceInsights() {
     totalSaves:       raw.total_saves,
   } : null;
 
-  if (loading || !vendorId) return (
+  if (!vendorId) return (
+    <div className="pb-6">
+      <BackButton to="/vendor/dashboard" />
+      <EmptyState
+        icon="🏪"
+        title="You don't have a vendor account yet"
+        description="Apply as a vendor to see audience insights for your offers."
+        action={<Link to="/become-vendor" className="btn btn-primary btn-sm"><Store size={16} /> Apply as Vendor</Link>}
+      />
+    </div>
+  );
+
+  if (loading) return (
     <div className="pb-6">
       <BackButton to="/vendor/dashboard" />
       <DashboardSkeleton />

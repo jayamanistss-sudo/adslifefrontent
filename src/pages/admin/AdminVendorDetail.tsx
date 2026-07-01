@@ -129,7 +129,7 @@ export default function AdminVendorDetail() {
               )}
               {v.status === 'approved' && (
                 <button disabled={acting} onClick={() => action('suspend')}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-orange-500 text-white text-sm font-semibold hover:bg-orange-600 disabled:opacity-60 transition-colors shadow-sm">
+                  className="btn btn-primary text-sm disabled:opacity-60">
                   <PauseCircle size={15} /> Suspend
                 </button>
               )}
@@ -305,7 +305,7 @@ export default function AdminVendorDetail() {
         {offers.length === 0 ? (
           <div className="text-center py-14 text-[var(--text-muted)] text-sm">No offers yet</div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto overflow-y-hidden">
             <table className="w-full text-xs">
               <thead>
                 <tr className="bg-[var(--surface-2)] text-[var(--text-muted)]">

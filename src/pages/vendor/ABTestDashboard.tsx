@@ -1,4 +1,5 @@
 import BackButton from '../../components/BackButton';
+import { EmptyState } from '../../components/ui/EmptyState';
 import { useState, useEffect } from 'react';
 
 import { Trophy } from 'lucide-react';
@@ -38,7 +39,16 @@ export default function ABTestDashboard() {
 
   if (loading) return <><BackButton to="/vendor/dashboard" /><div className="text-center py-20 text-[var(--text-muted)]">Loading A/B test...</div></>;
 
-  if (!result) return null;
+  if (!result) return (
+    <div className="pb-6">
+      <BackButton to="/vendor/dashboard" />
+      <EmptyState
+        icon="🧪"
+        title="No A/B test running"
+        description="Start an A/B test on two offers to compare performance and let the data pick a winner."
+      />
+    </div>
+  );
 
   const canDeclare = result.confidence >= 85 && result.status === 'running';
 

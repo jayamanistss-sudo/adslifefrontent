@@ -26,55 +26,23 @@ const ORBS = [
 
 function LeftPanel() {
   return (
-    <div className="hidden lg:flex relative flex-col justify-between overflow-hidden h-full"
-      style={{ background: 'linear-gradient(145deg,#FF7420 0%,#C84E00 50%,#8B3200 100%)' }}>
-      <style>{`
-        @keyframes adFloat {
-          0%   { transform:translateY(0px) rotate(0deg);   opacity:0.92; }
-          33%  { transform:translateY(-14px) rotate(1deg); opacity:1;    }
-          66%  { transform:translateY(-6px) rotate(-1deg); opacity:0.95; }
-          100% { transform:translateY(0px) rotate(0deg);   opacity:0.92; }
-        }
-        @keyframes orbPulse {
-          0%,100%{ transform:scale(1);    opacity:var(--op); }
-          50%    { transform:scale(1.08); opacity:calc(var(--op)*1.4); }
-        }
-        @keyframes shimmerL {
-          0%  { background-position:-200% center; }
-          100%{ background-position: 200% center; }
-        }
-        .ad-floater{ animation:adFloat var(--dur) ease-in-out infinite; animation-delay:var(--delay); }
-        .lp-orb    { animation:orbPulse var(--dur) ease-in-out infinite; animation-delay:var(--delay); }
-        .shimmer-bar{
-          background:linear-gradient(90deg,rgba(255,255,255,.05) 0%,rgba(255,255,255,.18) 50%,rgba(255,255,255,.05) 100%);
-          background-size:200% auto;
-          animation:shimmerL 3s linear infinite;
-        }
-      `}</style>
-
+    <div className="hidden lg:flex auth-panel-left relative flex-col justify-between overflow-hidden h-full">
       {ORBS.map((o,i)=>(
-        <div key={i} className="lp-orb absolute rounded-full" style={{
+        <div key={i} className="auth-orb absolute rounded-full" style={{
           width:o.w,height:o.h,left:`${o.x}%`,top:`${o.y}%`,
           background:'radial-gradient(circle,rgba(255,255,255,.22) 0%,rgba(255,255,255,0) 70%)',
           ['--op' as string]:o.opacity,['--dur' as string]:`${o.dur}s`,['--delay' as string]:`${o.delay}s`,
         }}/>
       ))}
-      <div className="shimmer-bar absolute inset-0 pointer-events-none"
-        style={{transform:'rotate(-12deg) scaleX(2)',transformOrigin:'center'}}/>
 
       {AD_FLOATERS.map((f,i)=>(
-        <div key={i} className="ad-floater absolute z-10"
+        <div key={i} className="auth-float absolute z-10"
           style={{left:`${f.x}%`,top:`${f.y}%`,['--dur' as string]:`${f.dur}s`,['--delay' as string]:`${f.delay}s`}}>
-          <div style={{
-            background:'rgba(255,255,255,.15)',backdropFilter:'blur(10px)',
-            border:'1px solid rgba(255,255,255,.28)',borderRadius:14,
-            padding:'8px 13px',display:'flex',alignItems:'center',gap:8,
-            boxShadow:'0 4px 20px rgba(0,0,0,.15)',minWidth:110,
-          }}>
-            <span style={{fontSize:18,lineHeight:1}}>{f.emoji}</span>
+          <div className="auth-floater-card">
+            <span className="text-lg leading-none">{f.emoji}</span>
             <div>
-              <div style={{color:'#fff',fontSize:12,fontWeight:700,lineHeight:1.2}}>{f.label}</div>
-              <div style={{color:'rgba(255,255,255,.65)',fontSize:10,lineHeight:1.3}}>{f.sub}</div>
+              <div className="text-white text-xs font-bold leading-tight">{f.label}</div>
+              <div className="text-white/65 text-[10px] leading-snug">{f.sub}</div>
             </div>
           </div>
         </div>
@@ -82,8 +50,8 @@ function LeftPanel() {
 
       <div className="relative z-20 flex flex-col justify-between h-full p-8 xl:p-10">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center text-white font-bold text-lg border border-white/30 shadow-lg">A</div>
-          <span className="text-white font-bold text-xl tracking-tight drop-shadow">AdsLife</span>
+          <div className="brand-mark brand-mark-lg bg-white/20 backdrop-blur-sm border-white/30">A</div>
+          <span className="text-white font-bold text-xl tracking-tight">AdsLife</span>
         </div>
         <div className="space-y-5 my-auto py-8">
           <span className="inline-block bg-white/15 border border-white/30 text-white text-[10px] font-bold px-3 py-1.5 rounded-full tracking-widest uppercase shadow">
@@ -148,110 +116,50 @@ export default function Login() {
 
   return (
     <div className="h-screen w-screen overflow-hidden grid lg:grid-cols-[0.82fr_1.18fr]">
-      <style>{`
-        @keyframes rSlide {
-          from{opacity:0;transform:translateX(28px);}
-          to  {opacity:1;transform:translateX(0);}
-        }
-        @keyframes rUp {
-          from{opacity:0;transform:translateY(14px);}
-          to  {opacity:1;transform:translateY(0);}
-        }
-        @keyframes orbFloat {
-          0%,100%{transform:translate(0,0) scale(1);}
-          50%    {transform:translate(14px,-12px) scale(1.06);}
-        }
-        @keyframes orbFloat2 {
-          0%,100%{transform:translate(0,0) scale(1);}
-          50%    {transform:translate(-12px,10px) scale(1.05);}
-        }
-        @keyframes accentShimmer {
-          0%  {background-position:-200% center;}
-          100%{background-position: 200% center;}
-        }
-        .r-enter{animation:rSlide .6s cubic-bezier(.22,1,.36,1) both;}
-        .r-f1{animation:rUp .5s cubic-bezier(.22,1,.36,1) .08s both;}
-        .r-f2{animation:rUp .5s cubic-bezier(.22,1,.36,1) .16s both;}
-        .r-f3{animation:rUp .5s cubic-bezier(.22,1,.36,1) .22s both;}
-        .r-f4{animation:rUp .5s cubic-bezier(.22,1,.36,1) .28s both;}
-        .r-f5{animation:rUp .5s cubic-bezier(.22,1,.36,1) .34s both;}
-        .r-f6{animation:rUp .5s cubic-bezier(.22,1,.36,1) .40s both;}
-        .ro1{animation:orbFloat  10s ease-in-out infinite;}
-        .ro2{animation:orbFloat2 13s ease-in-out infinite;}
-        .accent-bar{
-          background:linear-gradient(90deg,#FF7420,#FFB347,#FF7420);
-          background-size:200% auto;
-          animation:accentShimmer 3s linear infinite;
-        }
-        .btn-go{transition:transform .18s ease,box-shadow .18s ease;}
-        .btn-go:not(:disabled):hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(255,116,32,.28);}
-        .btn-go:not(:disabled):active{transform:translateY(0);}
-      `}</style>
-
       <LeftPanel/>
 
-      {/* RIGHT */}
-      <div className="relative flex flex-col justify-center overflow-hidden h-full px-8 py-6 xl:px-14 bg-[var(--surface)]"
-        style={{backgroundImage:'radial-gradient(var(--border) 1px,transparent 1px)',backgroundSize:'22px 22px'}}>
+      <div className="auth-form-panel relative flex flex-col justify-center overflow-hidden h-full px-6 py-6 sm:px-8 xl:px-14">
+        <div className="auth-accent-bar" />
 
-        {/* Ambient orbs */}
-        <div className="ro1 absolute pointer-events-none rounded-full"
-          style={{width:280,height:280,top:-70,right:-60,
-            background:'radial-gradient(circle,rgba(255,116,32,.07) 0%,transparent 65%)'}}/>
-        <div className="ro2 absolute pointer-events-none rounded-full"
-          style={{width:200,height:200,bottom:-50,left:-40,
-            background:'radial-gradient(circle,rgba(255,150,50,.05) 0%,transparent 65%)'}}/>
-
-        {/* Accent line at top */}
-        <div className="accent-bar absolute top-0 left-0 right-0 h-[3px] pointer-events-none"/>
-
-        {/* Content */}
-        <div className="r-enter relative z-10 w-full max-w-[400px] mx-auto">
-
-          {/* Brand mark */}
-          <div className="r-f1 flex items-center gap-2.5 mb-5">
-            <div className="w-9 h-9 bg-gradient-to-br from-[#FF7420] to-[#C84E00] rounded-[11px] flex items-center justify-center text-white font-bold text-sm shadow-md">A</div>
+        <div className="auth-enter relative z-10 w-full max-w-[400px] mx-auto">
+          <div className="auth-stagger-1 flex items-center gap-2.5 mb-5">
+            <div className="brand-mark brand-mark-md">A</div>
             <span className="font-bold text-[var(--text)] text-[15px] tracking-tight">AdsLife</span>
           </div>
 
-          {/* Heading */}
-          <div className="r-f1 mb-6">
+          <div className="auth-stagger-1 mb-6">
             <p className="text-[11px] font-semibold text-[var(--primary)] uppercase tracking-widest mb-1">Sign in</p>
             <h1 className="font-heading font-black text-[28px] text-[var(--text)] leading-tight">Welcome back</h1>
             <p className="text-[var(--text-muted)] text-sm mt-1">Sign in to continue to your account</p>
           </div>
 
-          {/* Google */}
-          <div className="r-f2">
+          <div className="auth-stagger-2">
             <GoogleAuthButton label="Continue with Google"/>
           </div>
 
-          {/* Divider */}
-          <div className="r-f3 flex items-center gap-3 my-5">
+          <div className="auth-stagger-3 flex items-center gap-3 my-5">
             <div className="flex-1 h-px bg-[var(--border)]"/>
             <span className="text-[10px] text-[var(--text-muted)] font-semibold tracking-widest uppercase">or</span>
             <div className="flex-1 h-px bg-[var(--border)]"/>
           </div>
 
-          {/* Form */}
           <form onSubmit={handleSubmit} noValidate className="space-y-4">
-            <div className="r-f3">
-              <label className="block text-[10px] font-bold text-[var(--text-secondary)] mb-1.5 tracking-widest uppercase">Email</label>
-              <div className="relative rounded-xl border border-[var(--border)] bg-[var(--surface)] transition-all duration-200 focus-within:border-[var(--primary)] focus-within:shadow-[0_0_0_3px_var(--primary-muted)]">
+            <div className="auth-stagger-3">
+              <label className="label">Email</label>
+              <div className="auth-input-wrap">
                 <Mail size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none"/>
                 <input id="login-email" type="email" required autoComplete="email"
-                  className="w-full bg-transparent text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] outline-none pl-9 pr-4 py-2.5"
                   placeholder="you@example.com"
                   value={form.email} onChange={e=>setForm(f=>({...f,email:e.target.value}))}/>
               </div>
             </div>
 
-            <div className="r-f4">
-              <label className="block text-[10px] font-bold text-[var(--text-secondary)] mb-1.5 tracking-widest uppercase">Password</label>
-              <div className="relative rounded-xl border border-[var(--border)] bg-[var(--surface)] transition-all duration-200 focus-within:border-[var(--primary)] focus-within:shadow-[0_0_0_3px_var(--primary-muted)]">
+            <div className="auth-stagger-4">
+              <label className="label">Password</label>
+              <div className="auth-input-wrap">
                 <Lock size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none"/>
                 <input id="login-password" type={showPw?'text':'password'} required autoComplete="current-password"
-                  className="w-full bg-transparent text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] outline-none pl-9 pr-10 py-2.5"
+                  className="!pr-10"
                   placeholder="Enter your password"
                   value={form.password} onChange={e=>setForm(f=>({...f,password:e.target.value}))}/>
                 <button type="button" onClick={()=>setShowPw(!showPw)} tabIndex={-1}
@@ -261,10 +169,8 @@ export default function Login() {
               </div>
             </div>
 
-            <div className="r-f5">
-              <button type="submit" disabled={loading}
-                className="btn-go btn btn-primary btn-lg w-full"
-                style={{marginTop:4}}>
+            <div className="auth-stagger-5">
+              <button type="submit" disabled={loading} className="btn btn-primary btn-lg btn-shine w-full mt-1">
                 {loading
                   ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"/>Signing in…</>
                   : <>Sign in <span className="text-white/70 text-base ml-1">→</span></>
@@ -273,7 +179,7 @@ export default function Login() {
             </div>
           </form>
 
-          <p className="r-f6 text-center text-sm text-[var(--text-muted)] mt-6">
+          <p className="auth-stagger-6 text-center text-sm text-[var(--text-muted)] mt-6">
             Don't have an account?{' '}
             <Link to="/register" className="text-[var(--primary)] font-semibold hover:underline underline-offset-2">Create one free</Link>
           </p>

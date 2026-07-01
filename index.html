@@ -111,6 +111,19 @@
     <!-- Preconnect for performance -->
     <link rel="preconnect" href="https://adslife.in" />
     <link rel="dns-prefetch" href="https://adslife.in" />
+
+    <!-- Prevent theme flash -->
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem('adslife-theme');
+          var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          if (stored === 'dark' || (!stored && prefersDark)) {
+            document.documentElement.classList.add('dark');
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

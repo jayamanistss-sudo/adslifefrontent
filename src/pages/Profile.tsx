@@ -7,6 +7,7 @@ import {
   Bookmark, Bell, BellOff, ExternalLink, Tag, Copy, Gift, MessageCircle, Info, Coins, Pencil
 } from 'lucide-react';
 import CategoryIcon from '../components/CategoryIcon';
+import { EmptyState } from '../components/ui/EmptyState';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useUserStore } from '../store/useUserStore';
@@ -177,7 +178,7 @@ function Step1({ form, update, categories }: {
                 onClick={() => update('category', c.slug)}
                 className={`flex items-center justify-center gap-2 px-3 py-3 rounded-2xl border text-sm font-semibold transition-all duration-200 cursor-pointer ${
                   form.category === c.slug
-                    ? 'bg-gradient-to-r from-[var(--primary)] to-orange-500 border-transparent text-white shadow-md shadow-primary/10'
+                    ? 'bg-gradient-to-r from-[var(--primary)] to-primary-400 border-transparent text-white shadow-md shadow-primary/10'
                     : 'border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] bg-[var(--surface)] hover:bg-[var(--surface-2)]'
                 }`}
               >
@@ -677,7 +678,7 @@ function BecomeVendorModal({ onClose, onSuccess }: {
         </div>
 
         {/* Step indicator */}
-        <div className="flex items-center gap-0 px-6 py-3 border-b border-[var(--border)] bg-[var(--surface-2)]/30 overflow-x-auto scrollbar-hide flex-shrink-0">
+        <div className="flex items-center gap-0 px-6 py-3 border-b border-[var(--border)] bg-[var(--surface-2)]/30 overflow-x-auto overflow-y-hidden scrollbar-hide flex-shrink-0">
           {STEPS.map((s, i) => {
             const Icon = s.icon;
             return (
@@ -842,7 +843,7 @@ function EditProfileModal({ onClose, onSaved }: { onClose: () => void; onSaved: 
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
-              className="relative w-20 h-20 rounded-2xl overflow-hidden bg-gradient-to-br from-[var(--primary)] to-orange-500 flex items-center justify-center cursor-pointer group shadow-md"
+              className="relative w-20 h-20 rounded-2xl overflow-hidden bg-gradient-to-br from-[var(--primary)] to-primary-400 flex items-center justify-center cursor-pointer group shadow-md"
             >
               {form.avatar_url ? (
                 <img src={form.avatar_url} alt="" className="w-full h-full object-cover" />
@@ -870,7 +871,7 @@ function EditProfileModal({ onClose, onSaved }: { onClose: () => void; onSaved: 
               value={form.name}
               onChange={(e) => upd('name', e.target.value)}
               placeholder="Your name"
-              className="input-field w-full"
+              className="input w-full"
             />
           </div>
 
@@ -885,9 +886,9 @@ function EditProfileModal({ onClose, onSaved }: { onClose: () => void; onSaved: 
               }}
               placeholder="10-digit mobile number"
               inputMode="numeric"
-              className="input-field w-full"
+              className="input w-full"
             />
-            {phoneErr && <p className="text-xs text-red-500 mt-1 font-medium">{phoneErr}</p>}
+            {phoneErr && <p className="text-xs mt-1 font-medium" style={{ color: 'var(--danger)' }}>{phoneErr}</p>}
           </div>
 
           {/* City */}
@@ -897,7 +898,7 @@ function EditProfileModal({ onClose, onSaved }: { onClose: () => void; onSaved: 
               value={form.city}
               onChange={(e) => upd('city', e.target.value)}
               placeholder="Your city"
-              className="input-field w-full"
+              className="input w-full"
             />
           </div>
         </div>
@@ -1013,7 +1014,8 @@ export default function Profile() {
           variants={itemVariants}
           whileHover={{ y: -4, boxShadow: '0 20px 30px rgba(255,98,0,0.15)' }}
           whileTap={{ scale: 0.99 }}
-          className="w-full flex items-center justify-between bg-gradient-to-r from-[var(--primary)] to-orange-500 text-white rounded-3xl p-5 mb-6 shadow-md transition-all duration-300 cursor-pointer"
+          className="w-full flex items-center justify-between bg-gradient-to-r from-[var(--primary)] to-primary-400 text-white rounded-3xl p-5 mb-6 transition-all duration-300 cursor-pointer"
+          style={{ boxShadow: 'var(--shadow-primary)' }}
         >
           <div className="flex items-center gap-4">
             <div className="w-11 h-11 rounded-2xl bg-white/20 flex items-center justify-center shadow-inner">
@@ -1031,10 +1033,11 @@ export default function Profile() {
       {user.role === 'user' && vendorApp?.status === 'pending' && (
         <motion.div
           variants={itemVariants}
-          className="w-full flex items-center gap-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-900/30 rounded-3xl p-5 mb-6"
+          className="w-full flex items-center gap-4 rounded-3xl p-5 mb-6 border"
+          style={{ background: 'var(--warning-light)', borderColor: 'rgba(245,158,11,0.25)' }}
         >
-          <div className="w-11 h-11 rounded-2xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center flex-shrink-0">
-            <Store size={22} className="text-amber-600" />
+          <div className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(245,158,11,0.18)' }}>
+            <Store size={22} style={{ color: 'var(--warning)' }} />
           </div>
           <div className="text-left">
             <p className="font-heading font-bold text-base text-[var(--text)]">Vendor Application Under Review</p>
@@ -1051,11 +1054,12 @@ export default function Profile() {
           variants={itemVariants}
           whileHover={{ y: -4 }}
           whileTap={{ scale: 0.99 }}
-          className="w-full flex items-center justify-between bg-red-50 dark:bg-red-950/20 border border-red-200/60 dark:border-red-900/30 rounded-3xl p-5 mb-6 transition-all duration-300 cursor-pointer"
+          className="w-full flex items-center justify-between rounded-3xl p-5 mb-6 border transition-all duration-300 cursor-pointer"
+          style={{ background: 'var(--danger-light)', borderColor: 'rgba(239,68,68,0.25)' }}
         >
           <div className="flex items-center gap-4">
-            <div className="w-11 h-11 rounded-2xl bg-red-100 dark:bg-red-900/40 flex items-center justify-center flex-shrink-0">
-              <Store size={22} className="text-red-500" />
+            <div className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(239,68,68,0.18)' }}>
+              <Store size={22} style={{ color: 'var(--danger)' }} />
             </div>
             <div className="text-left">
               <p className="font-heading font-bold text-base text-[var(--text)]">Vendor Application Not Approved</p>
@@ -1067,10 +1071,9 @@ export default function Profile() {
       )}
 
       {/* Profile Header */}
-      <motion.div 
-        variants={itemVariants} 
-        className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 shadow-sm mb-6 flex items-center gap-4 relative overflow-hidden"
-        style={{ boxShadow: '0 4px 20px -2px rgba(0,0,0,0.03)' }}
+      <motion.div
+        variants={itemVariants}
+        className="card p-6 mb-6 flex items-center gap-4 relative overflow-hidden"
       >
         <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[var(--primary)] to-accent flex items-center justify-center text-2xl font-extrabold text-white flex-shrink-0 shadow-md overflow-hidden">
           {user.avatarUrl
@@ -1082,7 +1085,7 @@ export default function Profile() {
           <h2 className="font-heading font-extrabold text-xl text-[var(--text)] leading-tight">{user.name}</h2>
           <p className="text-xs text-[var(--text-secondary)] mt-0.5 font-medium">{user.email}</p>
           <div className="flex items-center gap-2 mt-2 flex-wrap">
-            <span className="text-[10px] font-bold tracking-wider uppercase bg-[var(--primary-light)] text-[#9A3300] px-2.5 py-0.5 rounded-full border border-orange-200/50">
+            <span className="badge badge-primary uppercase tracking-wider text-[10px]">
               {user.role}
             </span>
             {user.city && (
@@ -1102,7 +1105,7 @@ export default function Profile() {
           </button>
           <button
             onClick={handleLogout}
-            className="p-2.5 text-[var(--text-secondary)] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-2xl transition-all cursor-pointer border border-transparent hover:border-red-200/30"
+            className="p-2.5 text-[var(--text-secondary)] hover:text-[var(--danger)] hover:bg-[var(--danger-light)] rounded-2xl transition-all cursor-pointer border border-transparent hover:border-[rgba(239,68,68,0.3)]"
             title="Sign Out"
           >
             <LogOut size={18} />
@@ -1147,9 +1150,9 @@ export default function Profile() {
           >
             {/* Coins & Referral Card */}
             {referral && (
-              <div 
-                className="bg-gradient-to-br from-orange-500 via-orange-600 to-amber-500 rounded-3xl p-6 text-white shadow-lg relative overflow-hidden border border-white/10"
-                style={{ boxShadow: '0 10px 30px rgba(255,98,0,0.15)' }}
+              <div
+                className="gradient-bg rounded-3xl p-6 text-white relative overflow-hidden border border-white/10"
+                style={{ boxShadow: 'var(--shadow-primary)' }}
               >
                 {/* Visual accents */}
                 <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-white/5 rounded-full blur-2xl pointer-events-none" />
@@ -1187,7 +1190,7 @@ export default function Profile() {
                     onClick={shareWhatsAppReferral}
                     className="flex items-center justify-center gap-2 bg-white text-orange-600 hover:bg-orange-50 active:scale-95 shadow-md rounded-2xl py-2.5 text-xs font-bold transition-all cursor-pointer flex-shrink-0"
                   >
-                    <MessageCircle size={15} fill="currentColor" className="text-orange-500" /> Share Link
+                    <MessageCircle size={15} fill="currentColor" className="text-primary" /> Share Link
                   </button>
                 </div>
 
@@ -1200,25 +1203,31 @@ export default function Profile() {
             )}
 
             {/* Quick dashboard overview welcome */}
-            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 shadow-sm">
+            <div className="card p-6">
               <h3 className="font-heading font-extrabold text-base text-[var(--text)] mb-1.5">Welcome back, {user.name?.split(' ')[0]}!</h3>
               <p className="text-xs text-[var(--text-secondary)] mb-6 font-medium">Here's a quick look at your platform activities and details.</p>
               
               <div className="grid grid-cols-3 gap-2 sm:gap-4">
-                <button onClick={() => setTab('saved')} className="bg-[var(--surface-2)] border border-[var(--border)] hover:border-[var(--primary)]/30 rounded-2xl p-3 sm:p-4 flex flex-col items-center justify-center text-center transition-all cursor-pointer hover:shadow-sm">
-                  <Bookmark size={18} className="text-[var(--primary)] mb-2" />
+                <button onClick={() => setTab('saved')} className="stat-card card-hover items-center text-center cursor-pointer p-3 sm:p-5">
+                  <div className="stat-card-icon" style={{ background: 'var(--primary-light)' }}>
+                    <Bookmark size={18} style={{ color: 'var(--primary)' }} />
+                  </div>
+                  <span className="stat-value text-lg sm:text-2xl">{savedOffers.length}</span>
                   <span className="text-xs font-semibold text-[var(--text-secondary)]">Saved Offers</span>
-                  <span className="text-base font-extrabold text-[var(--text)] mt-1">{savedOffers.length}</span>
                 </button>
-                <button onClick={() => setTab('subscribed')} className="bg-[var(--surface-2)] border border-[var(--border)] hover:border-[var(--primary)]/30 rounded-2xl p-4 flex flex-col items-center justify-center text-center transition-all cursor-pointer hover:shadow-sm">
-                  <Bell size={18} className="text-emerald-500 mb-2" />
+                <button onClick={() => setTab('subscribed')} className="stat-card card-hover items-center text-center cursor-pointer p-3 sm:p-5">
+                  <div className="stat-card-icon" style={{ background: 'var(--accent-light)' }}>
+                    <Bell size={18} style={{ color: 'var(--accent)' }} />
+                  </div>
+                  <span className="stat-value text-lg sm:text-2xl">{followedVendors.length}</span>
                   <span className="text-xs font-semibold text-[var(--text-secondary)]">Subscriptions</span>
-                  <span className="text-base font-extrabold text-[var(--text)] mt-1">{followedVendors.length}</span>
                 </button>
-                <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-2xl p-4 flex flex-col items-center justify-center text-center">
-                  <Coins size={18} className="text-amber-500 mb-2" />
+                <div className="stat-card items-center text-center p-3 sm:p-5">
+                  <div className="stat-card-icon" style={{ background: 'var(--warning-light)' }}>
+                    <Coins size={18} style={{ color: 'var(--warning)' }} />
+                  </div>
+                  <span className="stat-value text-lg sm:text-2xl">{referral?.coins ?? 0}</span>
                   <span className="text-xs font-semibold text-[var(--text-secondary)]">Coins Wallet</span>
-                  <span className="text-base font-extrabold text-[var(--text)] mt-1">{referral?.coins ?? 0}</span>
                 </div>
               </div>
             </div>
@@ -1232,7 +1241,7 @@ export default function Profile() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -15 }}
             transition={{ duration: 0.25 }}
-            className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl shadow-sm overflow-hidden"
+            className="card overflow-hidden"
           >
             <div className="flex items-center gap-2 px-6 py-4.5 border-b border-[var(--border)] bg-[var(--surface-2)]/30">
               <Bookmark size={16} className="text-[var(--primary)]" />
@@ -1252,11 +1261,11 @@ export default function Profile() {
                 ))}
               </div>
             ) : savedOffers.length === 0 ? (
-              <div className="py-20 text-center text-[var(--text-muted)] px-6">
-                <div className="text-4xl mb-3">🔖</div>
-                <p className="text-sm font-semibold text-[var(--text-secondary)]">No saved offers yet</p>
-                <p className="text-xs mt-1">Bookmark exclusive deals while browsing to find them listed here.</p>
-              </div>
+              <EmptyState
+                icon="🔖"
+                title="No saved offers yet"
+                description="Bookmark exclusive deals while browsing to find them listed here."
+              />
             ) : (
               <motion.div 
                 variants={containerVariants}
@@ -1277,7 +1286,7 @@ export default function Profile() {
                     <motion.div 
                       key={o.id} 
                       variants={itemVariants}
-                      className="flex items-start gap-4 p-4 hover:bg-gray-50/50 dark:hover:bg-gray-800/10 transition-all duration-300 rounded-2xl my-2 border border-transparent hover:border-[var(--primary)]/10"
+                      className="flex items-start gap-4 p-4 hover:bg-[var(--surface-hover)] transition-all duration-300 rounded-2xl my-2 border border-transparent hover:border-[var(--primary)]/10"
                     >
                       {(o.image_url ?? o.banner_url) ? (
                         <img src={o.image_url ?? o.banner_url} alt={o.title}
@@ -1297,11 +1306,12 @@ export default function Profile() {
                             </span>
                           )}
                           {tl && (
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                              isExpiring 
-                                ? 'bg-red-50 dark:bg-red-950/20 text-red-500 border-red-200/30' 
-                                : 'bg-gray-50 dark:bg-gray-800/40 text-[var(--text-secondary)] border-[var(--border)]'
-                            }`}>
+                            <span
+                              className="text-[10px] font-bold px-2 py-0.5 rounded-full border"
+                              style={isExpiring
+                                ? { background: 'var(--danger-light)', color: 'var(--danger)', borderColor: 'rgba(239,68,68,0.2)' }
+                                : { background: 'var(--surface-2)', color: 'var(--text-secondary)', borderColor: 'var(--border)' }}
+                            >
                               {tl}
                             </span>
                           )}
@@ -1329,7 +1339,7 @@ export default function Profile() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -15 }}
             transition={{ duration: 0.25 }}
-            className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl shadow-sm overflow-hidden"
+            className="card overflow-hidden"
           >
             <div className="flex items-center gap-2 px-6 py-4.5 border-b border-[var(--border)] bg-[var(--surface-2)]/30">
               <Bell size={16} className="text-[var(--primary)]" />
@@ -1349,11 +1359,11 @@ export default function Profile() {
                 ))}
               </div>
             ) : followedVendors.length === 0 ? (
-              <div className="py-20 text-center text-[var(--text-muted)] px-6">
-                <div className="text-4xl mb-3">🔔</div>
-                <p className="text-sm font-semibold text-[var(--text-secondary)]">Not subscribed to any shops</p>
-                <p className="text-xs mt-1">Subscribe to businesses to get real-time alerts on active flash sales.</p>
-              </div>
+              <EmptyState
+                icon="🔔"
+                title="Not subscribed to any shops"
+                description="Subscribe to businesses to get real-time alerts on active flash sales."
+              />
             ) : (
               <motion.div 
                 variants={containerVariants}
@@ -1365,7 +1375,7 @@ export default function Profile() {
                   <motion.div 
                     key={v.id} 
                     variants={itemVariants}
-                    className="flex items-center gap-4 p-4 hover:bg-gray-50/50 dark:hover:bg-gray-800/10 transition-all duration-300 rounded-2xl my-2 border border-transparent hover:border-[var(--primary)]/10"
+                    className="flex items-center gap-4 p-4 hover:bg-[var(--surface-hover)] transition-all duration-300 rounded-2xl my-2 border border-transparent hover:border-[var(--primary)]/10"
                   >
                     {v.logo_url ? (
                       <img src={v.logo_url} alt={v.business_name}
@@ -1387,7 +1397,7 @@ export default function Profile() {
                     <button
                       onClick={() => handleUnfollow(v.id)}
                       title="Unsubscribe"
-                      className="flex-shrink-0 flex items-center gap-1.5 text-xs text-[var(--text-secondary)] hover:text-red-500 font-bold border border-[var(--border)] hover:border-red-200 bg-[var(--surface)] hover:bg-red-50/40 dark:hover:bg-red-950/10 px-3 py-2 rounded-xl transition-all cursor-pointer"
+                      className="flex-shrink-0 flex items-center gap-1.5 text-xs text-[var(--text-secondary)] hover:text-[var(--danger)] font-bold border border-[var(--border)] hover:border-[rgba(239,68,68,0.25)] bg-[var(--surface)] hover:bg-[var(--danger-light)] px-3 py-2 rounded-xl transition-all cursor-pointer"
                     >
                       <BellOff size={13} />
                       <span className="hidden sm:inline">Unsubscribe</span>

@@ -10,6 +10,7 @@ import { useUserStore } from '../store/useUserStore';
 import { useSiteSettings } from '../store/useSiteSettings';
 import { useSavedStore } from '../store/useSavedStore';
 import NotificationPanel from './NotificationPanel';
+import AnimatedBackground from './AnimatedBackground';
 import { api, endpoints } from '../utils/api';
 import { haptic } from '../utils/haptics';
 
@@ -35,6 +36,14 @@ export default function Layout({ children }: Props) {
   const [darkMode, setDarkMode] = useState(() =>
     document.documentElement.classList.contains('dark')
   );
+
+  useEffect(() => {
+    const stored = localStorage.getItem('adslife-theme');
+    const prefersDark = globalThis.matchMedia('(prefers-color-scheme: dark)').matches;
+    const shouldBeDark = stored === 'dark' || (!stored && prefersDark);
+    document.documentElement.classList.toggle('dark', shouldBeDark);
+    setDarkMode(shouldBeDark);
+  }, []);
   const [searchQuery, setSearchQuery] = useState('');
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
@@ -64,6 +73,7 @@ export default function Layout({ children }: Props) {
     const next = !darkMode;
     setDarkMode(next);
     document.documentElement.classList.toggle('dark', next);
+    localStorage.setItem('adslife-theme', next ? 'dark' : 'light');
   };
 
   // Close profile dropdown on outside click
@@ -147,17 +157,18 @@ export default function Layout({ children }: Props) {
   );
 
   return (
-    <div className={`min-h-screen flex bg-[var(--bg)] text-[var(--text)]`}>
+    <div className={`min-h-screen flex bg-[var(--bg)] text-[var(--text)] relative`}>
+      <AnimatedBackground />
 
       {/* ── Sidebar ── */}
       <aside
         style={{ width: sidebarOpen ? 'var(--sidebar-w)' : 'var(--sidebar-w-sm)' }}
-        className="hidden md:flex flex-col fixed left-0 top-0 h-screen z-50 bg-[var(--surface)] border-r border-[var(--border)] transition-all duration-250 ease-out overflow-hidden"
+        className="hidden md:flex flex-col fixed left-0 top-0 h-screen z-50 bg-[var(--surface)]/95 backdrop-blur-xl border-r border-[var(--border)] shadow-[var(--shadow-nav)] transition-all duration-250 ease-out overflow-hidden"
       >
         {/* Sidebar header */}
         <div className={`flex items-center h-[var(--navbar-h)] border-b border-[var(--border)] flex-shrink-0 ${sidebarOpen ? 'px-4 gap-3' : 'justify-center'}`}>
           {sidebarOpen && (
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#FF7420] to-[#B04200] flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-[0_4px_12px_rgba(255,98,0,0.45)] overflow-hidden">
+            <div className="brand-mark brand-mark-md brand-mark-glow">
               {site.site_logo_url
                 ? <img src={site.site_logo_url} alt={site.site_name} className="w-full h-full object-contain p-0.5" />
                 : (site.site_name?.[0] ?? 'A')}
@@ -212,17 +223,17 @@ export default function Layout({ children }: Props) {
       {/* ── Right side: navbar + content ── */}
       <div
         style={{ marginLeft: sidebarOpen ? 'var(--sidebar-w)' : 'var(--sidebar-w-sm)' }}
-        className="hidden md:flex flex-col flex-1 min-w-0 transition-all duration-250 ease-out"
+        className="hidden md:flex flex-col flex-1 min-w-0 transition-all duration-250 ease-out relative z-10"
       >
         {/* ── Navbar ── */}
-        <header className="sticky top-0 z-40 h-[var(--navbar-h)] bg-[var(--surface)] border-b border-[var(--border)] shadow-[0_1px_0_var(--border),0_4px_20px_rgba(0,0,0,0.04)] flex items-center gap-3 px-5">
+        <header className="sticky top-0 z-40 h-[var(--navbar-h)] bg-[var(--surface)]/95 backdrop-blur-xl border-b border-[var(--border)] shadow-[var(--shadow-nav)] flex items-center gap-3 px-5">
 
           {/* Search */}
           <form onSubmit={handleSearch} className="flex-1 max-w-lg relative">
             <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none" />
             <input
               type="text"
-              className="w-full h-10 pl-10 pr-4 rounded-xl bg-[var(--surface-2)] border-1.5 border-[var(--border)] text-[0.8125rem] text-[var(--text)] placeholder-[var(--text-muted)] outline-none transition-all duration-200 focus:bg-[var(--surface)] focus:border-[var(--primary)] focus:shadow-[0_0_0_3px_rgba(255,98,0,0.1)] font-[Inter]"
+              className="w-full h-11 pl-10 pr-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[0.8125rem] text-[var(--text)] placeholder-[var(--text-muted)] outline-none transition-all duration-200 focus:bg-[var(--surface)] focus:border-[var(--primary)] focus:shadow-[0_0_0_3px_var(--primary-muted)]"
               placeholder="Search offers, shops..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -240,7 +251,7 @@ export default function Layout({ children }: Props) {
                     onClick={() => setProfileOpen(!profileOpen)}
                     className="flex items-center gap-2 pl-1 pr-2.5 py-1 rounded-xl hover:bg-[var(--surface-2)] transition-colors"
                   >
-                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#FF7420] to-[#B04200] flex items-center justify-center text-white font-bold text-xs overflow-hidden flex-shrink-0">
+                    <div className="brand-mark brand-mark-sm">
                       {user?.avatarUrl
                         ? <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
                         : user?.name?.[0]?.toUpperCase() ?? 'U'
@@ -252,8 +263,15 @@ export default function Layout({ children }: Props) {
                     </div>
                   </button>
 
+                  <AnimatePresence>
                   {profileOpen && (
-                    <div className="absolute right-0 top-full mt-2 w-52 card py-1 z-50 animate-scale-in">
+                    <motion.div
+                      initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                      transition={{ type: 'spring', stiffness: 400, damping: 28 }}
+                      className="absolute right-0 top-full mt-2 w-52 card py-1 z-50"
+                    >
                       <div className="px-4 py-3 border-b border-[var(--border)]">
                         <div className="font-semibold text-[var(--text)] text-sm">{user?.name}</div>
                         <div className="text-[0.75rem] text-[var(--text-muted)] truncate">{user?.email}</div>
@@ -296,8 +314,9 @@ export default function Layout({ children }: Props) {
                           <LogOut size={15} /> Sign out
                         </button>
                       </div>
-                    </div>
+                    </motion.div>
                   )}
+                  </AnimatePresence>
                 </div>
               </>
             ) : (
@@ -309,14 +328,15 @@ export default function Layout({ children }: Props) {
         </header>
 
         {/* ── Page content ── */}
-        <main className="flex-1 p-6 overflow-x-hidden overflow-y-auto">
+        <main className="flex-1 p-4 md:p-6 overflow-x-hidden overflow-y-auto">
           <AnimatePresence mode="wait">
             <motion.div
               key={location.pathname}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] as const }}
+              className="page-shell"
+              initial={{ opacity: 0, y: 20, scale: 0.99 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -12, scale: 0.99 }}
+              transition={{ type: 'spring', stiffness: 320, damping: 30 }}
             >
               {children}
             </motion.div>
@@ -325,15 +345,15 @@ export default function Layout({ children }: Props) {
       </div>
 
       {/* ── Mobile layout ── */}
-      <div className="md:hidden flex flex-col flex-1 min-h-screen">
+      <div className="md:hidden flex flex-col flex-1 min-w-0 min-h-screen relative z-10">
         {/* Mobile header — collapses on scroll down, reveals on scroll up */}
         <motion.header
           animate={{ y: headerHidden ? '-100%' : 0 }}
           transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] as const }}
-          className="fixed top-0 left-0 right-0 z-40 h-[calc(3.5rem+env(safe-area-inset-top,0px))] pt-[env(safe-area-inset-top,0px)] bg-[var(--surface)] border-b border-[var(--border)] flex items-center gap-3 px-4"
+          className="fixed top-0 left-0 right-0 z-40 h-[calc(3.5rem+env(safe-area-inset-top,0px))] pt-[env(safe-area-inset-top,0px)] mobile-nav-glass border-b flex items-center gap-3 px-4"
         >
           <Link to="/feed" className="flex items-center gap-2 flex-shrink-0">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#FF7420] to-[#B04200] flex items-center justify-center text-white font-bold text-xs overflow-hidden">
+            <div className="brand-mark brand-mark-sm">
               {site.site_logo_url
                 ? <img src={site.site_logo_url} alt={site.site_name} className="w-full h-full object-contain p-0.5" />
                 : (site.site_name?.[0] ?? 'A')}
@@ -366,10 +386,10 @@ export default function Layout({ children }: Props) {
           <AnimatePresence mode="wait">
             <motion.div
               key={location.pathname}
-              initial={{ opacity: 0, x: 12 }}
+              initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -8 }}
-              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] as const }}
+              exit={{ opacity: 0, x: -16 }}
+              transition={{ type: 'spring', stiffness: 350, damping: 32 }}
             >
               {children}
             </motion.div>
@@ -377,8 +397,8 @@ export default function Layout({ children }: Props) {
         </main>
 
         {/* Mobile bottom nav */}
-        <nav className="fixed bottom-0 left-0 right-0 z-40 bg-[var(--surface)] border-t border-[var(--border)] safe-area-pb">
-          <div className="flex items-center justify-around h-[60px]">
+        <nav className="fixed bottom-0 left-0 right-0 z-40 mobile-nav-glass border-t safe-area-pb">
+          <div className="flex items-center justify-around h-[64px]">
             {isAuthenticated ? (
               mobileNav.slice(0, 5).map(({ to, icon: Icon, label }) => {
                 const active = isActive(to);
@@ -398,9 +418,13 @@ export default function Layout({ children }: Props) {
                         transition={{ type: 'spring', stiffness: 500, damping: 35 }}
                       />
                     )}
-                    <div className={`p-1.5 rounded-xl transition-all ${active ? 'bg-[var(--primary-light)] scale-105' : ''}`}>
+                    <motion.div
+                      className={`p-1.5 rounded-xl transition-colors ${active ? 'bg-[var(--primary-light)]' : ''}`}
+                      animate={active ? { scale: [1, 1.12, 1.05] } : { scale: 1 }}
+                      transition={{ duration: 0.35, ease: 'easeOut' }}
+                    >
                       <Icon size={18} />
-                    </div>
+                    </motion.div>
                     <span className="text-[9px] font-medium">{label}</span>
                   </Link>
                 );
@@ -412,7 +436,7 @@ export default function Layout({ children }: Props) {
                   <div className={`p-1.5 rounded-xl ${isActive('/feed') ? 'bg-[var(--primary-light)]' : ''}`}><Home size={18} /></div>
                   <span className="text-[9px] font-medium">Discover</span>
                 </Link>
-                <Link to="/login" onClick={() => haptic('medium')} className="flex flex-col items-center justify-center gap-0.5 min-w-[56px] min-h-[44px] px-5 py-2 bg-[var(--primary)] text-white rounded-xl mx-2">
+                <Link to="/login" onClick={() => haptic('medium')} className="flex flex-col items-center justify-center gap-0.5 min-w-[56px] min-h-[44px] px-5 py-2 gradient-bg text-white rounded-xl mx-2 shadow-[var(--shadow-primary)]">
                   <User size={18} />
                   <span className="text-[9px] font-semibold">Login</span>
                 </Link>

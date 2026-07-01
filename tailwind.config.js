@@ -51,6 +51,9 @@ export default {
         'coin-pop':    'coinPop 0.5s ease-out',
         'streak-fire': 'streakFire 1s ease-in-out infinite alternate',
         'spin-wheel':  'spinWheel 4s cubic-bezier(0.17, 0.67, 0.12, 0.99) forwards',
+        'float':       'float-y 4s ease-in-out infinite',
+        'glow':        'brand-glow 3s ease-in-out infinite',
+        'border-dance':'border-dance 6s ease infinite',
       },
       keyframes: {
         fadeIn:     { '0%': { opacity: '0' }, '100%': { opacity: '1' } },

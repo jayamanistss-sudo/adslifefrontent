@@ -56,6 +56,7 @@ export interface Offer {
   saves: number;
   createdAt: string;
   videoUrl?: string;
+  images?: string[];
   // joined vendor fields
   businessName?: string;
   vendorLogo?: string;
