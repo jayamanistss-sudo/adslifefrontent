@@ -10,6 +10,7 @@ export interface User {
   streakDays: number;
   role: 'user' | 'vendor' | 'admin';
   loginCount?: number;
+  emailAlerts?: boolean;
 }
 
 export interface Vendor {

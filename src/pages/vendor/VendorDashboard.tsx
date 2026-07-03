@@ -355,9 +355,11 @@ export default function VendorDashboard() {
         <div className="card p-0 overflow-hidden lg:col-span-3">
           <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)]">
             <h3 className="font-heading font-semibold text-[var(--text)] text-sm">Recent Offers</h3>
-            <Link to="/vendor/offers" className="text-xs text-[var(--primary)] font-semibold hover:underline flex items-center gap-1">
-              View all <ArrowUpRight size={12} />
-            </Link>
+            {data.offers.total > data.recent_offers.length && (
+              <Link to="/vendor/offers" className="text-xs text-[var(--primary)] font-semibold hover:underline flex items-center gap-1">
+                View all <ArrowUpRight size={12} />
+              </Link>
+            )}
           </div>
           {data.recent_offers.length > 0 ? (
             <div className="divide-y divide-[var(--border)]">

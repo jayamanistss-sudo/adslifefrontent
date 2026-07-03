@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle, Store, TrendingUp, Users, Zap, ChevronRight, MapPin, BarChart2 } from 'lucide-react';
+import { CheckCircle, Store, TrendingUp, Users, Zap, ChevronRight, MapPin, BarChart2, Navigation } from 'lucide-react';
 import { api, endpoints } from '../utils/api';
 import { useUserStore } from '../store/useUserStore';
 import toast from 'react-hot-toast';
+
+declare const L: any;
 
 const BENEFITS = [
   { icon: <TrendingUp size={20} className="text-primary" />, title: 'Reach local customers', desc: 'Get discovered by thousands of users near your shop.' },
@@ -11,16 +13,11 @@ const BENEFITS = [
   { icon: <BarChart2 size={20} className="text-primary" />, title: 'Real analytics', desc: 'See views, clicks, and redemptions for every offer.' },
   { icon: <Users size={20} className="text-primary" />, title: 'Build followers', desc: 'Users subscribe to your shop and get notified of new deals.' },
   { icon: <MapPin size={20} className="text-primary" />, title: 'Map visibility', desc: 'Your shop appears on the map when users search nearby.' },
-  { icon: <CheckCircle size={20} className="text-primary" />, title: 'Free to start', desc: 'No cost for the first 30 days. Upgrade when you\'re ready.' },
-];
-
-const CATEGORIES = [
-  'Food & Dining', 'Fashion', 'Electronics', 'Beauty', 'Travel',
-  'Entertainment', 'Grocery', 'Health', 'Sports', 'General',
+  { icon: <CheckCircle size={20} className="text-primary" />, title: 'Free to start', desc: "No cost for the first 30 days. Upgrade when you're ready." },
 ];
 
 export default function BecomeVendor() {
-  const { user } = useUserStore();
+  const { user, token, setUser } = useUserStore();
   const navigate = useNavigate();
   const [step, setStep] = useState<'landing' | 'form'>('landing');
   const [submitting, setSubmitting] = useState(false);
@@ -28,17 +25,147 @@ export default function BecomeVendor() {
   const [form, setForm] = useState({
     business_name: '', category: '', city: '', address: '',
     phone: '', website: '', description: '',
+    lat: '', lng: '',
   });
+  const [categories, setCategories] = useState<{ id: number; name: string; slug: string }[]>([]);
+
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapObj = useRef<any>(null);
+  const markerRef = useRef<any>(null);
 
   const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
+
+  // Load categories from API
+  useEffect(() => {
+    api.get(endpoints.categoriesList()).then(res => {
+      if (res.data?.success) setCategories(res.data.data ?? []);
+    }).catch(() => {});
+  }, []);
+
+  // Load Leaflet and init map when form step is shown
+  useEffect(() => {
+    if (step !== 'form' || !mapRef.current || mapObj.current) return;
+
+    const initMap = () => {
+      const lat = form.lat ? parseFloat(form.lat) : 13.0827;
+      const lng = form.lng ? parseFloat(form.lng) : 80.2707;
+      const map = L.map(mapRef.current!).setView([lat, lng], 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+      }).addTo(map);
+
+      if (form.lat && form.lng) {
+        markerRef.current = L.marker([lat, lng], { draggable: true }).addTo(map);
+        markerRef.current.on('dragend', (e: any) => {
+          const { lat: la, lng: lo } = e.target.getLatLng();
+          setForm(f => ({ ...f, lat: String(la.toFixed(7)), lng: String(lo.toFixed(7)) }));
+          reverseGeocode(la, lo);
+        });
+      }
+
+      map.on('click', (e: any) => {
+        const { lat: la, lng: lo } = e.latlng;
+        setForm(f => ({ ...f, lat: String(la.toFixed(7)), lng: String(lo.toFixed(7)) }));
+        if (markerRef.current) {
+          markerRef.current.setLatLng([la, lo]);
+        } else {
+          markerRef.current = L.marker([la, lo], { draggable: true }).addTo(map);
+          markerRef.current.on('dragend', (ev: any) => {
+            const { lat: la2, lng: lo2 } = ev.target.getLatLng();
+            setForm(f => ({ ...f, lat: String(la2.toFixed(7)), lng: String(lo2.toFixed(7)) }));
+            reverseGeocode(la2, lo2);
+          });
+        }
+        reverseGeocode(la, lo);
+      });
+
+      mapObj.current = map;
+    };
+
+    if (typeof L !== 'undefined') {
+      initMap();
+      return;
+    }
+
+    if (!document.querySelector('link[href*="leaflet"]')) {
+      const css = document.createElement('link');
+      css.rel = 'stylesheet';
+      css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      document.head.appendChild(css);
+    }
+    if (!document.querySelector('script[src*="leaflet"]')) {
+      const script = document.createElement('script');
+      script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+      script.onload = initMap;
+      document.head.appendChild(script);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
+
+  // Cleanup map when leaving form
+  useEffect(() => {
+    if (step !== 'form' && mapObj.current) {
+      mapObj.current.remove();
+      mapObj.current = null;
+      markerRef.current = null;
+    }
+  }, [step]);
+
+  const reverseGeocode = async (la: number, lo: number) => {
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${la}&lon=${lo}&zoom=18&addressdetails=1`,
+      );
+      const data = await res.json();
+      const addr = data?.address ?? {};
+      const city = addr.city ?? addr.town ?? addr.village ?? addr.county ?? addr.state ?? '';
+      setForm(f => ({
+        ...f,
+        address: data.display_name ?? f.address,
+        ...(city ? { city } : {}),
+      }));
+    } catch {}
+  };
+
+  const useMyLocation = () => {
+    if (!navigator.geolocation) { toast.error('Geolocation not supported'); return; }
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        const la = coords.latitude;
+        const lo = coords.longitude;
+        setForm(f => ({ ...f, lat: String(la.toFixed(7)), lng: String(lo.toFixed(7)) }));
+        if (mapObj.current) {
+          mapObj.current.setView([la, lo], 16);
+          if (markerRef.current) {
+            markerRef.current.setLatLng([la, lo]);
+          } else {
+            markerRef.current = L.marker([la, lo], { draggable: true }).addTo(mapObj.current);
+            markerRef.current.on('dragend', (e: any) => {
+              const { lat: la2, lng: lo2 } = e.target.getLatLng();
+              setForm(f2 => ({ ...f2, lat: String(la2.toFixed(7)), lng: String(lo2.toFixed(7)) }));
+              reverseGeocode(la2, lo2);
+            });
+          }
+        }
+        reverseGeocode(la, lo);
+      },
+      () => toast.error('Could not get your location'),
+    );
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) { navigate('/login?redirect=/become-vendor'); return; }
     if (!form.business_name.trim()) { toast.error('Business name is required'); return; }
+    if (!form.lat || !form.lng) { toast.error('Please pin your business location on the map'); return; }
     setSubmitting(true);
     try {
-      const res = await api.post(endpoints.vendorApplySubmit, form);
+      const payload = {
+        ...form,
+        lat: form.lat ? parseFloat(form.lat) : undefined,
+        lng: form.lng ? parseFloat(form.lng) : undefined,
+      };
+      const res = await api.post(endpoints.vendorApplySubmit, payload);
       if (res.data.success) setDone(true);
       else toast.error(res.data.error ?? 'Submission failed');
     } catch (err: any) {
@@ -48,6 +175,24 @@ export default function BecomeVendor() {
     }
   };
 
+  // Poll /auth/me after submission so vendor permissions activate without logout/login
+  useEffect(() => {
+    if (!done || !token) return;
+    const poll = setInterval(async () => {
+      try {
+        const res = await api.get(endpoints.authMe);
+        if (res.data?.data?.role === 'vendor') {
+          const newToken = res.data.token ?? token;
+          setUser(res.data.data, newToken);
+          toast.success('🎉 Your vendor account is now active!');
+          clearInterval(poll);
+          navigate('/vendor/dashboard');
+        }
+      } catch {}
+    }, 10000); // check every 10s
+    return () => clearInterval(poll);
+  }, [done, token]);
+
   if (done) return (
     <div className="flex items-center justify-center min-h-screen p-6 bg-[var(--surface-2)]">
       <div className="w-full max-w-md p-10 text-center card rounded-3xl">
@@ -55,7 +200,12 @@ export default function BecomeVendor() {
           <CheckCircle size={40} style={{ color: 'var(--accent)' }} />
         </div>
         <h2 className="mb-2 text-2xl font-bold text-[var(--text)]">Application Submitted!</h2>
-        <p className="mb-6 text-[var(--text-muted)]">Our team will review your application and notify you within 24–48 hours.</p>
+        <p className="mb-2 text-[var(--text-muted)]">Our team will review your application and notify you within 24–48 hours.</p>
+        <p className="mb-6 text-sm text-[var(--text-muted)]">This page will automatically redirect you to the vendor dashboard once approved — no need to log out.</p>
+        <div className="flex items-center justify-center gap-2 mb-6 text-xs text-primary">
+          <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+          Waiting for admin approval…
+        </div>
         <button onClick={() => navigate('/feed')} className="btn btn-primary w-full">
           Back to AdsLife
         </button>
@@ -88,22 +238,59 @@ export default function BecomeVendor() {
               <label className="label">Category</label>
               <select className="w-full input" value={form.category} onChange={e => set('category', e.target.value)}>
                 <option value="">Select category</option>
-                {CATEGORIES.map(c => <option key={c} value={c.toLowerCase().replace(/\s+&\s+/, '-').replace(/\s+/g, '-')}>{c}</option>)}
+                {categories.map(c => (
+                  <option key={c.id} value={c.slug ?? c.name.toLowerCase()}>{c.name}</option>
+                ))}
               </select>
+            </div>
+
+            {/* Map picker */}
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="label label-required">Business Location</label>
+                <button
+                  type="button"
+                  onClick={useMyLocation}
+                  className="flex items-center gap-1 text-xs text-primary hover:underline"
+                >
+                  <Navigation size={12} /> Use my location
+                </button>
+              </div>
+              <p className="mb-2 text-xs text-[var(--text-muted)]">Click on the map to pin your shop location. Drag the marker to adjust.</p>
+              <div
+                ref={mapRef}
+                style={{ height: 220, borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border)' }}
+              />
+              {form.lat && form.lng && (
+                <p className="mt-1 text-xs text-[var(--text-muted)]">
+                  📍 {parseFloat(form.lat).toFixed(5)}, {parseFloat(form.lng).toFixed(5)}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="label">Address</label>
+              <input
+                className="w-full input"
+                placeholder="Auto-filled from map, or type manually"
+                value={form.address}
+                onChange={e => set('address', e.target.value)}
+              />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="label">City</label>
-                <input className="w-full input" placeholder="Chennai" value={form.city} onChange={e => set('city', e.target.value)} />
+                <input
+                  className="w-full input"
+                  placeholder="Auto-filled from map"
+                  value={form.city}
+                  onChange={e => set('city', e.target.value)}
+                />
               </div>
               <div>
                 <label className="label">Phone</label>
                 <input className="w-full input" placeholder="9876543210" type="tel" value={form.phone} onChange={e => set('phone', e.target.value)} />
               </div>
-            </div>
-            <div>
-              <label className="label">Address</label>
-              <input className="w-full input" placeholder="Shop address" value={form.address} onChange={e => set('address', e.target.value)} />
             </div>
             <div>
               <label className="label">Website (optional)</label>
@@ -118,11 +305,7 @@ export default function BecomeVendor() {
                 You'll need to <button type="button" onClick={() => navigate('/login?redirect=/become-vendor')} className="font-semibold underline">sign in</button> before submitting.
               </div>
             )}
-            <button
-              type="submit"
-              disabled={submitting}
-              className="btn btn-primary btn-lg w-full"
-            >
+            <button type="submit" disabled={submitting} className="btn btn-primary btn-lg w-full">
               {submitting ? 'Submitting…' : 'Submit Application →'}
             </button>
           </form>

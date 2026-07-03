@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Settings, Upload, Save, Globe, Search, Mail, Phone, Image } from "lucide-react";
+import { Settings, Upload, Save, Globe, Search, Mail, Phone, Image, FileText } from "lucide-react";
 import { api, endpoints } from "../../utils/api";
 import toast from "react-hot-toast";
 import { useSiteSettings } from "../../store/useSiteSettings";
@@ -14,6 +14,8 @@ interface SiteSettings {
   seo_keywords: string;
   contact_email: string;
   contact_phone: string;
+  terms_content: string;
+  privacy_content: string;
 }
 
 const defaults: SiteSettings = {
@@ -25,6 +27,8 @@ const defaults: SiteSettings = {
   seo_keywords: "",
   contact_email: "",
   contact_phone: "",
+  terms_content: "",
+  privacy_content: "",
 };
 
 export default function AdminSiteSettings() {
@@ -291,6 +295,38 @@ export default function AdminSiteSettings() {
                     placeholder="+91 99999 99999"
                   />
                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Legal Pages */}
+          <div className="card p-5">
+            <h3 className="font-heading font-semibold text-sm text-[var(--text)] mb-1 flex items-center gap-2">
+              <FileText size={15} className="text-[var(--primary)]" /> Legal Pages
+            </h3>
+            <p className="text-xs text-[var(--text-muted)] mb-4">
+              Leave blank to keep showing the built-in default text on the Terms/Privacy pages.
+            </p>
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs font-semibold text-[var(--text-secondary)] block mb-1.5">Terms of Service</label>
+                <textarea
+                  value={form.terms_content}
+                  onChange={(e) => set("terms_content", e.target.value)}
+                  rows={8}
+                  className="input resize-y font-mono text-xs"
+                  placeholder="Paste or write your Terms of Service content (plain text or HTML)…"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-[var(--text-secondary)] block mb-1.5">Privacy Policy</label>
+                <textarea
+                  value={form.privacy_content}
+                  onChange={(e) => set("privacy_content", e.target.value)}
+                  rows={8}
+                  className="input resize-y font-mono text-xs"
+                  placeholder="Paste or write your Privacy Policy content (plain text or HTML)…"
+                />
               </div>
             </div>
           </div>

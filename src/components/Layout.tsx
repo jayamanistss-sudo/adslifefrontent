@@ -11,6 +11,7 @@ import { useSiteSettings } from '../store/useSiteSettings';
 import { useSavedStore } from '../store/useSavedStore';
 import NotificationPanel from './NotificationPanel';
 import AnimatedBackground from './AnimatedBackground';
+import RequirePhoneModal from './RequirePhoneModal';
 import { api, endpoints } from '../utils/api';
 import { haptic } from '../utils/haptics';
 
@@ -164,6 +165,7 @@ export default function Layout({ children }: Props) {
   return (
     <div className="min-h-screen flex bg-[var(--bg)] text-[var(--text)] relative">
       <AnimatedBackground />
+      <RequirePhoneModal />
 
       {/* ── Sidebar ── */}
       <aside
@@ -221,8 +223,8 @@ export default function Layout({ children }: Props) {
         {/* Sidebar footer */}
         <div className={`border-t border-[var(--border)] py-2 flex flex-col gap-1 flex-shrink-0 ${sidebarOpen ? 'px-3' : 'px-2 items-center'}`}>
           <Link
-            to="/profile"
-            className={`nav-item ${isActive('/profile') ? 'active' : ''}`}
+            to="/settings"
+            className={`nav-item ${isActive('/settings') ? 'active' : ''}`}
             title={!sidebarOpen ? 'Settings' : undefined}
           >
             <Settings size={17} className="flex-shrink-0" />
@@ -327,13 +329,11 @@ export default function Layout({ children }: Props) {
                           <div className="text-[0.75rem] text-[var(--text-muted)] truncate">{user?.email}</div>
                         </div>
 
+                        {/* Rest of the app's navigation already lives in the sidebar —
+                            this menu only surfaces the two account-management pages. */}
                         {[
-                          { to: '/profile',           icon: User,        label: 'My Profile' },
-                          ...(user?.role === 'vendor' || user?.role === 'admin'
-                            ? [{ to: '/vendor/dashboard', icon: Store,    label: 'Dashboard' }] : []),
-                          ...(user?.role === 'admin'
-                            ? [{ to: '/admin/dashboard', icon: ShieldCheck, label: 'Admin Panel' }] : []),
-                          { to: '/leaderboard',       icon: Trophy,      label: 'Leaderboard' },
+                          { to: '/profile',  icon: User,     label: 'My Profile' },
+                          { to: '/settings', icon: Settings, label: 'Settings' },
                         ].map(({ to, icon: Icon, label }) => (
                           <Link
                             key={to}

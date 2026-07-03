@@ -147,8 +147,8 @@ export default function OfferCard({ offer, onSave, index = 0 }: Props) {
           aria-label={saved ? 'Remove from saved' : 'Save offer'}
           className={`absolute bottom-1.5 right-1.5 sm:bottom-3 sm:right-3 z-20 w-7 h-7 sm:w-9 sm:h-9 rounded-full flex items-center justify-center shadow-md transition-all duration-300 ${
             saved
-              ? 'gradient-bg text-white scale-110'
-              : 'bg-[var(--surface)]/90 text-[var(--text-muted)] hover:text-[var(--primary)] hover:scale-110'
+              ? 'bg-[var(--surface)] text-[var(--primary)] scale-110 ring-2 ring-[var(--primary)]'
+              : 'bg-[var(--surface)]/80 text-[var(--text-muted)] hover:text-[var(--primary)] hover:scale-110'
           }`}
         >
           <Bookmark size={12} className="sm:hidden" fill={saved ? 'currentColor' : 'none'} />

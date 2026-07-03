@@ -10,6 +10,8 @@ interface SiteSettings {
   seo_keywords?: string;
   contact_email?: string;
   contact_phone?: string;
+  terms_content?: string;
+  privacy_content?: string;
 }
 
 interface SiteSettingsStore {

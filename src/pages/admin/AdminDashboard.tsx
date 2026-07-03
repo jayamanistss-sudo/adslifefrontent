@@ -437,9 +437,11 @@ export default function AdminDashboard() {
               <h3 className="font-heading font-bold text-base text-[var(--text)]">Newly Joined Users</h3>
               <p className="text-xs text-[var(--text-muted)] mt-0.5">Most recent platform signups</p>
             </div>
-            <Link to="/admin/users" className="text-xs text-[var(--primary)] font-semibold flex items-center gap-1 hover:opacity-80 transition-opacity">
-              View all <ArrowUpRight size={13} />
-            </Link>
+            {stats && stats.totals.users > (stats.recent_users?.length ?? 0) && (
+              <Link to="/admin/users" className="text-xs text-[var(--primary)] font-semibold flex items-center gap-1 hover:opacity-80 transition-opacity">
+                View all <ArrowUpRight size={13} />
+              </Link>
+            )}
           </div>
           <div className="divide-y divide-[var(--border)]/60">
             {stats ? (
@@ -491,9 +493,11 @@ export default function AdminDashboard() {
               <h3 className="font-heading font-bold text-base text-[var(--text)]">Recently Onboarded Vendors</h3>
               <p className="text-xs text-[var(--text-muted)] mt-0.5">Businesses awaiting review or newly active</p>
             </div>
-            <Link to="/admin/vendors" className="text-xs text-[var(--primary)] font-semibold flex items-center gap-1 hover:opacity-80 transition-opacity">
-              View all <ArrowUpRight size={13} />
-            </Link>
+            {stats && stats.totals.vendors > (stats.recent_vendors?.length ?? 0) && (
+              <Link to="/admin/vendors" className="text-xs text-[var(--primary)] font-semibold flex items-center gap-1 hover:opacity-80 transition-opacity">
+                View all <ArrowUpRight size={13} />
+              </Link>
+            )}
           </div>
           <div className="divide-y divide-[var(--border)]/60">
             {stats ? (

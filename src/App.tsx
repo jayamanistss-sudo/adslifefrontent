@@ -45,6 +45,7 @@ import Privacy from "./pages/Privacy";
 import Feed from "./pages/Feed";
 import Leaderboard from "./pages/Leaderboard";
 import Profile from "./pages/Profile";
+import Settings from "./pages/Settings";
 import GroupDeals from "./pages/GroupDeals";
 import OfferDetail from "./pages/OfferDetail";
 
@@ -125,11 +126,12 @@ export default function App() {
       if (res.data.success) {
         const u = res.data.data;
         updateUser({
-          name:      u.name,
-          phone:     u.phone      ?? undefined,
-          city:      u.city       ?? undefined,
-          avatarUrl: u.avatar_url ?? undefined,
-          role:      u.role,
+          name:        u.name,
+          phone:       u.phone      ?? undefined,
+          city:        u.city       ?? undefined,
+          avatarUrl:   u.avatar_url ?? undefined,
+          role:        u.role,
+          emailAlerts: u.email_alerts,
         });
         // Backend returns a new token when role has changed (e.g. user → vendor).
         // Update localStorage and the store so subsequent API calls use the new role.
@@ -219,6 +221,16 @@ export default function App() {
               <ProtectedRoute>
                 <Layout>
                   <Profile />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Settings />
                 </Layout>
               </ProtectedRoute>
             }

@@ -1,5 +1,7 @@
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
+import { useSiteSettings } from '../store/useSiteSettings';
 
 const SECTIONS = [
   {
@@ -49,6 +51,11 @@ const SECTIONS = [
 ];
 
 export default function Privacy() {
+  const { settings, fetch } = useSiteSettings();
+  useEffect(() => { fetch(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const customContent = settings.privacy_content?.trim();
+
   return (
     <div className="min-h-screen px-4 py-10 bg-[var(--surface-2)]">
       <div className="mx-auto max-w-2xxl">
@@ -59,14 +66,21 @@ export default function Privacy() {
           <h1 className="mb-1 text-2xl font-bold text-[var(--text)] sm:text-3xl">Privacy Policy</h1>
           <p className="mb-8 text-sm text-[var(--text-muted)]">Last updated: June 2026</p>
 
-          <div className="space-y-6">
-            {SECTIONS.map((s) => (
-              <section key={s.title}>
-                <h2 className="text-sm font-bold text-[var(--text)] mb-1.5">{s.title}</h2>
-                <p className="text-sm leading-relaxed text-[var(--text-secondary)]">{s.body}</p>
-              </section>
-            ))}
-          </div>
+          {customContent ? (
+            <div
+              className="text-sm leading-relaxed text-[var(--text-secondary)] whitespace-pre-wrap"
+              dangerouslySetInnerHTML={{ __html: customContent }}
+            />
+          ) : (
+            <div className="space-y-6">
+              {SECTIONS.map((s) => (
+                <section key={s.title}>
+                  <h2 className="text-sm font-bold text-[var(--text)] mb-1.5">{s.title}</h2>
+                  <p className="text-sm leading-relaxed text-[var(--text-secondary)]">{s.body}</p>
+                </section>
+              ))}
+            </div>
+          )}
 
           <p className="pt-6 mt-8 text-xs text-[var(--text-muted)] border-t border-[var(--border)]">
             See also our <Link to="/terms" className="underline hover:text-primary">Terms of Service</Link>.

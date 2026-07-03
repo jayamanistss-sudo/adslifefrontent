@@ -293,7 +293,7 @@ export default function OfferDetail() {
             aria-label={saved ? 'Unsave offer' : 'Save offer'}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold transition-all ${
               saved
-                ? 'bg-[var(--primary)] text-white shadow-md shadow-[var(--primary)]/30'
+                ? 'bg-[var(--surface)] text-[var(--primary)] ring-2 ring-[var(--primary)] shadow-sm'
                 : 'text-[var(--text-muted)] hover:bg-[var(--surface-2)]'
             }`}>
             <Bookmark size={16} fill={saved ? 'currentColor' : 'none'} />

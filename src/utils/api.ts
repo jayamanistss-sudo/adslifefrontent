@@ -66,6 +66,9 @@ export const endpoints = {
   becomeVendor: "/auth/become-vendor",
   authProfile: "/auth/profile",
   authMe: "/auth/me",
+  authChangePassword: "/auth/change-password",
+  emailChangeRequest: "/auth/email-change/request",
+  emailChangeConfirm: "/auth/email-change/confirm",
 
   // Feed
   feed: (_uid: number, lat: number, lng: number, page = 1, perPage = 20, q = "") =>
