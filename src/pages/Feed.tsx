@@ -321,7 +321,7 @@ export default function Feed() {
         </div>
         {search && (
           <button
-            onClick={() => { setSearch(''); window.history.pushState({}, '', '/feed'); }}
+            onClick={() => { setSearch(''); navigate('/feed', { replace: true }); }}
             className="flex-shrink-0 flex items-center gap-1 text-xs font-semibold text-[var(--danger)] bg-[var(--danger-light)] border border-[rgba(239,68,68,0.2)] px-2.5 py-1 rounded-full"
           >
             <X size={10} /> Clear
@@ -383,7 +383,7 @@ export default function Feed() {
           action={
             (activeCategory || search) ? (
               <button className="btn btn-secondary text-sm"
-                onClick={() => { setActiveCategory(null); setSearch(''); window.history.pushState({}, '', '/feed'); }}>
+                onClick={() => { setActiveCategory(null); setSearch(''); navigate('/feed', { replace: true }); }}>
                 Clear filters
               </button>
             ) : undefined

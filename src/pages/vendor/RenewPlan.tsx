@@ -6,8 +6,10 @@ import { openRazorpayForOrder } from '../../utils/razorpay';
 import { useUserStore } from '../../store/useUserStore';
 import toast from 'react-hot-toast';
 
+// Matches GET /vendor/my-plan's actual response shape — NOT
+// {plan, plan_name, plan_price}. See SelectPlan.tsx for the same fix.
 interface VendorPlan {
-  vendor_id: number; plan: string; plan_name: string; plan_price: number;
+  subscription_plan: string; name: string; price: number;
   max_offers: number; features: string[]; status: string;
 }
 
@@ -19,13 +21,15 @@ export default function RenewPlan() {
 
   useEffect(() => {
     api.get(endpoints.vendorMyPlan).then((r) => {
-      if (r.data.success) setVendorPlan(r.data.data);
+      // price comes back as a numeric-string ("0.00") from Postgres — coerce
+      // once here so every comparison/format below can treat it as a number.
+      if (r.data.success) setVendorPlan({ ...r.data.data, price: Number(r.data.data.price) });
     }).finally(() => setLoading(false));
   }, [user]);
 
   const handleRenew = async () => {
     if (!vendorPlan) return;
-    if (vendorPlan.plan_price === 0) {
+    if (vendorPlan.price === 0) {
       toast('Free plan does not need renewal.', { icon: 'ℹ️' });
       return;
     }
@@ -35,7 +39,7 @@ export default function RenewPlan() {
       // Get plan id from plans list
       const plansRes = await api.get(endpoints.plansList);
       const plans    = plansRes.data.data as { id: number; slug: string }[];
-      const plan     = plans.find((p) => p.slug === vendorPlan.plan);
+      const plan     = plans.find((p) => p.slug === vendorPlan.subscription_plan);
       if (!plan) { toast.error('Plan not found'); return; }
 
       const orderRes = await api.post(endpoints.paymentCreateOrder, { plan_id: plan.id, purpose: 'plan_renewal' });
@@ -52,7 +56,7 @@ export default function RenewPlan() {
 
       toast.success('Plan renewed successfully!');
       const vendorRes = await api.get(endpoints.vendorMyPlan);
-      if (vendorRes.data.success) setVendorPlan(vendorRes.data.data);
+      if (vendorRes.data.success) setVendorPlan({ ...vendorRes.data.data, price: Number(vendorRes.data.data.price) });
     } catch (err: any) {
       const msg = err?.message ?? err.response?.data?.error ?? 'Renewal failed';
       if (msg === 'Payment cancelled') toast('Payment cancelled', { icon: '↩️' });
@@ -92,7 +96,7 @@ export default function RenewPlan() {
         <div className="flex items-start justify-between mb-4">
           <div>
             <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider font-semibold mb-1">Current Plan</p>
-            <h2 className="font-heading font-bold text-xl text-[var(--text)] capitalize">{vendorPlan.plan_name}</h2>
+            <h2 className="font-heading font-bold text-xl text-[var(--text)] capitalize">{vendorPlan.name}</h2>
           </div>
           <div className={`badge ${vendorPlan.status === 'approved' ? 'badge-accent' : 'badge-warning'}`}>
             {vendorPlan.status}
@@ -120,15 +124,15 @@ export default function RenewPlan() {
           <div>
             <p className="text-xs text-[var(--text-muted)]">Renewal amount</p>
             <p className="font-heading font-bold text-2xl text-[var(--text)]">
-              {vendorPlan.plan_price === 0 ? 'Free' : `₹${vendorPlan.plan_price.toLocaleString()}`}
+              {vendorPlan.price === 0 ? 'Free' : `₹${vendorPlan.price.toLocaleString()}`}
             </p>
-            {vendorPlan.plan_price > 0 && (
+            {vendorPlan.price > 0 && (
               <p className="text-xs text-[var(--text-muted)]">for 30 days</p>
             )}
           </div>
           <button
             onClick={handleRenew}
-            disabled={renewing || vendorPlan.plan_price === 0}
+            disabled={renewing || vendorPlan.price === 0}
             className="btn btn-primary"
           >
             {renewing ? (
@@ -139,7 +143,7 @@ export default function RenewPlan() {
             ) : (
               <span className="flex items-center gap-2">
                 <RefreshCw size={15} />
-                {vendorPlan.plan_price === 0 ? 'No renewal needed' : 'Renew Now'}
+                {vendorPlan.price === 0 ? 'No renewal needed' : 'Renew Now'}
               </span>
             )}
           </button>

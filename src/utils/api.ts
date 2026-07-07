@@ -161,6 +161,8 @@ export const endpoints = {
   // Notifications
   notificationsList: (limit = 30) => `/notifications?limit=${limit}`,
   notificationsMarkRead: "/notifications/mark-read",
+  notificationsDelete: (id: number) => `/notifications/${id}`,
+  notificationsClear: "/notifications/clear",
 
   // Plans
   plansList: "/plans",

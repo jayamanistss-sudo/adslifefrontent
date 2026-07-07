@@ -11,8 +11,10 @@ interface Plan {
   duration_days: number; max_offers: number; features: string[];
 }
 
+// Matches GET /vendor/my-plan's actual response shape (vendors.subscription_plan
+// joined with the subscription_plans row) — NOT {plan, plan_name, plan_price}.
 interface VendorPlan {
-  plan: string; plan_name: string; plan_price: number; status: string;
+  subscription_plan: string; name: string; price: number; status: string;
 }
 
 const PLAN_COLORS: Record<string, string> = {
@@ -38,13 +40,17 @@ export default function SelectPlan() {
       api.get(endpoints.plansList).catch(() => ({ data: { success: false } })),
       api.get(endpoints.vendorMyPlan).catch(() => ({ data: { success: false } })),
     ]).then(([planRes, vendorRes]) => {
-      if (planRes.data.success)   setPlans(planRes.data.data);
-      if (vendorRes.data.success) setCurrent(vendorRes.data.data);
+      // price comes back as a numeric-string ("0.00") from Postgres — coerce
+      // once here so every comparison/format below can treat it as a number.
+      if (planRes.data.success)
+        setPlans(planRes.data.data.map((p: Plan) => ({ ...p, price: Number(p.price) })));
+      if (vendorRes.data.success)
+        setCurrent({ ...vendorRes.data.data, price: Number(vendorRes.data.data.price) });
     }).finally(() => setLoading(false));
   }, [user]);
 
   const handleSelect = async (plan: Plan) => {
-    if (plan.slug === current?.plan) return;
+    if (plan.slug === current?.subscription_plan) return;
     setSelected(plan);
 
     if (plan.price === 0) {
@@ -95,14 +101,14 @@ export default function SelectPlan() {
         <div>
           <h1 className="page-title">Select Plan</h1>
           <p className="page-subtitle">
-            Current plan: <span className="font-semibold text-[var(--primary)] capitalize">{current?.plan_name ?? 'Free'}</span>
+            Current plan: <span className="font-semibold text-[var(--primary)] capitalize">{current?.name ?? 'Free'}</span>
           </p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {plans.map((plan) => {
-          const isCurrent = plan.slug === current?.plan;
+          const isCurrent = plan.slug === current?.subscription_plan;
           const badge     = PLAN_BADGE[plan.slug];
           return (
             <div

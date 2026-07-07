@@ -268,6 +268,18 @@ export default function OfferDetail() {
     return () => clearInterval(t);
   }, [heroSlideCount, heroPaused]);
 
+  // ─── Lightbox keyboard nav (Esc to close, arrows to switch image) ───────
+  useEffect(() => {
+    if (!lightbox || heroSlideCount === 0) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setLightbox(false);
+      else if (e.key === 'ArrowLeft') setHeroIdx(i => (i - 1 + heroSlideCount) % heroSlideCount);
+      else if (e.key === 'ArrowRight') setHeroIdx(i => (i + 1) % heroSlideCount);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [lightbox, heroSlideCount]);
+
   // ─── Loading ────────────────────────────────────────────────────────────
   if (loading) return (
     <div className="w-full animate-pulse space-y-4">
@@ -732,13 +744,41 @@ export default function OfferDetail() {
             className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4"
             onClick={() => setLightbox(false)}>
             <button onClick={() => setLightbox(false)}
-              className="absolute top-4 right-4 w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors">
+              className="absolute top-4 right-4 z-10 w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors">
               <X size={20} className="text-white" />
             </button>
-            <motion.img initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }}
-              src={heroImg} alt={offer.title}
-              className="max-w-full max-h-[90vh] object-contain rounded-2xl shadow-2xl"
-              onClick={e => e.stopPropagation()} />
+
+            {imageSlides.length > 1 && (
+              <>
+                <button
+                  onClick={(e) => { e.stopPropagation(); heroPrev(); }}
+                  className="absolute left-3 sm:left-6 top-1/2 -translate-y-1/2 z-10 w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+                >
+                  <ChevronRight size={20} className="rotate-180" />
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); heroNext(); }}
+                  className="absolute right-3 sm:right-6 top-1/2 -translate-y-1/2 z-10 w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+                >
+                  <ChevronRight size={20} />
+                </button>
+              </>
+            )}
+
+            <AnimatePresence mode="wait">
+              <motion.img key={heroIdx}
+                initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.97 }}
+                transition={{ duration: 0.18 }}
+                src={heroImg} alt={offer.title}
+                className="max-w-full max-h-[90vh] object-contain rounded-2xl shadow-2xl"
+                onClick={e => e.stopPropagation()} />
+            </AnimatePresence>
+
+            {imageSlides.length > 1 && (
+              <span className="absolute bottom-5 left-1/2 -translate-x-1/2 text-xs font-semibold text-white/80 bg-white/10 px-3 py-1 rounded-full">
+                {heroIdx + 1} / {imageSlides.length}
+              </span>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

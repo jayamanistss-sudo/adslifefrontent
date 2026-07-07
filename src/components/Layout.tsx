@@ -103,8 +103,16 @@ export default function Layout({ children }: Props) {
 
   const handleSearch = (e: { preventDefault: () => void }) => {
     e.preventDefault();
-    if (searchQuery.trim()) navigate(`/feed?q=${encodeURIComponent(searchQuery.trim())}`);
+    const q = searchQuery.trim();
+    navigate(q ? `/feed?q=${encodeURIComponent(q)}` : '/feed');
   };
+
+  // Keep the header search box in sync with the feed's own query param —
+  // covers shared "/feed?q=..." links and the feed page's own "Clear" button.
+  useEffect(() => {
+    if (location.pathname !== '/feed') return;
+    setSearchQuery(new URLSearchParams(location.search).get('q') ?? '');
+  }, [location.pathname, location.search]);
 
   const mainNav: NavItem[] = [
     { to: '/feed',        icon: Home,       label: 'Discover' },

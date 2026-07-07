@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { Bell, Check, CheckCheck, Tag, Trophy, Flame, Star, X } from 'lucide-react';
+import { Bell, Check, CheckCheck, Tag, Trophy, Flame, Star, X, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { api, endpoints } from '../utils/api';
 import { useNotificationStore } from '../store/useNotificationStore';
@@ -33,7 +33,7 @@ function timeAgo(date: string) {
 
 export default function NotificationPanel() {
   const { user } = useUserStore();
-  const { notifications, unreadCount, setNotifications, markRead, markAllRead } = useNotificationStore();
+  const { notifications, unreadCount, setNotifications, markRead, markAllRead, removeNotification, clearAll } = useNotificationStore();
   const [open, setOpen]     = useState(false);
   const [loading, setLoading] = useState(false);
   const ref      = useRef<HTMLDivElement>(null);
@@ -100,6 +100,19 @@ export default function NotificationPanel() {
     catch { fetchUnread(); }
   };
 
+  const handleDelete = async (e: React.MouseEvent, id: number) => {
+    e.stopPropagation();
+    removeNotification(id);
+    try { await api.delete(endpoints.notificationsDelete(id)); }
+    catch { fetchUnread(); }
+  };
+
+  const handleClearAll = async () => {
+    clearAll();
+    try { await api.delete(endpoints.notificationsClear); }
+    catch { fetchUnread(); }
+  };
+
   return (
     <div ref={ref} className="relative">
       {/* Bell button */}
@@ -138,6 +151,14 @@ export default function NotificationPanel() {
                   <CheckCheck size={13} /> Mark all read
                 </button>
               )}
+              {notifications.length > 0 && (
+                <button
+                  onClick={handleClearAll}
+                  className="flex items-center gap-1 text-xs text-[var(--danger)] hover:underline font-medium"
+                >
+                  <Trash2 size={13} /> Clear all
+                </button>
+              )}
               <button
                 onClick={() => setOpen(false)}
                 className="p-1 text-[var(--text-muted)] hover:text-[var(--text)] rounded-lg hover:bg-[var(--surface-2)] transition-colors"
@@ -171,10 +192,13 @@ export default function NotificationPanel() {
             )}
 
             {!loading && notifications.map((n) => (
-              <button
+              <div
                 key={n.id}
+                role="button"
+                tabIndex={0}
                 onClick={() => handleNotifClick(n)}
-                className={`w-full flex items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--surface-2)] ${!n.isRead ? 'bg-[var(--primary-light)]/50' : ''}`}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleNotifClick(n); }}
+                className={`group w-full flex items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--surface-2)] cursor-pointer ${!n.isRead ? 'bg-[var(--primary-light)]/50' : ''}`}
               >
                 <NotifIcon type={n.type} />
                 <div className="flex-1 min-w-0">
@@ -190,7 +214,14 @@ export default function NotificationPanel() {
                 {n.isRead && (
                   <Check size={13} className="text-[var(--border)] flex-shrink-0 mt-1" />
                 )}
-              </button>
+                <button
+                  onClick={(e) => handleDelete(e, n.id)}
+                  title="Delete notification"
+                  className="flex-shrink-0 p-1 -m-1 rounded-lg text-[var(--text-muted)] opacity-50 group-hover:opacity-100 hover:text-[var(--danger)] hover:bg-[var(--danger-light)] transition-all"
+                >
+                  <X size={13} />
+                </button>
+              </div>
             ))}
           </div>
         </div>
