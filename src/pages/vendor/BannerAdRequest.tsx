@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { Image, Video, Clock, Plus, Upload, X, Check, Calendar } from 'lucide-react';
+import { Image, Video, Clock, Plus, Upload, X, Check, Calendar, Trash2 } from 'lucide-react';
 import BackButton from '../../components/BackButton';
 import { api, endpoints } from '../../utils/api';
+import { openRazorpayForOrder } from '../../utils/razorpay';
+import { useUserStore } from '../../store/useUserStore';
 import toast from 'react-hot-toast';
 
 interface BannerPlan {
@@ -136,11 +138,64 @@ export default function BannerAdRequest() {
     }
   };
 
+  const { user } = useUserStore();
+  const [payingId, setPayingId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+
+  const deleteBanner = async (ad: BannerAd) => {
+    if (deletingId) return;
+    const isLive = ad.status === 'live';
+    if (!window.confirm(
+      isLive
+        ? 'This banner is live. Deleting it removes it from public display. Delete anyway?'
+        : 'Delete this banner request?',
+    )) return;
+    setDeletingId(ad.id);
+    try {
+      const res = await api.delete(`/banner-ads/${ad.id}`);
+      if (res.data.success) {
+        toast.success('Banner request deleted');
+        setAds((prev) => prev.filter((a) => a.id !== ad.id));
+      } else {
+        toast.error(res.data.error ?? 'Could not delete');
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.error ?? 'Could not delete');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const load = () => {
     setLoading(true);
     api.get(endpoints.bannerListMine).then((r) => {
       if (r.data.success) setAds(r.data.data);
     }).finally(() => setLoading(false));
+  };
+
+  const payForBanner = async (ad: BannerAd) => {
+    if (payingId) return;
+    setPayingId(ad.id);
+    try {
+      const res = await api.post(`/banner-ads/${ad.id}/pay`);
+      if (!res.data.success) { toast.error(res.data.error ?? 'Could not start payment'); return; }
+      await openRazorpayForOrder(
+        res.data.data,
+        { description: `Banner Ad — ${ad.plan_name ?? 'campaign'}`, prefill: { name: user?.name, email: user?.email, contact: user?.phone } },
+        async (resp) => {
+          const v = await api.post(`/banner-ads/${ad.id}/confirm-payment`, resp);
+          if (!v.data.success) throw new Error('Verification failed');
+        },
+      );
+      toast.success('🎉 Payment successful — your banner is now live!');
+      load();
+    } catch (err: any) {
+      const msg = err?.message ?? 'Payment failed';
+      if (msg === 'Payment cancelled') toast('Payment cancelled', { icon: '↩️' });
+      else toast.error(msg);
+    } finally {
+      setPayingId(null);
+    }
   };
 
   const loadPlans = () => {
@@ -373,13 +428,29 @@ export default function BannerAdRequest() {
                 {ad.review_note && (
                   <p className="text-xs text-[var(--text-muted)] mt-1 italic">Admin note: {ad.review_note}</p>
                 )}
+                {ad.status === 'approved' && (
+                  <button
+                    onClick={() => payForBanner(ad)}
+                    disabled={payingId === ad.id}
+                    className="btn btn-primary btn-sm mt-2">
+                    {payingId === ad.id ? 'Processing…' : `Pay ₹${Number(ad.price ?? 0).toLocaleString()} to go live`}
+                  </button>
+                )}
               </div>
-              <div className="text-right flex-shrink-0">
+              <div className="text-right flex-shrink-0 flex flex-col items-end">
                 {ad.price != null && <div className="font-semibold text-[var(--text)] text-sm">₹{Number(ad.price).toLocaleString()}</div>}
                 <div className="flex items-center gap-1 text-xs text-[var(--text-muted)] mt-1 justify-end">
                   <Clock size={10} />
                   {new Date(ad.created_at).toLocaleDateString()}
                 </div>
+                <button
+                  onClick={() => deleteBanner(ad)}
+                  disabled={deletingId === ad.id}
+                  title="Delete request"
+                  aria-label="Delete request"
+                  className="mt-2 p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-[var(--danger-light)] transition-colors disabled:opacity-50">
+                  <Trash2 size={15} />
+                </button>
               </div>
             </div>
           ))}

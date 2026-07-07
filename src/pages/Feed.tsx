@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   TrendingUp, Zap, Clock, WifiOff, LogIn, ChevronLeft, ChevronRight,
   LayoutGrid, List, X, SlidersHorizontal, ChevronDown, Eye, Bookmark, MapPin,
-  Flame, Tag, Plus,
+  Flame, Tag, Plus, Map as MapIcon,
 } from 'lucide-react';
 import { EmptyState } from '../components/ui/EmptyState';
 import PullToRefresh from '../components/ui/PullToRefresh';
@@ -14,7 +14,6 @@ import CategoryIcon from '../components/CategoryIcon';
 import SpotlightHero from '../components/SpotlightHero';
 import { useUserStore } from '../store/useUserStore';
 import { useGeolocation } from '../hooks/useGeolocation';
-import { useOffers, useCategories, type Category } from '../powersync/queries';
 import { api, endpoints } from '../utils/api';
 import type { Offer } from '../types';
 
@@ -63,10 +62,20 @@ function timeLeft(until: string | undefined): string | null {
   return `${Math.floor(h / 24)}d left`;
 }
 
+type Category = { id: number; name: string; slug: string; icon: string; sort_order: number };
+
 export default function Feed() {
   const { user } = useUserStore();
-  const { lat, lng } = useGeolocation();
+  const geo = useGeolocation();
+  // Seed the feed with the user's last-known saved location so the very first
+  // load is already ordered by their area (not the Chennai default). The moment
+  // live GPS resolves we switch to it and the feed re-sorts automatically —
+  // no manual refresh needed.
+  const liveReady = !geo.loading && !geo.error;
+  const lat = liveReady ? geo.lat : (user?.lat != null ? Number(user.lat) : geo.lat);
+  const lng = liveReady ? geo.lng : (user?.lng != null ? Number(user.lng) : geo.lng);
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const urlQuery = searchParams.get('q') ?? '';
 
   const [isOnline, setIsOnline]             = useState(globalThis.navigator.onLine);
@@ -87,19 +96,21 @@ export default function Feed() {
 
   const CATS_LIMIT = 8;
 
-  const psOffers     = useOffers(activeCategory);
-  const psCategories = useCategories();
-
-  const allOffers     = psOffers.length > 0 ? psOffers : apiOffers;
-  const allCategories = psCategories.length > 0 ? psCategories : apiCategories;
+  // REST is the single source of truth (search/category/distance/quick-filter
+  // are all applied server-side).
+  const allOffers     = apiOffers;
+  const allCategories = apiCategories;
 
   const fetchOffers = async () => {
     setLoading(true); setError(null);
     const cityParam = user?.city || 'Chennai';
     try {
+      // Search + category + distance + quick-filter are all applied server-side.
+      const flt = activeFilter === 'all' ? '' : activeFilter;
+      const cat = activeCategory || '';
       const r = user
-        ? await api.get(endpoints.feed(user.id, lat || 13.08, lng || 80.27, 1, 50, ''))
-        : await api.get(endpoints.trending(cityParam, 1, 50, ''));
+        ? await api.get(endpoints.feed(user.id, lat || 13.08, lng || 80.27, 1, 500, search, cat, nearbyRadius, flt))
+        : await api.get(endpoints.trending(cityParam, 1, 500, search, lat || 13.08, lng || 80.27, cat, nearbyRadius, flt));
       if (r.data.success) setApiOffers((r.data.data ?? []).map(mapApiOffer));
     } catch {
       setError('Failed to load offers. Please check your connection.');
@@ -108,13 +119,13 @@ export default function Feed() {
     }
   };
 
-  useEffect(() => { if (psOffers.length > 0) return; fetchOffers(); }, [psOffers.length, user?.id]);
+  useEffect(() => { fetchOffers(); setPage(1); },
+    [user?.id, lat, lng, search, activeCategory, nearbyRadius, activeFilter]);
   const handleRefresh = async () => { await fetchOffers(); };
 
   useEffect(() => {
-    if (psCategories.length > 0) return;
     api.get(endpoints.categoriesList()).then(r => setApiCategories(r.data.data ?? [])).catch(() => {});
-  }, [psCategories.length]);
+  }, []);
 
   useEffect(() => {
     const goOnline  = () => setIsOnline(true);
@@ -127,22 +138,8 @@ export default function Feed() {
   useEffect(() => { setSearch(urlQuery); setPage(1); }, [urlQuery]);
 
   const displayOffers = allOffers
-    .filter((o: Offer) => {
-      if (activeCategory && o.category !== activeCategory) return false;
-      if (search && !o.title.toLowerCase().includes(search.toLowerCase()) &&
-          !o.description?.toLowerCase().includes(search.toLowerCase())) return false;
-      if (nearbyRadius > 0 && lat && lng && o.vendorLat && o.vendorLng) {
-        const d = Math.sqrt(Math.pow((o.vendorLat - lat) * 111, 2) + Math.pow((o.vendorLng - lng) * 111, 2));
-        if (d > nearbyRadius) return false;
-      }
-      if (activeFilter === 'flash'   && (o.discountPercent ?? 0) < 30) return false;
-      if (activeFilter === 'trending') return (o.views ?? 0) > 100;
-      if (activeFilter === 'ending') {
-        if (!o.validUntil) return false;
-        if (new Date(o.validUntil).getTime() - Date.now() > 86400000 * 2) return false;
-      }
-      return true;
-    })
+    // Search, category, distance and quick-filter are all applied server-side.
+    .filter(() => true)
     .sort((a: Offer, b: Offer) => {
       if (sortKey === 'discount') return (b.discountPercent ?? 0) - (a.discountPercent ?? 0);
       if (sortKey === 'views')    return (b.views ?? 0) - (a.views ?? 0);
@@ -346,6 +343,13 @@ export default function Feed() {
             title="List view"
           >
             <List size={14} />
+          </button>
+          <button
+            onClick={() => navigate('/map')}
+            className="p-1.5 transition-colors text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]"
+            title="Map view"
+          >
+            <MapIcon size={14} />
           </button>
         </div>
       </div>

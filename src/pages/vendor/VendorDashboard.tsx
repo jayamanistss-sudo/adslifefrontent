@@ -9,8 +9,6 @@ import {
 import BackButton from '../../components/BackButton';
 import { ErrorState } from '../../components/ui/EmptyState';
 import { api, endpoints } from '../../utils/api';
-import { useUserStore } from '../../store/useUserStore';
-import { useVendorDashboardPS } from '../../powersync/queries';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, BarChart, Bar,
@@ -59,40 +57,14 @@ interface FollowersData {
 }
 
 export default function VendorDashboard() {
-  const { user } = useUserStore();
   const [data, setData]           = useState<DashboardData | null>(null);
   const [followers, setFollowers] = useState<FollowersData | null>(null);
   const [loading, setLoading]     = useState(true);
   const [trendsReady, setTrendsReady] = useState(false);
   const [error, setError]         = useState('');
 
-  // PowerSync: instant data from local SQLite — renders before API responds
-  const ps = useVendorDashboardPS(user?.id ?? 0);
-
-  // Pre-populate from PowerSync while API loads
-  useEffect(() => {
-    if (!ps.vendor || data !== null) return;
-    setData({
-      vendor: { ...ps.vendor, plan_name: ps.vendor.subscription_plan, plan_max_offers: 0 },
-      stats: {
-        impressions: 0,
-        clicks: ps.offerStats?.total_clicks ?? 0,
-        saves:  ps.offerStats?.total_saves  ?? 0,
-        engagement_rate: 0,
-        impressions_trend: '—', clicks_trend: '—', saves_trend: '—', engagement_trend: '—',
-      },
-      offers: ps.offerStats
-        ? { ...ps.offerStats, expired: 0 }
-        : { total: 0, active: 0, inactive: 0, expired: 0, total_views: 0, total_clicks: 0, total_saves: 0, total_redemptions: 0 },
-      recent_offers: ps.recentOffers,
-      peak_hours: Array(24).fill(0),
-      daily_trend: [],
-    });
-    setLoading(false);
-  }, [ps.vendor?.id, ps.offerStats?.total_clicks]);
-
   const fetchDashboard = useCallback((silent = false) => {
-    if (!silent && !ps.vendor) setLoading(true);
+    if (!silent) setLoading(true);
     api.get(endpoints.vendorDashboard)
       .then((r) => {
         if (!r.data.success) {
@@ -109,7 +81,7 @@ export default function VendorDashboard() {
       })
       .catch((err) => setError(err?.response?.data?.error ?? 'Failed to load dashboard data'))
       .finally(() => setLoading(false));
-  }, [ps.vendor]);
+  }, []);
 
   useEffect(() => { fetchDashboard(); }, []);
 
@@ -201,6 +173,9 @@ export default function VendorDashboard() {
           ))}
         </div>
       </div>
+
+      {/* ── Verify in-store redemption code ──────────── */}
+      <VerifyRedemptionCard />
 
       {/* ── Main content ─────────────────────────────── */}
       <div className="min-w-0">
@@ -423,4 +398,56 @@ export default function VendorDashboard() {
     </div>
   );
 
+}
+
+
+function VerifyRedemptionCard() {
+  const [code, setCode] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<{ offer_title: string; customer: string } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const verify = async () => {
+    const clean = code.trim().toUpperCase();
+    if (clean.length !== 6) { setError('Enter the 6-character code'); return; }
+    setBusy(true); setError(null); setResult(null);
+    try {
+      const res = await api.post('/vendor/redemptions/verify', { code: clean });
+      if (res.data.success) { setResult(res.data.data); setCode(''); }
+      else setError(res.data.error ?? 'Invalid code');
+    } catch (err: any) {
+      setError(err.response?.data?.error ?? 'Verification failed');
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <div className="card p-4 mb-5">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2 min-w-[180px]">
+          <span className="text-lg">🎟️</span>
+          <div>
+            <p className="text-sm font-bold text-[var(--text)]">Verify Redemption</p>
+            <p className="text-[10px] text-[var(--text-muted)]">Enter the customer's in-store code</p>
+          </div>
+        </div>
+        <input
+          className="input flex-1 min-w-[140px] font-mono tracking-[0.3em] text-center uppercase"
+          placeholder="AB12CD"
+          maxLength={6}
+          value={code}
+          onChange={(e) => setCode(e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase())}
+          onKeyDown={(e) => e.key === 'Enter' && verify()}
+        />
+        <button onClick={verify} disabled={busy} className="btn btn-primary btn-sm">
+          {busy ? 'Verifying…' : 'Verify'}
+        </button>
+      </div>
+      {error && <p className="text-xs text-[var(--danger)] mt-2">{error}</p>}
+      {result && (
+        <p className="text-xs font-semibold mt-2" style={{ color: 'var(--accent)' }}>
+          ✅ Verified — {result.customer} redeemed "{result.offer_title}"
+        </p>
+      )}
+    </div>
+  );
 }

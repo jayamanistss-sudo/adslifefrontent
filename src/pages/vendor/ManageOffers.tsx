@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   Tag, Plus, Upload, X, Eye, MousePointer, Bookmark,
   ToggleLeft, ToggleRight, Pencil, ArrowLeft, Trash2, TrendingUp,
-  Sparkles, Globe, Loader2, ImageIcon, Copy,
+  Sparkles, Globe, Loader2, ImageIcon, Copy, Zap,
 } from 'lucide-react';
 import BackButton from '../../components/BackButton';
 import { EmptyState } from '../../components/ui/EmptyState';
@@ -28,7 +28,7 @@ const emptyForm = {
   title: '', description: '', category: '', image_url: '',
   images: [] as string[],
   discount_percent: '', original_price: '', offer_price: '',
-  coupon_code: '', redeem_url: '', max_redemptions: '100',
+  coupon_code: '', redeem_url: '', max_redemptions: '100', coins_required: '0',
   valid_from: new Date().toISOString().slice(0, 10),
   valid_until: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
   is_active: '1',
@@ -49,6 +49,7 @@ function offerToForm(o: Offer) {
     coupon_code:      o.coupon_code ?? '',
     redeem_url:       o.redeem_url ?? '',
     max_redemptions:  String(o.max_redemptions ?? 0),
+    coins_required:   String((o as any).coins_required ?? 0),
     valid_from:       o.valid_from  ? o.valid_from.slice(0, 10)  : '',
     valid_until:      o.valid_until ? o.valid_until.slice(0, 10) : '',
     is_active:        o.is_active ? '1' : '0',
@@ -287,6 +288,12 @@ function OfferForm({ form, setForm, uploading, uploadingGallery, fileRef, onUplo
           <input id="of-max" className="input" type="number" min="0" placeholder="100 (0 = unlimited)"
             value={form.max_redemptions} onChange={(e) => upd('max_redemptions', e.target.value)} />
         </div>
+        <div>
+          <label htmlFor="of-coins" className="label">Coins Required 🪙</label>
+          <input id="of-coins" className="input" type="number" min="0" placeholder="0 = free for everyone"
+            value={form.coins_required} onChange={(e) => upd('coins_required', e.target.value)} />
+          <p className="text-[10px] text-[var(--text-muted)] mt-1">Make this a coin-exclusive deal — users spend earned coins to redeem</p>
+        </div>
       </div>
 
       {/* Active toggle — shown in both create and edit */}
@@ -352,11 +359,15 @@ export default function ManageOffers() {
       api.get(endpoints.vendorProfile).catch(() => null),
       api.get(endpoints.categoriesList(true)).catch(() => null),
     ]).then(([profileRes, catsRes]) => {
-      const vc: string = profileRes?.data?.data?.category ?? '';
-      if (vc) setVendorCategory(vc);
+      const vcRaw: string = (profileRes?.data?.data?.category ?? '').toLowerCase().trim();
       if (catsRes?.data?.success) {
         const cats: Category[] = catsRes.data.data ?? [];
         setCategories(cats);
+        // Vendor profiles may hold either the slug or a lowercased name
+        // (older mobile builds saved the name) — resolve both to the slug.
+        const match = cats.find((c) => c.slug.toLowerCase() === vcRaw || c.name.toLowerCase() === vcRaw);
+        const vc = match?.slug ?? '';
+        if (vc) setVendorCategory(vc);
         const defaultSlug = vc || cats[0]?.slug || '';
         setForm((f) => ({ ...f, category: defaultSlug }));
       }
@@ -462,6 +473,7 @@ export default function ManageOffers() {
       coupon_code:      aiResult.coupon_code,
       redeem_url:       '',
       max_redemptions:  '100',
+      coins_required:   '0',
       valid_from:       today,
       valid_until:      in30,
       is_active:        '1',
@@ -502,6 +514,7 @@ export default function ManageOffers() {
         original_price:   parseFloat(form.original_price),
         offer_price:      parseFloat(form.offer_price),
         max_redemptions:  form.max_redemptions ? Number.parseInt(form.max_redemptions) : 0,
+        coins_required:   form.coins_required ? Number.parseInt(form.coins_required) : 0,
         valid_from:       form.valid_from,
         valid_until:      form.valid_until,
         is_active:        form.is_active === '1',
@@ -534,6 +547,17 @@ export default function ManageOffers() {
     }
   };
 
+  const handleBoost = async (o: Offer) => {
+    if (!confirm(`Request a 7-day spotlight boost for "${o.title}"? Our team will review and feature it on the home feed.`)) return;
+    try {
+      const res = await api.post(endpoints.spotlightRequest, { offer_id: o.id, duration_days: 7 });
+      if (res.data.success) toast.success('⚡ Boost requested — pending admin approval');
+      else toast.error(res.data.error ?? 'Request failed');
+    } catch (err: any) {
+      toast.error(err.response?.data?.error ?? 'Request failed');
+    }
+  };
+
   const handleDelete = async (o: Offer) => {
     if (!window.confirm(`Delete "${o.title}"? This cannot be undone.`)) return;
     try {
@@ -561,6 +585,7 @@ export default function ManageOffers() {
         original_price:   parseFloat(form.original_price),
         offer_price:      parseFloat(form.offer_price),
         max_redemptions:  form.max_redemptions ? Number.parseInt(form.max_redemptions) : 0,
+        coins_required:   form.coins_required ? Number.parseInt(form.coins_required) : 0,
         valid_from:       form.valid_from,
         valid_until:      form.valid_until,
         is_active:        form.is_active === '1',
@@ -853,6 +878,13 @@ export default function ManageOffers() {
                 </div>
               </div>
               <div className="flex items-center gap-2 sm:flex-shrink-0">
+                <button
+                  onClick={() => handleBoost(o)}
+                  title="Request spotlight boost — featured placement for 7 days"
+                  className="p-1 rounded-lg hover:bg-[var(--warning-light)] text-[var(--text-muted)] hover:text-[var(--warning)] transition-colors"
+                >
+                  <Zap size={15} />
+                </button>
                 <button onClick={() => openEdit(o)} className="btn btn-secondary btn-sm">
                   <Pencil size={13} /> <span className="hidden xs:inline sm:inline">Edit</span>
                 </button>

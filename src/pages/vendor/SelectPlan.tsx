@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Check, Zap } from 'lucide-react';
 import BackButton from '../../components/BackButton';
 import { api, endpoints } from '../../utils/api';
+import { openRazorpayForOrder } from '../../utils/razorpay';
 import { useUserStore } from '../../store/useUserStore';
 import toast from 'react-hot-toast';
 
@@ -56,31 +57,22 @@ export default function SelectPlan() {
       const orderRes = await api.post(endpoints.paymentCreateOrder, { plan_id: plan.id, purpose: 'plan_change' });
       if (!orderRes.data.success) { toast.error('Could not create payment order'); return; }
 
-      const { order_id, payment_session_id } = orderRes.data.data;
-      const { load: loadCF } = await import('@cashfreepayments/cashfree-js');
-      const cashfree = await loadCF({ mode: import.meta.env.VITE_CASHFREE_ENV === 'production' ? 'production' : 'sandbox' });
-      await cashfree.checkout({ paymentSessionId: payment_session_id, redirectTarget: '_modal' });
+      await openRazorpayForOrder(
+        orderRes.data.data,
+        { description: `${plan.name} plan`, prefill: orderRes.data.data.prefill },
+        async (resp) => {
+          const v = await api.post('/payment/confirm', resp);
+          if (!v.data.success) throw new Error('Verification failed');
+        },
+      );
 
-      // Poll verify endpoint until paid or max retries
-      let verified = false;
-      for (let i = 0; i < 10; i++) {
-        await new Promise((r) => setTimeout(r, 3000));
-        try {
-          const vRes = await api.get(endpoints.paymentVerify(order_id));
-          if (vRes.data.data?.status === 'paid') { verified = true; break; }
-        } catch { /* keep polling */ }
-      }
-
-      if (verified) {
-        toast.success('Plan upgraded successfully!');
-        // Refresh current plan display
-        const vendorRes = await api.get(endpoints.vendorMyPlan);
-        if (vendorRes.data.success) setCurrent(vendorRes.data.data);
-      } else {
-        toast('Payment processing — your plan will update shortly.', { icon: 'ℹ️' });
-      }
+      toast.success('Plan upgraded successfully!');
+      const vendorRes = await api.get(endpoints.vendorMyPlan);
+      if (vendorRes.data.success) setCurrent(vendorRes.data.data);
     } catch (err: any) {
-      toast.error(err.response?.data?.error ?? 'Payment failed');
+      const msg = err?.message ?? err.response?.data?.error ?? 'Payment failed';
+      if (msg === 'Payment cancelled') toast('Payment cancelled', { icon: '↩️' });
+      else toast.error(msg);
     } finally {
       setPaying(false);
     }

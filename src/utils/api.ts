@@ -70,11 +70,11 @@ export const endpoints = {
   emailChangeRequest: "/auth/email-change/request",
   emailChangeConfirm: "/auth/email-change/confirm",
 
-  // Feed
-  feed: (_uid: number, lat: number, lng: number, page = 1, perPage = 20, q = "") =>
-    `/feed/personalized?lat=${lat}&lng=${lng}&page=${page}&per_page=${perPage}${q ? `&q=${encodeURIComponent(q)}` : ""}`,
-  trending: (city: string, page = 1, perPage = 20, q = "", lat = 13.0827, lng = 80.2707) =>
-    `/feed/trending?city=${city}&lat=${lat}&lng=${lng}&page=${page}&per_page=${perPage}${q ? `&q=${encodeURIComponent(q)}` : ""}`,
+  // Feed  (category / distance / filter applied server-side)
+  feed: (_uid: number, lat: number, lng: number, page = 1, perPage = 20, q = "", category = "", distance = 0, filter = "") =>
+    `/feed/personalized?lat=${lat}&lng=${lng}&page=${page}&per_page=${perPage}${q ? `&q=${encodeURIComponent(q)}` : ""}${category ? `&category=${encodeURIComponent(category)}` : ""}${distance ? `&distance=${distance}` : ""}${filter && filter !== "all" ? `&filter=${filter}` : ""}`,
+  trending: (city: string, page = 1, perPage = 20, q = "", lat = 13.0827, lng = 80.2707, category = "", distance = 0, filter = "") =>
+    `/feed/trending?city=${city}&lat=${lat}&lng=${lng}&page=${page}&per_page=${perPage}${q ? `&q=${encodeURIComponent(q)}` : ""}${category ? `&category=${encodeURIComponent(category)}` : ""}${distance ? `&distance=${distance}` : ""}${filter && filter !== "all" ? `&filter=${filter}` : ""}`,
   nearby: (lat: number, lng: number, radius = 5, page = 1) =>
     `/feed/nearby?lat=${lat}&lng=${lng}&radius=${radius}&page=${page}`,
   interaction: "/feed/interaction",
@@ -137,6 +137,7 @@ export const endpoints = {
 
   // Leaderboard
   leaderboard: (city: string, period: string) => `/leaderboard?city=${encodeURIComponent(city)}&period=${period}`,
+  leaderboardMe: (city: string, period: string) => `/leaderboard/me?city=${encodeURIComponent(city)}&period=${period}`,
 
   // Gamification
   streakStatus: (userId: number) => `/streak/${userId}`,

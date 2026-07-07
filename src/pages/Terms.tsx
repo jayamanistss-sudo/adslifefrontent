@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import DOMPurify from 'dompurify';
 import { Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { useSiteSettings } from '../store/useSiteSettings';
@@ -69,7 +70,7 @@ export default function Terms() {
           {customContent ? (
             <div
               className="text-sm leading-relaxed text-[var(--text-secondary)] whitespace-pre-wrap"
-              dangerouslySetInnerHTML={{ __html: customContent }}
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(customContent) }}
             />
           ) : (
             <div className="space-y-6">

@@ -157,6 +157,7 @@ export default function BecomeVendor() {
     e.preventDefault();
     if (!user) { navigate('/login?redirect=/become-vendor'); return; }
     if (!form.business_name.trim()) { toast.error('Business name is required'); return; }
+    if (form.phone && !/^[6-9]\d{9}$/.test(form.phone.trim())) { toast.error('Enter a valid 10-digit mobile number'); return; }
     if (!form.lat || !form.lng) { toast.error('Please pin your business location on the map'); return; }
     setSubmitting(true);
     try {
@@ -289,7 +290,7 @@ export default function BecomeVendor() {
               </div>
               <div>
                 <label className="label">Phone</label>
-                <input className="w-full input" placeholder="9876543210" type="tel" value={form.phone} onChange={e => set('phone', e.target.value)} />
+                <input className="w-full input" placeholder="9876543210" type="tel" maxLength={10} value={form.phone} onChange={e => set('phone', e.target.value.replace(/\D/g, ''))} />
               </div>
             </div>
             <div>

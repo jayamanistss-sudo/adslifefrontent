@@ -33,7 +33,6 @@ class ErrorBoundary extends Component<{ children: React.ReactNode }, { hasError:
   }
 }
 import Layout from "./components/Layout";
-import PowerSyncProvider from "./powersync/PowerSyncProvider";
 import { useUserStore } from "./store/useUserStore";
 import { api, endpoints } from "./utils/api";
 // Pages
@@ -46,8 +45,10 @@ import Feed from "./pages/Feed";
 import Leaderboard from "./pages/Leaderboard";
 import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
-import GroupDeals from "./pages/GroupDeals";
 import OfferDetail from "./pages/OfferDetail";
+import VendorProfile from "./pages/VendorProfile";
+import OffersMap from "./pages/OffersMap";
+import PayTest from "./pages/PayTest";
 
 // Vendor pages
 import VendorDashboard from "./pages/vendor/VendorDashboard";
@@ -146,7 +147,6 @@ export default function App() {
   return (
     <ErrorBoundary>
       <BrowserRouter>
-        <PowerSyncProvider>
         <Toaster
           position="top-center"
           containerStyle={{ zIndex: 10001 }}
@@ -213,6 +213,32 @@ export default function App() {
               </Layout>
             }
           />
+          <Route
+            path="/shop/:id"
+            element={
+              <Layout>
+                <VendorProfile />
+              </Layout>
+            }
+          />
+          <Route
+            path="/map"
+            element={
+              <Layout>
+                <OffersMap />
+              </Layout>
+            }
+          />
+          <Route
+            path="/pay-test"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <PayTest />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
 
           {/* Protected routes — login required */}
           <Route
@@ -235,17 +261,6 @@ export default function App() {
               </ProtectedRoute>
             }
           />
-          <Route
-            path="/group-deals"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <GroupDeals />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-
           <Route
             path="/vendor/dashboard"
             element={
@@ -520,7 +535,6 @@ export default function App() {
 
           <Route path="*" element={<Navigate to="/feed" replace />} />
         </Routes>
-        </PowerSyncProvider>
       </BrowserRouter>
     </ErrorBoundary>
   );

@@ -65,6 +65,16 @@ export default function EditVendorProfile() {
     }).finally(() => setLoading(false));
   }, []);
 
+  // Older mobile builds saved the lowercased category NAME instead of the
+  // slug — normalize to the slug once both profile and categories are loaded.
+  useEffect(() => {
+    if (!categories.length || !form.category) return;
+    const raw = form.category.toLowerCase().trim();
+    if (categories.some((c) => c.slug.toLowerCase() === raw)) return;
+    const match = categories.find((c) => c.name.toLowerCase() === raw);
+    if (match) setForm((f) => ({ ...f, category: match.slug }));
+  }, [categories, form.category]);
+
   /* ── Leaflet map init ───────────────────────────────────── */
   useEffect(() => {
     if (loading || !mapRef.current || mapObj.current) return;
@@ -307,7 +317,7 @@ export default function EditVendorProfile() {
             </div>
             <div>
               <label htmlFor="vp-web" className="block text-sm font-medium text-[var(--text)] mb-1.5">Website <span className="text-[var(--text-muted)] font-normal text-xs">(optional)</span></label>
-              <input id="vp-web" className="input" type="url" placeholder="https://yourshop.com"
+              <input id="vp-web" className="input" type="text" placeholder="https://yourshop.com"
                 value={form.website} onChange={(e) => upd('website', e.target.value)} />
             </div>
             <div>

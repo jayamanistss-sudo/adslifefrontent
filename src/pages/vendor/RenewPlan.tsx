@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { RefreshCw, Check, AlertCircle } from 'lucide-react';
 import BackButton from '../../components/BackButton';
 import { api, endpoints } from '../../utils/api';
+import { openRazorpayForOrder } from '../../utils/razorpay';
 import { useUserStore } from '../../store/useUserStore';
 import toast from 'react-hot-toast';
 
@@ -40,29 +41,22 @@ export default function RenewPlan() {
       const orderRes = await api.post(endpoints.paymentCreateOrder, { plan_id: plan.id, purpose: 'plan_renewal' });
       if (!orderRes.data.success) { toast.error('Could not create payment order'); return; }
 
-      const { order_id, payment_session_id } = orderRes.data.data;
-      const { load: loadCF } = await import('@cashfreepayments/cashfree-js');
-      const cashfree = await loadCF({ mode: import.meta.env.VITE_CASHFREE_ENV === 'production' ? 'production' : 'sandbox' });
-      await cashfree.checkout({ paymentSessionId: payment_session_id, redirectTarget: '_modal' });
+      await openRazorpayForOrder(
+        orderRes.data.data,
+        { description: 'Plan renewal', prefill: orderRes.data.data.prefill },
+        async (resp) => {
+          const v = await api.post('/payment/confirm', resp);
+          if (!v.data.success) throw new Error('Verification failed');
+        },
+      );
 
-      let verified = false;
-      for (let i = 0; i < 10; i++) {
-        await new Promise((r) => setTimeout(r, 3000));
-        try {
-          const vRes = await api.get(endpoints.paymentVerify(order_id));
-          if (vRes.data.data?.status === 'paid') { verified = true; break; }
-        } catch { /* keep polling */ }
-      }
-
-      if (verified) {
-        toast.success('Plan renewed successfully!');
-        const vendorRes = await api.get(endpoints.vendorMyPlan);
-        if (vendorRes.data.success) setVendorPlan(vendorRes.data.data);
-      } else {
-        toast('Payment processing — your plan will renew shortly.', { icon: 'ℹ️' });
-      }
+      toast.success('Plan renewed successfully!');
+      const vendorRes = await api.get(endpoints.vendorMyPlan);
+      if (vendorRes.data.success) setVendorPlan(vendorRes.data.data);
     } catch (err: any) {
-      toast.error(err.response?.data?.error ?? 'Renewal failed');
+      const msg = err?.message ?? err.response?.data?.error ?? 'Renewal failed';
+      if (msg === 'Payment cancelled') toast('Payment cancelled', { icon: '↩️' });
+      else toast.error(msg);
     } finally {
       setRenewing(false);
     }
@@ -154,7 +148,7 @@ export default function RenewPlan() {
 
       <div className="card p-4 bg-[var(--surface-2)]">
         <p className="text-xs text-[var(--text-secondary)]">
-          Payment is processed securely via Cashfree. You will receive a confirmation notification after successful payment.
+          Payment is processed securely via Razorpay. You will receive a confirmation notification after successful payment.
         </p>
       </div>
     </div>

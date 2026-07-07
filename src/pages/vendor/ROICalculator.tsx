@@ -5,8 +5,6 @@ import { motion } from 'framer-motion';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { TrendingUp, TrendingDown, Minus, Printer, Target, DollarSign, MousePointer, Repeat } from 'lucide-react';
 import { endpoints } from '../../utils/api';
-import { useUserStore } from '../../store/useUserStore';
-import { useVendorDashboardPS } from '../../powersync/queries';
 import { useCachedApi } from '../../hooks/useCachedApi';
 
 interface ROIData {
@@ -38,11 +36,11 @@ function TrendPill({ value }: { value: number }) {
 }
 
 export default function ROICalculator() {
-  const { user } = useUserStore();
   const [days, setDays] = useState(30);
 
-  const ps = useVendorDashboardPS(user?.id ?? 0);
-  const offerId = ps.recentOffers[0]?.id ?? 0;
+  // Pick the vendor's most recent offer to analyse (REST).
+  const { data: myOffers } = useCachedApi<Array<{ id: number }>>(endpoints.myOffers);
+  const offerId = myOffers?.[0]?.id ?? 0;
 
   const { data: raw, loading } = useCachedApi<any>(
     offerId ? endpoints.roi(offerId, days) : '',

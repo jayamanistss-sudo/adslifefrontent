@@ -30,6 +30,19 @@ export default function Layout({ children }: Props) {
   const { load: loadSaved } = useSavedStore();
   useEffect(() => { fetchSite(); }, []);
   useEffect(() => { if (isAuthenticated && user) loadSaved(user.id); }, [isAuthenticated, user?.id]);
+  // Daily streak check-in — once per browser session
+  useEffect(() => {
+    if (!isAuthenticated || !user) return;
+    if (sessionStorage.getItem('adslife_checkin')) return;
+    sessionStorage.setItem('adslife_checkin', '1');
+    api.post('/auth/checkin').then((r) => {
+      const d = r.data?.data;
+      if (d?.coins_awarded > 0) {
+        import('react-hot-toast').then(({ default: toast }) =>
+          toast.success(`🔥 ${d.streak}-day streak! +${d.coins_awarded} coins`));
+      }
+    }).catch(() => sessionStorage.removeItem('adslife_checkin'));
+  }, [isAuthenticated, user?.id]);
   const location = useLocation();
   const navigate = useNavigate();
 

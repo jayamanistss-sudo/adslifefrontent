@@ -41,7 +41,10 @@ export default function SupportTickets() {
     if (!form.subject || !form.description) return;
     setSubmitting(true);
     try {
-      const res = await api.post(endpoints.supportCreate, form);
+      // Backend field is "message"; priority is display-only (not stored)
+      const res = await api.post(endpoints.supportCreate, {
+        subject: form.subject, message: form.description, category: form.category,
+      });
       if (res.data.success) {
         toast.success('Support ticket created!');
         setShowForm(false);

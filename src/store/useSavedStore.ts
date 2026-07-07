@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { api, endpoints } from '../utils/api';
-import { db } from '../powersync/database';
 
 interface SavedState {
   savedIds: Set<number>;
@@ -15,16 +14,14 @@ export const useSavedStore = create<SavedState>((set, get) => ({
   savedIds: new Set(),
   loaded: false,
 
-  load: async (userId: number) => {
+  load: async (_userId: number) => {
+    // REST is the single source of truth for saved offers.
     try {
-      const rows = await db.getAll('SELECT offer_id FROM saved_offers WHERE user_id = ?', [userId]);
-      set({ savedIds: new Set<number>(rows.map((r: any) => Number(r.offer_id))), loaded: true });
-    } catch {
-      try {
-        const r = await api.get(endpoints.savedIds);
-        if (r.data.success) set({ savedIds: new Set<number>((r.data.data as number[]).map(Number)), loaded: true });
-      } catch {}
-    }
+      const r = await api.get(endpoints.savedIds);
+      if (r.data.success) {
+        set({ savedIds: new Set<number>((r.data.data as number[]).map(Number)), loaded: true });
+      }
+    } catch { /* keep whatever we have */ }
   },
 
   save: async (offerId) => {

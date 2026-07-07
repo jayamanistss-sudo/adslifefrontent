@@ -8,11 +8,12 @@ import {
 } from 'lucide-react';
 import CategoryIcon from '../components/CategoryIcon';
 import { EmptyState } from '../components/ui/EmptyState';
+import { openRazorpayForOrder } from '../utils/razorpay';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useUserStore } from '../store/useUserStore';
 import { api, endpoints } from '../utils/api';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Variants } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -627,34 +628,30 @@ function BecomeVendorModal({ onClose, onSuccess }: {
         await submitApplication();
         return;
       }
-      const orderRes = await api.post(endpoints.paymentCreateOrder, {
-        plan_id: selectedPlan.id,
-        amount: selectedPlan.price,
-      });
+      const orderRes = await api.post(endpoints.paymentCreateOrder, { plan_id: selectedPlan.id });
       if (!orderRes.data.success) { toast.error('Could not initiate payment'); return; }
-      const { payment_session_id, order_id } = orderRes.data.data as { payment_session_id: string; order_id: string };
 
-      if (!order_id || !payment_session_id) {
+      // Free plan (no order) → submit the application directly.
+      if (orderRes.data.data.free || !orderRes.data.data.order_id) {
         await submitApplication();
         return;
       }
 
-      const { load: loadCF } = await import('@cashfreepayments/cashfree-js');
-      const cashfree = await loadCF({ mode: 'sandbox' });
-      await cashfree.checkout({ paymentSessionId: payment_session_id, redirectTarget: '_modal' });
-      const interval = setInterval(async () => {
-        try {
-          const vRes = await api.get(endpoints.paymentVerify(order_id));
-          if (vRes.data.success && vRes.data.data.status === 'paid') {
-            clearInterval(interval);
-            await submitApplication(order_id);
-          }
-        } catch { /* poll silently */ }
-      }, 3000);
-      setTimeout(() => clearInterval(interval), 300000);
+      await openRazorpayForOrder(
+        orderRes.data.data,
+        { description: 'Vendor plan', prefill: orderRes.data.data.prefill },
+        async (resp) => {
+          const v = await api.post('/payment/confirm', resp);
+          if (!v.data.success) throw new Error('Verification failed');
+        },
+      );
+      await submitApplication(orderRes.data.data.order_id);
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error ?? 'Failed to submit';
-      toast.error(msg);
+      const msg = (err as Error)?.message
+        ?? (err as { response?: { data?: { error?: string } } }).response?.data?.error
+        ?? 'Failed to submit';
+      if (msg === 'Payment cancelled') toast('Payment cancelled', { icon: '↩️' });
+      else toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -773,6 +770,7 @@ export default function Profile() {
   const [followedVendors, setFollowedVendors] = useState<FollowedVendor[]>([]);
   const [followedLoading, setFollowedLoading] = useState(false);
   const [referral, setReferral] = useState<{ referral_code: string; coins: number; referral_count: number } | null>(null);
+  const [myRank, setMyRank] = useState<{ score: number; rank: number | null; city?: string; total_ranked?: number } | null>(null);
   const [refCopied, setRefCopied] = useState(false);
   const [vendorApp, setVendorApp] = useState<{ status: string; business_name: string } | null>(null);
   const navigate = useNavigate();
@@ -788,6 +786,9 @@ export default function Profile() {
     if (user) {
       api.get(endpoints.referralMy).then((r) => {
         if (r.data.success) setReferral(r.data.data);
+      }).catch(() => {});
+      api.get('/leaderboard/me').then((r) => {
+        if (r.data.success) setMyRank(r.data.data);
       }).catch(() => {});
       refreshVendorAppStatus();
     }
@@ -1050,7 +1051,7 @@ export default function Profile() {
               <h3 className="font-heading font-extrabold text-base text-[var(--text)] mb-1.5">Welcome back, {user.name?.split(' ')[0]}!</h3>
               <p className="text-xs text-[var(--text-secondary)] mb-6 font-medium">Here's a quick look at your platform activities and details.</p>
               
-              <div className="grid grid-cols-3 gap-2 sm:gap-4">
+              <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-4">
                 <button onClick={() => setTab('saved')} className="stat-card card-hover items-center text-center cursor-pointer p-3 sm:p-5">
                   <div className="stat-card-icon" style={{ background: 'var(--primary-light)' }}>
                     <Bookmark size={18} style={{ color: 'var(--primary)' }} />
@@ -1072,6 +1073,22 @@ export default function Profile() {
                   <span className="stat-value text-lg sm:text-2xl">{referral?.coins ?? 0}</span>
                   <span className="text-xs font-semibold text-[var(--text-secondary)]">Coins Wallet</span>
                 </div>
+                <Link to="/leaderboard" className="stat-card card-hover items-center text-center cursor-pointer p-3 sm:p-5">
+                  <div className="stat-card-icon" style={{ background: 'var(--primary-light)' }}>
+                    <span className="text-base">⭐</span>
+                  </div>
+                  <span className="stat-value text-lg sm:text-2xl">{myRank?.score ?? 0}</span>
+                  <span className="text-xs font-semibold text-[var(--text-secondary)]">Points</span>
+                </Link>
+                <Link to="/leaderboard" className="stat-card card-hover items-center text-center cursor-pointer p-3 sm:p-5">
+                  <div className="stat-card-icon" style={{ background: 'var(--warning-light)' }}>
+                    <span className="text-base">🏆</span>
+                  </div>
+                  <span className="stat-value text-lg sm:text-2xl">{myRank?.rank ? `#${myRank.rank}` : '—'}</span>
+                  <span className="text-xs font-semibold text-[var(--text-secondary)]">
+                    {myRank?.rank ? `Rank${myRank.city ? ` in ${myRank.city}` : ''}` : 'Not ranked yet'}
+                  </span>
+                </Link>
               </div>
             </div>
           </motion.div>
@@ -1220,23 +1237,25 @@ export default function Profile() {
                     variants={itemVariants}
                     className="flex items-center gap-4 p-4 hover:bg-[var(--surface-hover)] transition-all duration-300 rounded-2xl my-2 border border-transparent hover:border-[var(--primary)]/10"
                   >
-                    {v.logo_url ? (
-                      <img src={v.logo_url} alt={v.business_name}
-                        className="w-12 h-12 rounded-2xl object-cover flex-shrink-0 shadow-sm border border-[var(--border)]" />
-                    ) : (
-                      <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 flex items-center justify-center flex-shrink-0 font-extrabold text-emerald-600 dark:text-emerald-400 text-lg shadow-sm">
-                        {v.business_name[0]?.toUpperCase()}
+                    <Link to={`/shop/${v.id}`} className="flex items-center gap-4 flex-1 min-w-0 group">
+                      {v.logo_url ? (
+                        <img src={v.logo_url} alt={v.business_name}
+                          className="w-12 h-12 rounded-2xl object-cover flex-shrink-0 shadow-sm border border-[var(--border)]" />
+                      ) : (
+                        <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 flex items-center justify-center flex-shrink-0 font-extrabold text-emerald-600 dark:text-emerald-400 text-lg shadow-sm">
+                          {v.business_name[0]?.toUpperCase()}
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-[var(--text)] truncate leading-snug group-hover:text-[var(--primary)] transition-colors">{v.business_name}</p>
+                        <p className="text-xs text-[var(--text-secondary)] capitalize truncate mt-0.5 font-semibold">
+                          {v.category}{v.city ? ` · ${v.city}` : ''}
+                        </p>
+                        <p className="text-[10px] text-[var(--text-secondary)] font-medium mt-1">
+                          <strong className="text-[var(--primary)] font-bold">{v.active_offers ?? 0} active</strong> deal{(v.active_offers ?? 0) !== 1 ? 's' : ''} · {(v.total_followers ?? 0).toLocaleString()} followers
+                        </p>
                       </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-[var(--text)] truncate leading-snug">{v.business_name}</p>
-                      <p className="text-xs text-[var(--text-secondary)] capitalize truncate mt-0.5 font-semibold">
-                        {v.category}{v.city ? ` · ${v.city}` : ''}
-                      </p>
-                      <p className="text-[10px] text-[var(--text-secondary)] font-medium mt-1">
-                        <strong className="text-[var(--primary)] font-bold">{v.active_offers ?? 0} active</strong> deal{(v.active_offers ?? 0) !== 1 ? 's' : ''} · {(v.total_followers ?? 0).toLocaleString()} followers
-                      </p>
-                    </div>
+                    </Link>
                     <button
                       onClick={() => handleUnfollow(v.id)}
                       title="Unsubscribe"

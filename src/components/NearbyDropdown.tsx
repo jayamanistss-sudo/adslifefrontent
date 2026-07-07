@@ -8,6 +8,8 @@ const RADIUS_OPTIONS = [
   { value: 5,    label: 'Within 5 km' },
   { value: 10,   label: 'Within 10 km' },
   { value: 25,   label: 'Within 25 km' },
+  { value: 50,   label: 'Within 50 km' },
+  { value: 100,  label: 'Within 100 km' },
 ];
 
 interface Props {

@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { QRCodeSVG } from 'qrcode.react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, MapPin, Phone, Globe, Clock, Tag, Bookmark,
   Navigation, Copy, CheckCheck, Star, Share2, Calendar,
   ExternalLink, Bell, BellOff, ZoomIn, X, Flag,
-  MessageSquare, ChevronRight, ShoppingBag, Play, Pause,
+  MessageSquare, MessageCircle, ChevronRight, ShoppingBag, Play, Pause, QrCode,
 } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -192,8 +193,34 @@ export default function OfferDetail() {
     setTimeout(() => setCopied(false), 2500);
   };
 
+  // Backend counts one unique click per user from redeem/direction actions
+  const recordEngagement = (action: 'redeem' | 'direction') => {
+    if (!user || !offer) return;
+    api.post(endpoints.interaction, { offer_id: offer.id, action }).catch(() => {});
+  };
+
+  const [redeemCode, setRedeemCode] = useState<string | null>(null);
+  const [codeBusy, setCodeBusy] = useState(false);
+
+  const showInStoreCode = async () => {
+    if (!offer) return;
+    if (!user) { toast.error('Login to get your in-store code'); return; }
+    if (codeBusy) return;
+    setCodeBusy(true);
+    try {
+      const r = await api.post(`/offers/${offer.id}/redemption-code`);
+      if (r.data.success) setRedeemCode(r.data.data.code);
+      else toast.error(r.data.error ?? 'Could not get your code');
+    } catch (err: any) {
+      toast.error(err.response?.data?.error ?? 'Could not get your code');
+    } finally {
+      setCodeBusy(false);
+    }
+  };
+
   const handleDirections = () => {
     if (!offer) return;
+    recordEngagement('direction');
     const lat = offer.vendorLat, lng = offer.vendorLng;
     if (!lat || !lng) { window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(offer.vendorAddress ?? offer.businessName ?? '')}`, '_blank'); return; }
     window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`, '_blank');
@@ -500,7 +527,7 @@ export default function OfferDetail() {
           {/* Redeem online */}
           {offer.redeemUrl && (
             <a href={offer.redeemUrl} target="_blank" rel="noopener noreferrer"
-              onClick={() => { if (offer.couponCode) handleCopy(); }}
+              onClick={() => { recordEngagement('redeem'); if (offer.couponCode) handleCopy(); }}
               className="flex items-center gap-4 gradient-bg text-white px-5 py-4 rounded-2xl shadow-lg shadow-[var(--primary)]/20 hover:opacity-95 transition-opacity group">
               <div className="flex-1">
                 <p className="font-heading font-bold text-lg leading-tight">Redeem Online</p>
@@ -586,6 +613,12 @@ export default function OfferDetail() {
                     <span className="text-[10px] text-[var(--text-muted)] ml-auto">{fmtDate(r.createdAt)}</span>
                   </div>
                   {r.comment && <p className="text-xs text-[var(--text-secondary)] leading-relaxed">{r.comment}</p>}
+                  {r.vendorReply && (
+                    <div className="mt-2 p-2.5 bg-[var(--surface-2)] border-l-2 border-[var(--primary)] rounded-r-lg">
+                      <span className="text-[10px] font-bold text-[var(--primary)] uppercase tracking-wide">Shop's reply</span>
+                      <p className="text-xs text-[var(--text-secondary)] mt-0.5 leading-relaxed">{r.vendorReply}</p>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -600,18 +633,20 @@ export default function OfferDetail() {
           {/* Vendor card */}
           <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl overflow-hidden shadow-sm">
             <div className="flex items-center gap-3.5 p-4">
-              <div className="w-14 h-14 rounded-2xl bg-[var(--primary)]/10 border border-[var(--border)] flex items-center justify-center flex-shrink-0 overflow-hidden">
-                {offer.vendorLogo
-                  ? <img src={offer.vendorLogo} alt="" className="w-full h-full object-cover" />
-                  : <span className="font-black text-[var(--primary)] text-2xl">{offer.businessName?.[0]}</span>}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-heading font-bold text-[var(--text)] text-base truncate">{offer.businessName}</p>
-                <p className="text-xs text-[var(--text-secondary)] capitalize mt-0.5">
-                  {offer.vendorCategory}{offer.vendorCity ? ` · ${offer.vendorCity}` : ''}
-                </p>
-                {followCnt > 0 && <p className="text-[11px] text-[var(--text-muted)] mt-0.5">{followCnt.toLocaleString()} subscribers</p>}
-              </div>
+              <Link to={`/shop/${offer.vendorId}`} className="flex items-center gap-3.5 flex-1 min-w-0 group">
+                <div className="w-14 h-14 rounded-2xl bg-[var(--primary)]/10 border border-[var(--border)] flex items-center justify-center flex-shrink-0 overflow-hidden">
+                  {offer.vendorLogo
+                    ? <img src={offer.vendorLogo} alt="" className="w-full h-full object-cover" />
+                    : <span className="font-black text-[var(--primary)] text-2xl">{offer.businessName?.[0]}</span>}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-heading font-bold text-[var(--text)] text-base truncate group-hover:text-[var(--primary)] transition-colors">{offer.businessName}</p>
+                  <p className="text-xs text-[var(--text-secondary)] capitalize mt-0.5">
+                    {offer.vendorCategory}{offer.vendorCity ? ` · ${offer.vendorCity}` : ''}
+                  </p>
+                  {followCnt > 0 && <p className="text-[11px] text-[var(--text-muted)] mt-0.5">{followCnt.toLocaleString()} subscribers</p>}
+                </div>
+              </Link>
               {user && (
                 <button onClick={handleFollow} disabled={followBusy}
                   className={`flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-xl border transition-all flex-shrink-0 ${
@@ -638,6 +673,16 @@ export default function OfferDetail() {
                   <ChevronRight size={13} className="text-[var(--text-muted)]" />
                 </a>
               )}
+              {offer.vendorPhone && (
+                <a
+                  href={`https://wa.me/${(() => { const d = offer.vendorPhone.replace(/\D/g, ''); return d.length === 10 ? `91${d}` : d; })()}?text=${encodeURIComponent(`Hi! I saw your offer "${offer.title}" on AdsLife. Is it still available?`)}`}
+                  target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-3 px-4 py-3 hover:bg-[var(--surface-2)] transition-colors">
+                  <MessageCircle size={14} className="text-[#25D366] flex-shrink-0" />
+                  <span className="text-sm font-semibold text-[var(--text)] flex-1">Chat on WhatsApp</span>
+                  <ExternalLink size={11} className="text-[var(--text-muted)]" />
+                </a>
+              )}
               {offer.vendorWebsite && (
                 <a href={offer.vendorWebsite} target="_blank" rel="noopener noreferrer"
                   className="flex items-center gap-3 px-4 py-3 hover:bg-[var(--surface-2)] transition-colors">
@@ -646,6 +691,12 @@ export default function OfferDetail() {
                   <ExternalLink size={11} className="text-[var(--text-muted)]" />
                 </a>
               )}
+              <button onClick={showInStoreCode} disabled={codeBusy}
+                className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-[var(--surface-2)] transition-colors">
+                <QrCode size={14} className="text-[var(--primary)] flex-shrink-0" />
+                <span className="text-sm font-semibold text-[var(--text)] flex-1 text-left">{codeBusy ? 'Getting your code…' : 'Show in-store code'}</span>
+                <ChevronRight size={13} className="text-[var(--text-muted)]" />
+              </button>
               <button onClick={handleDirections}
                 className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-[var(--surface-2)] transition-colors">
                 <Navigation size={14} className="text-[var(--primary)] flex-shrink-0" />
@@ -688,6 +739,33 @@ export default function OfferDetail() {
               src={heroImg} alt={offer.title}
               className="max-w-full max-h-[90vh] object-contain rounded-2xl shadow-2xl"
               onClick={e => e.stopPropagation()} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── In-store redemption code modal ───────────────────────────────── */}
+      <AnimatePresence>
+        {redeemCode && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black/70 flex items-center justify-center p-4"
+            onClick={() => setRedeemCode(null)}>
+            <motion.div initial={{ scale: 0.93, y: 12 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.93, y: 12 }}
+              className="bg-[var(--surface)] rounded-3xl p-7 w-full max-w-xs text-center shadow-2xl"
+              onClick={e => e.stopPropagation()}>
+              <h3 className="font-heading font-bold text-[var(--text)] mb-1">Show this at the shop</h3>
+              <p className="text-xs text-[var(--text-muted)] mb-4">The shopkeeper scans the QR or enters your code</p>
+              <div className="bg-white rounded-2xl p-4 inline-block border border-[var(--border)]">
+                <QRCodeSVG value={redeemCode} size={168} />
+              </div>
+              <button
+                onClick={() => { navigator.clipboard.writeText(redeemCode); toast.success('Code copied'); }}
+                className="mt-4 w-full py-3 rounded-xl font-mono text-2xl font-black tracking-[0.3em] text-[var(--primary)] border border-[var(--primary)]/30"
+                style={{ background: 'var(--primary-light, rgba(255,98,0,0.08))' }}>
+                {redeemCode}
+              </button>
+              <p className="text-[10px] text-[var(--text-muted)] mt-3">Valid for one redemption at {offer.businessName ?? 'the shop'}</p>
+              <button onClick={() => setRedeemCode(null)} className="btn btn-secondary btn-sm w-full mt-4">Close</button>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

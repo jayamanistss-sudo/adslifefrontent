@@ -5,16 +5,13 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { endpoints } from '../../utils/api';
 import type { HeatmapPoint } from '../../types';
-import { useUserStore } from '../../store/useUserStore';
-import { useVendorDashboardPS } from '../../powersync/queries';
+import { useVendorId } from '../../hooks/useVendorId';
 import { useCachedApi } from '../../hooks/useCachedApi';
 
 type Days = 7 | 30 | 90;
 
 export default function HeatmapAnalytics() {
-  const { user } = useUserStore();
-  const ps = useVendorDashboardPS(user?.id ?? 0);
-  const vendorId = ps.vendorId > 0 ? ps.vendorId : 0;
+  const vendorId = useVendorId();
 
   const mapRef     = useRef<L.Map | null>(null);
   const heatRef    = useRef<any>(null);

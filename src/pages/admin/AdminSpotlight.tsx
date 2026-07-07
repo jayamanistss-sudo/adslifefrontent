@@ -32,8 +32,10 @@ export default function AdminSpotlight() {
 
   const action = async (id: number, act: 'approve' | 'reject') => {
     try {
-      const res = await api.post(endpoints.adminSpotlightAction(id), { status: act, duration_days: 7 });
-      toast.success(res.data.message);
+      // API expects the past-tense status values
+      const status = act === 'approve' ? 'approved' : 'rejected';
+      await api.post(endpoints.adminSpotlightAction(id), { status, duration_days: 7 });
+      toast.success(act === 'approve' ? '⚡ Spotlight approved — offer is now featured' : 'Request rejected');
       setSelected(null);
       setNote('');
       load();
@@ -171,7 +173,7 @@ export default function AdminSpotlight() {
             <div className="flex items-center gap-3 text-xs text-[var(--text-muted)]">
               <span className="capitalize font-medium text-[var(--text)]">{r.subscription_plan}</span>
               <span>·</span>
-              <span>{r.created_at.slice(0, 10)}</span>
+              <span>{r.created_at?.slice(0, 10) ?? '—'}</span>
             </div>
 
             {r.review_note && (

@@ -7,78 +7,24 @@ import { useUserStore } from '../store/useUserStore';
 
 type Period = 'weekly' | 'monthly' | 'alltime';
 
-const CITIES = ['Chennai', 'Mumbai', 'Bangalore', 'Delhi', 'Hyderabad'];
-
-/* ── Sample data shown when the API returns no entries ── */
-const SAMPLE_USERS: Record<string, Array<{ name: string; id: number }>> = {
-  Chennai: [
-    { name: 'Arjun Karthik',   id: 1001 }, { name: 'Priya Sundaram', id: 1002 },
-    { name: 'Rahul Venkatesh', id: 1003 }, { name: 'Deepa Nair',     id: 1004 },
-    { name: 'Vikram Iyer',     id: 1005 }, { name: 'Ananya Pillai',  id: 1006 },
-    { name: 'Suresh Balaji',   id: 1007 }, { name: 'Meera Krishnan', id: 1008 },
-    { name: 'Arun Kumar',      id: 1009 }, { name: 'Lakshmi Rajan',  id: 1010 },
-  ],
-  Mumbai: [
-    { name: 'Rohan Patil',    id: 2001 }, { name: 'Sneha Desai',   id: 2002 },
-    { name: 'Amit Shah',      id: 2003 }, { name: 'Pooja Joshi',   id: 2004 },
-    { name: 'Raj Malhotra',   id: 2005 }, { name: 'Neha Kulkarni', id: 2006 },
-    { name: 'Sameer Mehta',   id: 2007 }, { name: 'Kavita Nair',   id: 2008 },
-    { name: 'Vishal Kamat',   id: 2009 }, { name: 'Asha Thakkar',  id: 2010 },
-  ],
-  Bangalore: [
-    { name: 'Kiran Reddy',   id: 3001 }, { name: 'Divya Menon',   id: 3002 },
-    { name: 'Sunil Hegde',   id: 3003 }, { name: 'Anjali Rao',    id: 3004 },
-    { name: 'Ravi Shankar',  id: 3005 }, { name: 'Vidya Murthy',  id: 3006 },
-    { name: 'Praveen Gowda', id: 3007 }, { name: 'Shruti Kumar',  id: 3008 },
-    { name: 'Naveen Shetty', id: 3009 }, { name: 'Padma Swamy',   id: 3010 },
-  ],
-  Delhi: [
-    { name: 'Rahul Sharma', id: 4001 }, { name: 'Pooja Agarwal', id: 4002 },
-    { name: 'Vikas Gupta',  id: 4003 }, { name: 'Nisha Singh',   id: 4004 },
-    { name: 'Ajay Verma',   id: 4005 }, { name: 'Ritu Chopra',   id: 4006 },
-    { name: 'Manish Yadav', id: 4007 }, { name: 'Simran Kapoor', id: 4008 },
-    { name: 'Sandeep Arora',id: 4009 }, { name: 'Priya Bhatia',  id: 4010 },
-  ],
-  Hyderabad: [
-    { name: 'Venkat Rao',    id: 5001 }, { name: 'Swetha Reddy',  id: 5002 },
-    { name: 'Krishna Murthy',id: 5003 }, { name: 'Lalitha Devi',  id: 5004 },
-    { name: 'Suresh Babu',   id: 5005 }, { name: 'Padmaja Nair',  id: 5006 },
-    { name: 'Ramesh Kumar',  id: 5007 }, { name: 'Anitha Raju',   id: 5008 },
-    { name: 'Aditya Varma',  id: 5009 }, { name: 'Kavya Reddy',   id: 5010 },
-  ],
-};
-
-const BASE_SCORES: Record<Period, number[]> = {
-  weekly:  [1420, 1180, 980, 840, 720, 610, 510, 420, 340, 260],
-  monthly: [7800, 6400, 5200, 4300, 3500, 2800, 2200, 1700, 1200, 850],
-  alltime: [24500, 19800, 16200, 13400, 10800, 8600, 6700, 5100, 3800, 2600],
-};
-
-function makeSampleEntries(city: string, period: Period): LeaderboardEntry[] {
-  const users  = SAMPLE_USERS[city] ?? SAMPLE_USERS['Chennai'];
-  const scores = BASE_SCORES[period];
-  return users.map((u, i) => ({
-    rank:             i + 1,
-    userId:           u.id,
-    name:             u.name,
-    city,
-    score:            scores[i],
-    totalSaves:       Math.round(scores[i] * 0.4),
-    totalRedemptions: Math.round(scores[i] * 0.25),
-    totalReviews:     Math.round(scores[i] * 0.15),
-  }));
-}
+const ALL_CITIES = 'All Cities';
+const CITIES = [ALL_CITIES, 'Chennai', 'Mumbai', 'Bangalore', 'Delhi', 'Hyderabad'];
 
 export default function Leaderboard() {
   const { user } = useUserStore();
   const [entries, setEntries]     = useState<LeaderboardEntry[]>([]);
+  const [myStanding, setMyStanding] = useState<{ rank: number | null; score: number; total_ranked: number } | null>(null);
   const [loading, setLoading]     = useState(true);
   const [period, setPeriod]       = useState<Period>('monthly');
-  const [city, setCity]           = useState('Chennai');
+  // Default to the user's own city so profile rank and this page agree
+  const [city, setCity]           = useState(() => {
+    const mine = useUserStore.getState().user?.city?.trim();
+    return mine && CITIES.includes(mine) ? mine : ALL_CITIES;
+  });
 
   useEffect(() => {
     setLoading(true);
-    api.get(endpoints.leaderboard(city, period)).then((res) => {
+    api.get(endpoints.leaderboard(city === ALL_CITIES ? '' : city, period)).then((res) => {
       const live: LeaderboardEntry[] = res.data.success
         ? res.data.data.map((e: any, i: number) => ({
             rank:             i + 1,
@@ -92,15 +38,23 @@ export default function Leaderboard() {
             totalReviews:     e.total_reviews,
           }))
         : [];
-      setEntries(live.length > 0 ? live : makeSampleEntries(city, period));
+      setEntries(live);
     }).catch(() => {
-      setEntries(makeSampleEntries(city, period));
+      setEntries([]);
     }).finally(() => setLoading(false));
-  }, [period, city]);
+
+    // The user's own standing — shown even when they're outside the top list.
+    if (user) {
+      api.get(endpoints.leaderboardMe(city === ALL_CITIES ? '' : city, period))
+        .then((r) => { if (r.data.success) setMyStanding(r.data.data); })
+        .catch(() => setMyStanding(null));
+    } else {
+      setMyStanding(null);
+    }
+  }, [period, city, user?.id]);
 
   const top3  = entries.slice(0, 3);
   const rest  = entries.slice(3);
-  const myRank = entries.findIndex((e) => e.userId === user?.id);
 
   const podiumOrder   = top3.length >= 3 ? [top3[1], top3[0], top3[2]] : top3;
   const podiumHeights = ['h-20', 'h-28', 'h-16'];
@@ -142,9 +96,36 @@ export default function Leaderboard() {
         </div>
       </div>
 
+      {/* Your standing — always visible, even outside the top list */}
+      {user && myStanding && (
+        <div className="card p-4 mb-6 flex items-center gap-4 border border-[var(--primary)]/30 bg-[var(--primary-light)]">
+          <div className="w-12 h-12 rounded-full gradient-bg flex items-center justify-center font-heading font-bold text-white text-lg flex-shrink-0 overflow-hidden">
+            {user.avatarUrl ? <img src={user.avatarUrl} alt="" className="w-full h-full object-cover" /> : user.name?.[0]}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="font-heading font-bold text-[var(--text)] text-sm truncate">{user.name} <span className="text-[var(--primary)] text-xs font-semibold">(You)</span></div>
+            <div className="text-xs text-[var(--text-muted)]">
+              {myStanding.rank
+                ? `Rank #${myStanding.rank} of ${myStanding.total_ranked}`
+                : 'Not ranked yet — save & redeem offers to climb'}
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="font-heading font-bold text-[var(--primary)] text-lg leading-none">{myStanding.rank ? `#${myStanding.rank}` : '—'}</div>
+            <div className="text-[11px] text-[var(--text-muted)] mt-0.5">{myStanding.score} pts</div>
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <div className="space-y-3">
           {[1, 2, 3, 4, 5].map((i) => <div key={i} className="skeleton h-16 rounded-2xl" />)}
+        </div>
+      ) : entries.length === 0 ? (
+        <div className="card p-12 text-center">
+          <div className="text-5xl mb-3">🏆</div>
+          <p className="font-heading font-bold text-[var(--text)]">{city === ALL_CITIES ? 'No rankings yet' : `No rankings in ${city} yet`}</p>
+          <p className="text-sm text-[var(--text-muted)] mt-1">Save and redeem offers to earn coins and claim the top spot!</p>
         </div>
       ) : (
         <>
@@ -227,11 +208,6 @@ export default function Leaderboard() {
             ))}
           </div>
 
-          {myRank === -1 && user && (
-            <div className="mt-4 p-4 bg-[var(--primary-light)] border border-[var(--primary)]/20 rounded-xl text-center">
-              <p className="text-sm text-[var(--text-secondary)]">You're not yet ranked. Start saving and redeeming offers to climb the leaderboard!</p>
-            </div>
-          )}
         </>
       )}
     </div>

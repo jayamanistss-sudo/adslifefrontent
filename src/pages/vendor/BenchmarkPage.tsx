@@ -7,16 +7,13 @@ import { RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Responsi
 import { TrendingUp, Award, Zap, Lightbulb, Store } from 'lucide-react';
 import { endpoints } from '../../utils/api';
 import type { BenchmarkData } from '../../types';
-import { useUserStore } from '../../store/useUserStore';
-import { useVendorDashboardPS } from '../../powersync/queries';
+import { useVendorId } from '../../hooks/useVendorId';
 import { useCachedApi } from '../../hooks/useCachedApi';
 
 const fadeUp = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] as const } } };
 
 export default function BenchmarkPage() {
-  const { user } = useUserStore();
-  const ps = useVendorDashboardPS(user?.id ?? 0);
-  const vendorId = ps.vendorId > 0 ? ps.vendorId : 0;
+  const vendorId = useVendorId();
 
   const { data: raw, loading, error } = useCachedApi<any>(
     vendorId ? endpoints.benchmark(vendorId) : '',

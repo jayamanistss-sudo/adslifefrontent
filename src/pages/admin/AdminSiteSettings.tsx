@@ -41,7 +41,7 @@ export default function AdminSiteSettings() {
 
   useEffect(() => {
     api
-      .get(endpoints.siteSettings)
+      .get(`${endpoints.siteSettings}/all`)
       .then((r) => {
         if (r.data.success) setForm({ ...defaults, ...r.data.data });
       })

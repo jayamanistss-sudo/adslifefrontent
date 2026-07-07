@@ -1,8 +1,11 @@
 name: Deploy Frontend
 
+# NOTE: only dev/prod are live right now — there is no test.adslife.in /
+# adslife-frontend-test on the server yet. Add "test" back to both the
+# trigger and the target map once that environment actually exists.
 on:
   push:
-    branches: [dev, test, prod]
+    branches: [dev, prod]
 
 jobs:
   deploy:
@@ -16,16 +19,33 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Fetch .env from server
+      - name: Fetch shared secrets (Firebase/Google/Razorpay) from server
         run: |
           echo "${{ secrets.DEPLOY_SSH_KEY }}" > /tmp/deploy_key
           chmod 600 /tmp/deploy_key
           scp -o StrictHostKeyChecking=no -i /tmp/deploy_key \
             ${{ secrets.DEPLOY_SERVER_USER }}@${{ secrets.DEPLOY_SERVER_IP }}:/var/www/adslife-frontend-dev/.env .env
           rm /tmp/deploy_key
+          # VITE_API_URL must NEVER come from a shared/fetched file — the app
+          # resolves its backend by hostname at runtime (see src/utils/api.ts).
+          # A stray value here bakes one branch's backend into every branch's
+          # build (this exact bug shipped the dev backend inside a prod build
+          # once already). Strip it unconditionally, independent of gitignore
+          # state or which server the value was fetched from.
+          sed -i '/^VITE_API_URL=/d' .env
 
       - name: Install & Build
         run: npm ci && npm run build
+
+      - name: Verify no cross-environment API host leaked into the bundle
+        run: |
+          HOSTS=$(grep -rhoE "https://(dev\.|test\.)?adslife\.in/api" dist/assets/*.js | sort -u | wc -l)
+          if [ "$HOSTS" -lt 2 ]; then
+            echo "Expected multiple hostname branches in the bundle (dev/test/prod), found $HOSTS — VITE_API_URL likely leaked in."
+            grep -rhoE "https://[a-z.]*adslife\.in/api" dist/assets/*.js | sort -u
+            exit 1
+          fi
+          echo "OK — bundle resolves backend by hostname, not baked to one environment."
 
       - name: Set deploy target
         id: target
@@ -33,9 +53,6 @@ jobs:
           if [ "${{ github.ref_name }}" = "prod" ]; then
             echo "path=/var/www/adslife-frontend" >> $GITHUB_OUTPUT
             echo "env=PRODUCTION (adslife.in)" >> $GITHUB_OUTPUT
-          elif [ "${{ github.ref_name }}" = "test" ]; then
-            echo "path=/var/www/adslife-frontend-test" >> $GITHUB_OUTPUT
-            echo "env=TEST (test.adslife.in)" >> $GITHUB_OUTPUT
           else
             echo "path=/var/www/adslife-frontend-dev" >> $GITHUB_OUTPUT
             echo "env=DEV (dev.adslife.in)" >> $GITHUB_OUTPUT
@@ -52,4 +69,4 @@ jobs:
           strip_components: 1
 
       - name: Notify
-        run: echo "✅ Deployed to ${{ steps.target.outputs.env }} from branch ${{ github.ref_name }}"
+        run: echo "Deployed to ${{ steps.target.outputs.env }} from branch ${{ github.ref_name }}"

@@ -47,6 +47,7 @@ export interface Offer {
   couponCode?: string;
   redeemUrl?: string;
   maxRedemptions: number;
+  coinsRequired?: number;
   currentRedemptions: number;
   validFrom?: string;
   validUntil?: string;
@@ -85,6 +86,8 @@ export interface OfferReview {
   createdAt: string;
   userName: string;
   userAvatar?: string | null;
+  vendorReply?: string | null;
+  repliedAt?: string | null;
 }
 
 export interface Badge {

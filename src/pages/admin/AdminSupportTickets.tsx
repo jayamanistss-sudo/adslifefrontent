@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { LifeBuoy, MessageSquare } from 'lucide-react';
 import BackButton from '../../components/BackButton';
 import { api, endpoints } from '../../utils/api';
-import { db } from '../../powersync/database';
 import toast from 'react-hot-toast';
 
 interface Ticket {
@@ -37,11 +36,8 @@ export default function AdminSupportTickets() {
 
   // Live-refresh whenever a support ticket changes locally via PowerSync
   useEffect(() => {
-    const unsubscribe = db.onChange(
-      { onChange: () => load() },
-      { tables: ['support_tickets'], throttleMs: 1000 },
-    );
-    return unsubscribe;
+    const t = setInterval(load, 30000);
+    return () => clearInterval(t);
   }, [filter]);
 
   const handleReply = async (ticketId: number) => {
