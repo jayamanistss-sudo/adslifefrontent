@@ -15,6 +15,7 @@ const firebaseConfig = {
 };
 
 let registered = false;
+let currentToken: string | null = null;
 
 /** Request notification permission, register for push, and save the token — call once after login. */
 export async function registerPushToken(): Promise<void> {
@@ -28,8 +29,28 @@ export async function registerPushToken(): Promise<void> {
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') return;
 
-    await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-    const swRegistration = await navigator.serviceWorker.ready;
+    // Registered at its OWN scope, distinct from the PWA caching SW
+    // (sw.js, registered at "/" in App.tsx). Two service workers registered
+    // at the same scope fight over control of the page — whichever wins
+    // that race receives this postMessage, and if it's the wrong one,
+    // firebase-messaging-sw.js never initializes, silently breaking both
+    // foreground toasts AND background/killed-tab push display.
+    const swRegistration = await navigator.serviceWorker.register(
+      '/firebase-messaging-sw.js',
+      { scope: '/firebase-cloud-messaging-push-scope' },
+    );
+    // navigator.serviceWorker.ready resolves for the PAGE's default-scope
+    // controller (sw.js), which tells us nothing about this distinct-scope
+    // registration — wait for THIS worker's own activation instead.
+    if (!swRegistration.active) {
+      await new Promise<void>((resolve) => {
+        const worker = swRegistration.installing ?? swRegistration.waiting;
+        if (!worker) { resolve(); return; }
+        worker.addEventListener('statechange', () => {
+          if (worker.state === 'activated') resolve();
+        });
+      });
+    }
     swRegistration.active?.postMessage({ type: 'FIREBASE_CONFIG', config: firebaseConfig });
 
     if (!getApps().length) initializeApp(firebaseConfig);
@@ -43,6 +64,7 @@ export async function registerPushToken(): Promise<void> {
 
     await api.post(endpoints.saveToken, { token, platform: 'web' });
     registered = true;
+    currentToken = token;
 
     // Foreground messages (tab focused) — service worker only handles background ones.
     // Push the notification straight into the store so the bell badge/list update
@@ -65,4 +87,18 @@ export async function registerPushToken(): Promise<void> {
   } catch (err) {
     console.error('[Push] Registration failed:', err);
   }
+}
+
+/**
+ * Call on logout — without this, a shared/public browser keeps receiving
+ * the previous user's pushes on this device until FCM eventually decides
+ * the token is stale on its own (which can take a long time).
+ */
+export async function unregisterPushToken(): Promise<void> {
+  if (!currentToken) return;
+  try {
+    await api.delete(endpoints.notificationsRemoveToken, { data: { token: currentToken } });
+  } catch { /* best-effort — logout must not be blocked by this */ }
+  registered = false;
+  currentToken = null;
 }

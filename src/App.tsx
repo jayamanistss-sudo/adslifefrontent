@@ -82,6 +82,7 @@ import AdminSpotlight from "./pages/admin/AdminSpotlight";
 import AdminCategories from "./pages/admin/AdminCategories";
 import AdminSubscriptions from "./pages/admin/AdminSubscriptions";
 import AdminSiteSettings from "./pages/admin/AdminSiteSettings";
+import AdminNotificationSettings from "./pages/admin/AdminNotificationSettings";
 
 /** Returns true if the stored JWT is still valid (not expired). */
 function isTokenValid(): boolean {
@@ -531,6 +532,16 @@ export default function App() {
               <ProtectedRoute roles={["admin"]}>
                 <Layout>
                   <AdminSiteSettings />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/notification-settings"
+            element={
+              <ProtectedRoute roles={["admin"]}>
+                <Layout>
+                  <AdminNotificationSettings />
                 </Layout>
               </ProtectedRoute>
             }

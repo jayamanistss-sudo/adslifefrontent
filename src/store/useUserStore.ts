@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { User } from "../types";
-import { registerPushToken } from "../services/pushNotifications";
+import { registerPushToken, unregisterPushToken } from "../services/pushNotifications";
+import { connectNotificationSocket, disconnectNotificationSocket } from "../services/notificationSocket";
 
 interface UserState {
   user: User | null;
@@ -38,8 +39,12 @@ function loadFromStorage(): { user: User | null; token: string | null } {
 
 const stored = loadFromStorage();
 
-// Already logged in from a previous session — register for push on load too.
-if (stored.token && isTokenValid(stored.token)) registerPushToken();
+// Already logged in from a previous session — register for push and connect
+// realtime on load too.
+if (stored.token && isTokenValid(stored.token)) {
+  registerPushToken();
+  connectNotificationSocket();
+}
 
 export const useUserStore = create<UserState>((set) => ({
   user: stored.user,
@@ -51,6 +56,7 @@ export const useUserStore = create<UserState>((set) => ({
     localStorage.setItem("adslife_token", token);
     set({ user, token, isAuthenticated: true });
     registerPushToken();
+    connectNotificationSocket();
   },
 
   updateUser: (fields) => {
@@ -63,6 +69,11 @@ export const useUserStore = create<UserState>((set) => ({
   },
 
   logout: () => {
+    // Best-effort, fire-and-forget — must run before the token is cleared
+    // (the API client reads it from localStorage), but logout itself
+    // shouldn't wait on it.
+    unregisterPushToken().catch(() => {});
+    disconnectNotificationSocket();
     localStorage.removeItem("adslife_user");
     localStorage.removeItem("adslife_token");
     set({ user: null, token: null, isAuthenticated: false });

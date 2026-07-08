@@ -13,7 +13,7 @@ const BASE_URL = getBaseURL();
 // Rewrite internal IPs / localhost URLs returned by the server to the public origin
 const LOCALHOST_OR_INTERNAL_RE = /http:\/\/(localhost|127\.0\.0\.1|160\.250\.224\.242)(:\d+)?/g;
 
-function getPublicOrigin(): string {
+export function getPublicOrigin(): string {
   if (currentHost === "dev.adslife.in") return "https://dev.adslife.in";
   if (currentHost === "test.adslife.in") return "https://test.adslife.in";
   return "https://adslife.in";
@@ -163,6 +163,7 @@ export const endpoints = {
   notificationsMarkRead: "/notifications/mark-read",
   notificationsDelete: (id: number) => `/notifications/${id}`,
   notificationsClear: "/notifications/clear",
+  notificationsRemoveToken: "/notifications/token",
 
   // Plans
   plansList: "/plans",
@@ -223,6 +224,8 @@ export const endpoints = {
   adminBroadcast: "/admin/broadcast",
   adminSpotlight: (status = "") => (status ? `/spotlight/list?status=${status}` : "/spotlight/list"),
   adminSpotlightAction: (id: number) => `/spotlight/${id}/approve`,
+  adminNotificationSettings: "/admin/notification-settings",
+  adminNotificationSettingUpdate: (type: string) => `/admin/notification-settings/${type}`,
 
   // Vendor reviews
   vendorReviews: (page = 1) => `/vendor/reviews?page=${page}`,

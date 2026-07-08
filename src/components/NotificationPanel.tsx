@@ -33,9 +33,10 @@ function timeAgo(date: string) {
 
 export default function NotificationPanel() {
   const { user } = useUserStore();
-  const { notifications, unreadCount, setNotifications, markRead, markAllRead, removeNotification, clearAll } = useNotificationStore();
+  const { notifications, unreadCount, setNotifications, setUnreadCount, markRead, markAllRead, removeNotification, clearAll } = useNotificationStore();
   const [open, setOpen]     = useState(false);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const ref      = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
@@ -59,37 +60,51 @@ export default function NotificationPanel() {
       createdAt: n.created_at as string,
     }));
 
+  const fetchList = useCallback(() => {
+    if (!user) return;
+    setLoading(true);
+    setLoadError(false);
+    api.get(endpoints.notificationsList(30))
+      .then((res) => {
+        if (res.data.success) {
+          setNotifications(mapNotifications(res.data.data.notifications), res.data.data.unread_count);
+        } else {
+          setLoadError(true);
+        }
+      })
+      .catch(() => setLoadError(true))
+      .finally(() => setLoading(false));
+  }, [user?.id]);
+
   useEffect(() => {
     if (!open || !user) return;
-    setLoading(true);
-    api.get(endpoints.notificationsList(30))
-      .then((res) => {
-        if (res.data.success) setNotifications(mapNotifications(res.data.data.notifications));
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    fetchList();
   }, [open, user?.id]);
 
-  const fetchUnread = useCallback(() => {
+  // The periodic poll only refreshes the unread COUNT (server-authoritative,
+  // not derived from the capped 30-item list) — it never overwrites the full
+  // notifications array, so it can't race with an in-flight optimistic
+  // mark-read/delete and resurrect something the user just cleared.
+  const pollUnreadCount = useCallback(() => {
     if (!user) return;
-    api.get(endpoints.notificationsList(30))
+    api.get(endpoints.notificationsList(1))
       .then((res) => {
-        if (res.data.success) setNotifications(mapNotifications(res.data.data.notifications));
+        if (res.data.success) setUnreadCount(res.data.data.unread_count ?? 0);
       })
       .catch(() => {});
   }, [user?.id]);
 
   useEffect(() => {
-    fetchUnread();
-    const t = setInterval(fetchUnread, 60000);
+    pollUnreadCount();
+    const t = setInterval(pollUnreadCount, 60000);
     return () => clearInterval(t);
-  }, [fetchUnread]);
+  }, [pollUnreadCount]);
 
   const handleNotifClick = async (n: Notification) => {
     if (!n.isRead) {
       markRead(n.id);
       try { await api.put(endpoints.notificationsMarkRead, { id: n.id }); }
-      catch { fetchUnread(); }
+      catch { pollUnreadCount(); }
     }
     if (n.offerId) { setOpen(false); navigate(`/offer/${n.offerId}`); }
   };
@@ -97,20 +112,20 @@ export default function NotificationPanel() {
   const handleMarkAllRead = async () => {
     markAllRead();
     try { await api.put(endpoints.notificationsMarkRead, {}); }
-    catch { fetchUnread(); }
+    catch { pollUnreadCount(); }
   };
 
   const handleDelete = async (e: React.MouseEvent, id: number) => {
     e.stopPropagation();
     removeNotification(id);
     try { await api.delete(endpoints.notificationsDelete(id)); }
-    catch { fetchUnread(); }
+    catch { pollUnreadCount(); }
   };
 
   const handleClearAll = async () => {
     clearAll();
     try { await api.delete(endpoints.notificationsClear); }
-    catch { fetchUnread(); }
+    catch { pollUnreadCount(); }
   };
 
   return (
@@ -184,14 +199,23 @@ export default function NotificationPanel() {
               </div>
             )}
 
-            {!loading && notifications.length === 0 && (
+            {!loading && loadError && (
+              <div className="py-10 text-center text-[var(--text-muted)]">
+                <p className="text-sm mb-2">Couldn't load notifications.</p>
+                <button onClick={fetchList} className="text-xs font-semibold text-[var(--primary)] hover:underline">
+                  Try again
+                </button>
+              </div>
+            )}
+
+            {!loading && !loadError && notifications.length === 0 && (
               <div className="py-12 text-center text-[var(--text-muted)]">
                 <Bell size={32} className="mx-auto mb-2 opacity-30" />
                 <p className="text-sm">No notifications yet</p>
               </div>
             )}
 
-            {!loading && notifications.map((n) => (
+            {!loading && !loadError && notifications.map((n) => (
               <div
                 key={n.id}
                 role="button"

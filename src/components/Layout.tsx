@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Home, Trophy, User, Store, Search, Moon, Sun, LogOut,
   PanelLeftClose, PanelLeftOpen, BarChart2, ShieldCheck, Zap, Settings,
-  Users, Tag, Building2, Star, LayoutGrid, CreditCard, SlidersHorizontal, ChevronRight
+  Users, Tag, Building2, Star, LayoutGrid, CreditCard, SlidersHorizontal, ChevronRight, Bell
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUserStore } from '../store/useUserStore';
@@ -149,6 +149,7 @@ export default function Layout({ children }: Props) {
     { to: '/admin/categories',      icon: LayoutGrid,         label: 'Categories' },
     { to: '/admin/subscriptions',   icon: CreditCard,         label: 'Subscriptions' },
     { to: '/admin/site-settings',   icon: SlidersHorizontal,  label: 'Site Settings' },
+    { to: '/admin/notification-settings', icon: Bell,         label: 'Notifications' },
     { to: '/admin/fraud',           icon: Zap,                label: 'Fraud Center' },
   ] : [];
 
