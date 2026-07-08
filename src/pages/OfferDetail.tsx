@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -748,6 +749,13 @@ export default function OfferDetail() {
       </div>{/* /grid */}
 
 
+      {/* Modals are portaled to <body> — Layout's content column establishes
+          its own stacking context (position:relative + z-index:10), which is
+          LOWER than the sidebar's z-50. Without a portal, these modals'
+          z-[100] is trapped inside that context and renders behind the
+          sidebar no matter how high its own z-index is. */}
+      {createPortal(
+        <>
       {/* ── Lightbox ─────────────────────────────────────────────────────── */}
       <AnimatePresence>
         {lightbox && hasImg && (
@@ -853,6 +861,9 @@ export default function OfferDetail() {
           </motion.div>
         )}
       </AnimatePresence>
+        </>,
+        document.body,
+      )}
 
     </div>
   );
