@@ -101,10 +101,25 @@ export default function Layout({ children }: Props) {
 
   const isActive = (to: string) => location.pathname === to || location.pathname.startsWith(to + '/');
 
+  // Instant search — mirrors the mobile app's 350ms-debounced live search,
+  // so results update as you type instead of requiring Enter.
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const goToSearch = (q: string) => {
+    navigate(q ? `/feed?q=${encodeURIComponent(q)}` : '/feed', { replace: true });
+  };
+  const handleSearchInput = (value: string) => {
+    setSearchQuery(value);
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    searchDebounceRef.current = setTimeout(() => goToSearch(value.trim()), 350);
+  };
+  useEffect(() => () => {
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+  }, []);
+
   const handleSearch = (e: { preventDefault: () => void }) => {
     e.preventDefault();
-    const q = searchQuery.trim();
-    navigate(q ? `/feed?q=${encodeURIComponent(q)}` : '/feed');
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    goToSearch(searchQuery.trim());
   };
 
   // Keep the header search box in sync with the feed's own query param —
@@ -303,7 +318,7 @@ export default function Layout({ children }: Props) {
               }}
               placeholder="Search offers, shops..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => handleSearchInput(e.target.value)}
             />
           </form>
 
@@ -439,7 +454,7 @@ export default function Layout({ children }: Props) {
                 style={{ background: 'var(--surface-2)', border: '1.5px solid var(--border)' }}
                 placeholder="Search offers..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => handleSearchInput(e.target.value)}
               />
             </form>
 
