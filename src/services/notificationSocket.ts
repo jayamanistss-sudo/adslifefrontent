@@ -17,7 +17,12 @@ export function connectNotificationSocket(): void {
 
   socket = io(`${getPublicOrigin()}/notifications`, {
     auth: { token },
-    transports: ['websocket', 'polling'],
+    // Polling first, then opportunistically upgrade — Socket.IO's own
+    // recommended order. Listing websocket first makes the client attempt a
+    // cold direct upgrade with no fallback; if that fails (as it does behind
+    // this nginx setup) the connection fails outright instead of degrading
+    // to the always-reliable long-polling transport.
+    transports: ['polling', 'websocket'],
     reconnection: true,
   });
 
