@@ -74,9 +74,10 @@ export default function SelectPlan() {
 
       toast.success('Plan upgraded successfully!');
       const vendorRes = await api.get(endpoints.vendorMyPlan);
-      if (vendorRes.data.success) setCurrent(vendorRes.data.data);
+      if (vendorRes.data.success)
+        setCurrent({ ...vendorRes.data.data, price: Number(vendorRes.data.data.price) });
     } catch (err: any) {
-      const msg = err?.message ?? err.response?.data?.error ?? 'Payment failed';
+      const msg = err.response?.data?.error ?? err?.message ?? 'Payment failed';
       if (msg === 'Payment cancelled') toast('Payment cancelled', { icon: '↩️' });
       else toast.error(msg);
     } finally {
@@ -141,7 +142,7 @@ export default function SelectPlan() {
               </div>
 
               <ul className="flex-1 space-y-2">
-                {plan.features.map((f) => (
+                {(plan.features ?? []).map((f) => (
                   <li key={f} className="flex items-start gap-2 text-xs text-[var(--text-secondary)]">
                     <Check size={12} className="text-emerald-500 flex-shrink-0 mt-0.5" />
                     {f}

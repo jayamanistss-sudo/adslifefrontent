@@ -98,13 +98,16 @@ function isTokenValid(): boolean {
 
 function ProtectedRoute({ children, roles }: { readonly children: React.ReactNode; readonly roles?: string[] }) {
   const { isAuthenticated, user, logout } = useUserStore();
+  const tokenExpired = isAuthenticated && !isTokenValid();
 
-  // Token expired — force logout
-  if (isAuthenticated && !isTokenValid()) {
-    logout();
-    return <Navigate to="/login" replace />;
-  }
+  // Rendering must stay pure — the actual logout (a store mutation) happens
+  // in an effect; the redirect below can still happen in this same render
+  // since tokenExpired is already known.
+  useEffect(() => {
+    if (tokenExpired) logout();
+  }, [tokenExpired, logout]);
 
+  if (tokenExpired) return <Navigate to="/login" replace />;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (roles && user && !roles.includes(user.role)) return <Navigate to="/feed" replace />;
   return <>{children}</>;

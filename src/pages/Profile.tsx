@@ -13,6 +13,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useUserStore } from '../store/useUserStore';
 import { api, endpoints } from '../utils/api';
+import { formatPlanPrice } from '../utils/formatPlan';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Variants } from 'framer-motion';
@@ -114,10 +115,10 @@ function Step4({ selectedPlanId, onSelect, plans, loadingPlans }: {
               {selectedPlanId === plan.id && <Check size={16} className="text-[var(--primary)] flex-shrink-0" />}
             </div>
             <div className="font-heading font-extrabold text-2xl text-[var(--text)] mb-3">
-              {plan.price === 0 ? 'Free' : `₹${plan.price.toLocaleString()}/mo`}
+              {formatPlanPrice(plan.price, '/mo')}
             </div>
             <ul className="space-y-1.5">
-              {plan.features.slice(0, 3).map((f) => (
+              {(plan.features ?? []).slice(0, 3).map((f) => (
                 <li key={f} className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
                   <Check size={11} className="text-emerald-500 flex-shrink-0" />
                   <span className="truncate">{f}</span>
@@ -647,8 +648,8 @@ function BecomeVendorModal({ onClose, onSuccess }: {
       );
       await submitApplication(orderRes.data.data.order_id);
     } catch (err: unknown) {
-      const msg = (err as Error)?.message
-        ?? (err as { response?: { data?: { error?: string } } }).response?.data?.error
+      const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
+        ?? (err as Error)?.message
         ?? 'Failed to submit';
       if (msg === 'Payment cancelled') toast('Payment cancelled', { icon: '↩️' });
       else toast.error(msg);

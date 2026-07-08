@@ -3,6 +3,7 @@ import { RefreshCw, Check, AlertCircle } from 'lucide-react';
 import BackButton from '../../components/BackButton';
 import { api, endpoints } from '../../utils/api';
 import { openRazorpayForOrder } from '../../utils/razorpay';
+import { formatPlanPrice } from '../../utils/formatPlan';
 import { useUserStore } from '../../store/useUserStore';
 import toast from 'react-hot-toast';
 
@@ -58,7 +59,7 @@ export default function RenewPlan() {
       const vendorRes = await api.get(endpoints.vendorMyPlan);
       if (vendorRes.data.success) setVendorPlan({ ...vendorRes.data.data, price: Number(vendorRes.data.data.price) });
     } catch (err: any) {
-      const msg = err?.message ?? err.response?.data?.error ?? 'Renewal failed';
+      const msg = err.response?.data?.error ?? err?.message ?? 'Renewal failed';
       if (msg === 'Payment cancelled') toast('Payment cancelled', { icon: '↩️' });
       else toast.error(msg);
     } finally {
@@ -106,7 +107,7 @@ export default function RenewPlan() {
         <div className="divider" />
 
         <ul className="space-y-2 my-4">
-          {vendorPlan.features.map((f) => (
+          {(vendorPlan.features ?? []).map((f) => (
             <li key={f} className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
               <Check size={14} className="text-emerald-500 flex-shrink-0" />
               {f}
@@ -124,7 +125,7 @@ export default function RenewPlan() {
           <div>
             <p className="text-xs text-[var(--text-muted)]">Renewal amount</p>
             <p className="font-heading font-bold text-2xl text-[var(--text)]">
-              {vendorPlan.price === 0 ? 'Free' : `₹${vendorPlan.price.toLocaleString()}`}
+              {formatPlanPrice(vendorPlan.price)}
             </p>
             {vendorPlan.price > 0 && (
               <p className="text-xs text-[var(--text-muted)]">for 30 days</p>

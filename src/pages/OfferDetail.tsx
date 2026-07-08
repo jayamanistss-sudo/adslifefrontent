@@ -12,6 +12,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { api, endpoints } from '../utils/api';
 import { useUserStore } from '../store/useUserStore';
+import { useSavedStore } from '../store/useSavedStore';
 import type { Offer, OfferReview } from '../types';
 import toast from 'react-hot-toast';
 
@@ -71,9 +72,13 @@ export default function OfferDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useUserStore();
-  const [saved, setSaved] = useState(false);
+  // Single source of truth for saved/bookmark state, shared with OfferCard/Feed —
+  // saving or unsaving here now updates their bookmark icons too, instead of
+  // only this page's own local flag.
+  const { isSaved, save: saveOffer, unsave: unsaveOffer } = useSavedStore();
 
   const [offer, setOffer]         = useState<Offer | null>(null);
+  const saved = offer ? isSaved(offer.id) : false;
   const [loading, setLoading]     = useState(true);
   const [copied, setCopied]       = useState(false);
   const [lightbox, setLightbox]   = useState(false);
@@ -109,7 +114,19 @@ export default function OfferDetail() {
       .then(r => {
         if (r.data.success) {
           setOffer(r.data.data as Offer);
-          if (typeof r.data.data.isSaved === 'boolean') setSaved(r.data.data.isSaved);
+          // Reconcile the shared saved-store with the server's authoritative
+          // answer for this offer — no API call, we already have the truth.
+          if (typeof r.data.data.isSaved === 'boolean') {
+            const offerId = Number(id);
+            const marked = useSavedStore.getState().savedIds.has(offerId);
+            if (r.data.data.isSaved !== marked) {
+              useSavedStore.setState((s) => {
+                const ids = new Set(s.savedIds);
+                if (r.data.data.isSaved) ids.add(offerId); else ids.delete(offerId);
+                return { savedIds: ids };
+              });
+            }
+          }
         }
       })
       .catch(() => toast.error('Offer not found'))
@@ -161,17 +178,11 @@ export default function OfferDetail() {
     if (!user) { toast.error('Sign in to save'); navigate('/login'); return; }
     if (!offer) return;
     const willSave = !saved;
-    setSaved(willSave);
-    try {
-      if (willSave) {
-        await api.post(endpoints.interaction, { offer_id: offer.id, action: 'save' });
-      } else {
-        await api.delete(endpoints.unsaveOffer, { data: { offer_id: offer.id } });
-      }
-      toast.success(willSave ? 'Saved!' : 'Removed from saved');
-    } catch {
-      setSaved(!willSave);
-    }
+    // useSavedStore.save/unsave already handle the optimistic update, the API
+    // call, and rollback-on-error — and keep every other bookmark icon (feed
+    // cards, etc.) in sync since they read from the same store.
+    if (willSave) await saveOffer(offer.id); else await unsaveOffer(offer.id);
+    toast.success(willSave ? 'Saved!' : 'Removed from saved');
   };
 
   const handleFollow = async () => {

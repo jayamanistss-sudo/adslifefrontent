@@ -7,6 +7,7 @@ import {
 import toast from "react-hot-toast";
 import BackButton from "../../components/BackButton";
 import { api } from "../../utils/api";
+import { formatPlanPrice } from "../../utils/formatPlan";
 import { usePlansStore, type Plan } from "../../store/usePlansStore";
 
 // ─── Banner Plan types ──────────────────────────────────────────────────────
@@ -106,7 +107,7 @@ export default function AdminSubscriptions() {
   const confirmDeletePlan = async () => {
     if (!deleteId) return;
     try { await deletePlan(deleteId); toast.success("Plan deleted"); setDeleteId(null); }
-    catch (err: unknown) { toast.error((err as any).response?.data?.error ?? "Failed to delete"); }
+    catch (err: unknown) { toast.error((err as any).response?.data?.error ?? (err as any).message ?? "Failed to delete"); }
   };
 
   // ── Banner Plan helpers ─────────────────────────────────────────────────
@@ -241,7 +242,7 @@ export default function AdminSubscriptions() {
                 </div>
                 <div className="flex items-end gap-1">
                   <span className="text-2xl font-bold text-[var(--text)]">
-                    {plan.price === 0 ? "Free" : `₹${plan.price.toLocaleString()}`}
+                    {formatPlanPrice(plan.price)}
                   </span>
                   {plan.price > 0 && <span className="text-xs text-[var(--text-secondary)] mb-1">/mo</span>}
                 </div>
@@ -249,15 +250,15 @@ export default function AdminSubscriptions() {
                   <span className="bg-[var(--bg)] px-2 py-1 rounded-lg">{plan.duration_days}d</span>
                   <span className="bg-[var(--bg)] px-2 py-1 rounded-lg">{plan.max_offers} offers</span>
                 </div>
-                {plan.features.length > 0 && (
+                {(plan.features?.length ?? 0) > 0 && (
                   <ul className="space-y-0.5">
-                    {plan.features.slice(0, 3).map((f, i) => (
+                    {(plan.features ?? []).slice(0, 3).map((f, i) => (
                       <li key={i} className="text-xs text-[var(--text-secondary)] flex items-center gap-1.5">
                         <span className="w-1 h-1 rounded-full bg-[var(--primary)] flex-shrink-0" />
                         {f}
                       </li>
                     ))}
-                    {plan.features.length > 3 && <li className="text-xs text-[var(--text-secondary)] pl-2.5">+{plan.features.length - 3} more</li>}
+                    {(plan.features?.length ?? 0) > 3 && <li className="text-xs text-[var(--text-secondary)] pl-2.5">+{plan.features.length - 3} more</li>}
                   </ul>
                 )}
                 <div className="flex gap-2 mt-auto pt-2 border-t border-[var(--border)]">

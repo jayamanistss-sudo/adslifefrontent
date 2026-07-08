@@ -1,11 +1,11 @@
-import { useState, useRef } from 'react';
+import { memo, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Clock, Bookmark, Eye, Heart, Play, Pause, BadgeCheck, ShieldCheck } from 'lucide-react';
 import { motion } from 'framer-motion';
 import type { Offer } from '../types';
-import { useFeedStore } from '../store/useFeedStore';
 import { useUserStore } from '../store/useUserStore';
 import { useSavedStore } from '../store/useSavedStore';
+import { api, endpoints } from '../utils/api';
 
 interface Props {
   readonly offer: Offer;
@@ -30,9 +30,8 @@ const CATEGORY_FALLBACK: Record<string, string> = {
   automotive: '🚗', gifting: '🎁', salon: '✂️',
 };
 
-export default function OfferCard({ offer, onSave, index = 0 }: Props) {
+function OfferCard({ offer, onSave, index = 0 }: Props) {
   const { user } = useUserStore();
-  const { recordInteraction } = useFeedStore();
   const { isSaved, save, unsave } = useSavedStore();
   const navigate = useNavigate();
 
@@ -42,7 +41,7 @@ export default function OfferCard({ offer, onSave, index = 0 }: Props) {
 
   const handleCardClick = () => {
     if (videoPlaying) return;
-    if (user) recordInteraction(user.id, offer.id, 'click');
+    if (user) api.post(endpoints.interaction, { offer_id: offer.id, action: 'click' }).catch(() => {});
     navigate(`/offer/${offer.id}`);
   };
 
@@ -91,6 +90,7 @@ export default function OfferCard({ offer, onSave, index = 0 }: Props) {
           <img
             src={offer.bannerUrl || offer.imageUrl}
             alt={offer.title}
+            loading="lazy"
             className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
             onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
           />
@@ -166,6 +166,7 @@ export default function OfferCard({ offer, onSave, index = 0 }: Props) {
               <img
                 src={offer.vendorLogo}
                 alt=""
+                loading="lazy"
                 className="w-6 h-6 sm:w-11 sm:h-11 rounded-full object-cover flex-shrink-0 ring-2 ring-[var(--primary-light)]"
               />
             ) : (
@@ -262,3 +263,8 @@ export default function OfferCard({ offer, onSave, index = 0 }: Props) {
     </motion.div>
   );
 }
+
+// The feed grid renders many of these at once; unrelated Feed state changes
+// (sort dropdown open/close, view-mode toggle) shouldn't re-render every
+// card, only the ones whose own offer/index actually changed.
+export default memo(OfferCard);

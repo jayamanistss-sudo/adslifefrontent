@@ -66,8 +66,12 @@ function ImageUploadBox({ imageUrl, uploading, onUpload, onClear, fileRef }: {
   return (
     <div>
       <div
+        role="button"
+        tabIndex={0}
+        aria-label="Upload image"
         onClick={() => fileRef.current?.click()}
-        className="relative border-2 border-dashed border-[var(--border)] rounded-xl overflow-hidden cursor-pointer hover:border-[var(--primary)] transition-colors bg-[var(--surface-2)]"
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileRef.current?.click(); } }}
+        className="relative border-2 border-dashed border-[var(--border)] rounded-xl overflow-hidden cursor-pointer hover:border-[var(--primary)] transition-colors bg-[var(--surface-2)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
         style={{ height: '120px' }}
       >
         {imageUrl ? (

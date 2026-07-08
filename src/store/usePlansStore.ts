@@ -32,7 +32,9 @@ export const usePlansStore = create<PlansState>((set, get) => ({
     try {
       const res = await api.get(endpoints.plansList);
       if (res.data.success) {
-        const fetchedPlans = res.data.data || [];
+        // price is a numeric-string ("0.00") from Postgres — coerce once here
+        // so every consumer can safely compare/format it as a number.
+        const fetchedPlans = (res.data.data || []).map((p: Plan) => ({ ...p, price: Number(p.price) }));
         set({ plans: fetchedPlans, loaded: true });
         return fetchedPlans;
       }
@@ -83,6 +85,11 @@ export const usePlansStore = create<PlansState>((set, get) => ({
         await get().fetchPlans(true);
         return true;
       }
+      // Backend rejects in-use plans with {success:false, error} over a 200
+      // response (not a thrown HTTP error) — surface that reason instead of
+      // silently falling through to "false" and letting the caller assume
+      // a generic failure.
+      throw new Error(res.data.error || "Failed to delete plan");
     } catch (err) {
       console.error("Failed to delete plan:", err);
       throw err;

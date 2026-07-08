@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -89,6 +89,7 @@ export default function Feed() {
   const [error, setError]                   = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [apiOffers, setApiOffers]           = useState<Offer[]>([]);
+  const [totalOffers, setTotalOffers]       = useState(0);
   const [apiCategories, setApiCategories]   = useState<Category[]>([]);
   const [sortOpen, setSortOpen]             = useState(false);
   const [viewMode, setViewMode]             = useState<'list' | 'grid'>('grid');
@@ -96,31 +97,45 @@ export default function Feed() {
 
   const CATS_LIMIT = 8;
 
-  // REST is the single source of truth (search/category/distance/quick-filter
-  // are all applied server-side).
+  // REST is the single source of truth (search/category/distance/quick-filter/
+  // sort/pagination are all applied server-side) — allOffers is already the
+  // exact page to render, never the full result set.
   const allOffers     = apiOffers;
   const allCategories = apiCategories;
 
+  // Abort an in-flight fetch when a newer one starts, so a slow response for
+  // a stale search/filter can't land after (and overwrite) a fresher one.
+  const fetchAbortRef = useRef<AbortController | null>(null);
+
   const fetchOffers = async () => {
+    fetchAbortRef.current?.abort();
+    const controller = new AbortController();
+    fetchAbortRef.current = controller;
+
     setLoading(true); setError(null);
     const cityParam = user?.city || 'Chennai';
     try {
-      // Search + category + distance + quick-filter are all applied server-side.
+      // Search + category + distance + quick-filter + sort are all applied
+      // server-side; the API returns exactly the requested page.
       const flt = activeFilter === 'all' ? '' : activeFilter;
       const cat = activeCategory || '';
       const r = user
-        ? await api.get(endpoints.feed(user.id, lat || 13.08, lng || 80.27, 1, 500, search, cat, nearbyRadius, flt))
-        : await api.get(endpoints.trending(cityParam, 1, 500, search, lat || 13.08, lng || 80.27, cat, nearbyRadius, flt));
-      if (r.data.success) setApiOffers((r.data.data ?? []).map(mapApiOffer));
-    } catch {
+        ? await api.get(endpoints.feed(user.id, lat || 13.08, lng || 80.27, page, perPage, search, cat, nearbyRadius, flt, sortKey), { signal: controller.signal })
+        : await api.get(endpoints.trending(cityParam, page, perPage, search, lat || 13.08, lng || 80.27, cat, nearbyRadius, flt, sortKey), { signal: controller.signal });
+      if (r.data.success) {
+        setApiOffers((r.data.data ?? []).map(mapApiOffer));
+        setTotalOffers(r.data.total ?? 0);
+      }
+    } catch (err: any) {
+      if (err?.code === 'ERR_CANCELED') return; // superseded by a newer fetch
       setError('Failed to load offers. Please check your connection.');
     } finally {
-      setLoading(false);
+      if (fetchAbortRef.current === controller) setLoading(false);
     }
   };
 
-  useEffect(() => { fetchOffers(); setPage(1); },
-    [user?.id, lat, lng, search, activeCategory, nearbyRadius, activeFilter]);
+  useEffect(() => { fetchOffers(); },
+    [user?.id, lat, lng, search, activeCategory, nearbyRadius, activeFilter, sortKey, page]);
   const handleRefresh = async () => { await fetchOffers(); };
 
   useEffect(() => {
@@ -137,18 +152,10 @@ export default function Feed() {
 
   useEffect(() => { setSearch(urlQuery); setPage(1); }, [urlQuery]);
 
-  const displayOffers = allOffers
-    // Search, category, distance and quick-filter are all applied server-side.
-    .filter(() => true)
-    .sort((a: Offer, b: Offer) => {
-      if (sortKey === 'discount') return (b.discountPercent ?? 0) - (a.discountPercent ?? 0);
-      if (sortKey === 'views')    return (b.views ?? 0) - (a.views ?? 0);
-      return 0;
-    });
-
-  const totalOffers = displayOffers.length;
+  // Search, category, distance, quick-filter, sort and pagination are all
+  // applied server-side now — allOffers already *is* the current page.
   const totalPages  = Math.max(1, Math.ceil(totalOffers / perPage));
-  const pagedOffers = displayOffers.slice((page - 1) * perPage, page * perPage);
+  const pagedOffers = allOffers;
 
   const goToPage = (p: number) => {
     if (p < 1 || p > totalPages) return;
@@ -265,7 +272,7 @@ export default function Feed() {
         </div>
 
         <div className="flex items-center gap-2 flex-shrink-0">
-          <NearbyDropdown radius={nearbyRadius} onChange={setNearbyRadius} />
+          <NearbyDropdown radius={nearbyRadius} onChange={(r) => { setNearbyRadius(r); setPage(1); }} />
           <div className="relative">
             <button
               onClick={() => setSortOpen(!sortOpen)}
@@ -425,6 +432,7 @@ export default function Feed() {
                       <img
                         src={offer.imageUrl || offer.bannerUrl}
                         alt={offer.title}
+                        loading="lazy"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
                       />
