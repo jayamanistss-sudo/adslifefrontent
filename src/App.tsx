@@ -71,6 +71,7 @@ import RenewPlan from "./pages/vendor/RenewPlan";
 // Admin pages
 import FraudDashboard from "./pages/admin/FraudDashboard";
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import VendorRequests from "./pages/admin/VendorRequests";
 import AdminSupportTickets from "./pages/admin/AdminSupportTickets";
 import AdminBannerAds from "./pages/admin/AdminBannerAds";
@@ -412,6 +413,16 @@ export default function App() {
               <ProtectedRoute roles={["admin"]}>
                 <Layout>
                   <AdminDashboard />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/analytics"
+            element={
+              <ProtectedRoute roles={["admin"]}>
+                <Layout>
+                  <AdminAnalytics />
                 </Layout>
               </ProtectedRoute>
             }

@@ -36,7 +36,13 @@ export function useCachedApi<T>(url: string) {
           setError(r.data.error ?? 'Failed to load');
         }
       })
-      .catch(e => { if (!cancelled) setError(e?.response?.data?.error ?? 'Failed to load'); })
+      .catch(e => {
+        // NestJS's thrown exceptions (403/400/etc) shape the body as
+        // { message, error: "Forbidden" } — `error` there is just the HTTP
+        // status text, not a message. Custom { success:false, error } routes
+        // put the real text in `error` instead. Prefer `message`, fall back.
+        if (!cancelled) setError(e?.response?.data?.message ?? e?.response?.data?.error ?? 'Failed to load');
+      })
       .finally(() => { if (!cancelled) setLoading(false); });
 
     return () => { cancelled = true; };

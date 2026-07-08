@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Home, Trophy, User, Store, Search, Moon, Sun, LogOut,
   PanelLeftClose, PanelLeftOpen, BarChart2, ShieldCheck, Zap, Settings,
-  Users, Tag, Building2, Star, LayoutGrid, CreditCard, SlidersHorizontal, ChevronRight, Bell
+  Users, Tag, Building2, Star, LayoutGrid, CreditCard, SlidersHorizontal, ChevronRight, Bell, Activity
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUserStore } from '../store/useUserStore';
@@ -142,6 +142,7 @@ export default function Layout({ children }: Props) {
 
   const adminNav: NavItem[] = user?.role === 'admin' ? [
     { to: '/admin/dashboard',       icon: ShieldCheck,       label: 'Admin Panel' },
+    { to: '/admin/analytics',       icon: Activity,           label: 'Analytics' },
     { to: '/admin/users',           icon: Users,              label: 'Users' },
     { to: '/admin/vendors',         icon: Building2,          label: 'Vendors' },
     { to: '/admin/all-offers',      icon: Tag,                label: 'All Offers' },

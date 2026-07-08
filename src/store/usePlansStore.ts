@@ -9,6 +9,7 @@ export interface Plan {
   duration_days: number;
   max_offers: number;
   features: string[];
+  feature_flags: string[];
   is_active: number;
 }
 

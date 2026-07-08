@@ -35,8 +35,16 @@ const emptyBannerPlan = (): Partial<BannerPlan> => ({
 
 // ─── Subscription Plan helpers (unchanged) ──────────────────────────────────
 const emptyPlan = (): Partial<Plan> => ({
-  name: "", slug: "", price: 0, duration_days: 30, max_offers: 5, features: [], is_active: 1,
+  name: "", slug: "", price: 0, duration_days: 30, max_offers: 5, features: [], feature_flags: [], is_active: 1,
 });
+
+// Canonical, code-checked feature keys — must match PLAN_FEATURE_KEYS in
+// backend-nest/src/plan-features/plan-features.service.ts.
+const FEATURE_FLAG_OPTIONS: { key: string; label: string; description: string }[] = [
+  { key: "banner_ads", label: "Banner Ads", description: "Vendor can request & pay for banner ad placements" },
+  { key: "spotlight", label: "Spotlight", description: "Vendor can request spotlight placement" },
+  { key: "advanced_analytics", label: "Analytics Tools", description: "ROI, audience, heatmap, benchmark, A/B testing" },
+];
 
 // ─── Component ──────────────────────────────────────────────────────────────
 export default function AdminSubscriptions() {
@@ -74,7 +82,7 @@ export default function AdminSubscriptions() {
 
   // ── Subscription helpers ───────────────────────────────────────────────
   const openNew  = () => { setEditing(emptyPlan()); setIsNew(true); setFeatureInput(""); };
-  const openEdit = (p: Plan) => { setEditing({ ...p, features: [...p.features] }); setIsNew(false); setFeatureInput(""); };
+  const openEdit = (p: Plan) => { setEditing({ ...p, features: [...p.features], feature_flags: [...(p.feature_flags ?? [])] }); setIsNew(false); setFeatureInput(""); };
   const closeEdit = () => { setEditing(null); setFeatureInput(""); };
   const addFeature = () => {
     const f = featureInput.trim(); if (!f) return;
@@ -83,6 +91,12 @@ export default function AdminSubscriptions() {
   };
   const removeFeature = (i: number) =>
     setEditing((e) => ({ ...e, features: (e?.features ?? []).filter((_, idx) => idx !== i) }));
+  const toggleFeatureFlag = (key: string) =>
+    setEditing((e) => {
+      const current = e?.feature_flags ?? [];
+      const next = current.includes(key) ? current.filter((k) => k !== key) : [...current, key];
+      return { ...e, feature_flags: next };
+    });
   const autoSlug = (name: string) =>
     name.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
 
@@ -261,6 +275,15 @@ export default function AdminSubscriptions() {
                     {(plan.features?.length ?? 0) > 3 && <li className="text-xs text-[var(--text-secondary)] pl-2.5">+{plan.features.length - 3} more</li>}
                   </ul>
                 )}
+                {(plan.feature_flags?.length ?? 0) > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {FEATURE_FLAG_OPTIONS.filter((f) => plan.feature_flags.includes(f.key)).map((f) => (
+                      <span key={f.key} className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[var(--primary-light)] text-[var(--primary)]">
+                        {f.label}
+                      </span>
+                    ))}
+                  </div>
+                )}
                 <div className="flex gap-2 mt-auto pt-2 border-t border-[var(--border)]">
                   <button onClick={() => openEdit(plan)} className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-xl border border-[var(--border)] text-xs font-medium text-[var(--text)] hover:bg-[var(--bg)]">
                     <Pencil size={13} /> Edit
@@ -423,6 +446,31 @@ export default function AdminSubscriptions() {
                     </div>
                   ))}
                   {(editing.features ?? []).length === 0 && <p className="text-xs text-[var(--text-secondary)] italic">No features added yet</p>}
+                </div>
+              </div>
+              <div>
+                <label className="modal-label">Feature Access</label>
+                <p className="text-[11px] text-[var(--text-secondary)] mb-2">These actually gate access — unlike Features above, which is just display copy.</p>
+                <div className="space-y-1.5">
+                  {FEATURE_FLAG_OPTIONS.map((f) => {
+                    const on = (editing.feature_flags ?? []).includes(f.key);
+                    return (
+                      <button
+                        type="button"
+                        key={f.key}
+                        onClick={() => toggleFeatureFlag(f.key)}
+                        className="w-full flex items-center justify-between bg-[var(--bg)] p-2.5 rounded-xl border border-[var(--border)] text-left"
+                      >
+                        <div>
+                          <span className="text-sm font-semibold text-[var(--text)]">{f.label}</span>
+                          <p className="text-xs text-[var(--text-secondary)]">{f.description}</p>
+                        </div>
+                        {on
+                          ? <ToggleRight size={30} className="text-green-500 flex-shrink-0" />
+                          : <ToggleLeft  size={30} className="text-[var(--text-muted)] flex-shrink-0" />}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
               <div className="flex items-center justify-between bg-[var(--bg)] p-3 rounded-xl border border-[var(--border)]">

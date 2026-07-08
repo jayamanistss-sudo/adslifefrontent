@@ -208,6 +208,10 @@ export const endpoints = {
 
   // Admin
   adminStats: "/admin/stats",
+  adminMonitoringOverview: "/admin/monitoring/overview",
+  adminAnalyticsLogins: (days = 30) => `/admin/analytics/logins?days=${days}`,
+  adminAnalyticsVendorActivity: (days = 30) => `/admin/analytics/vendor-activity?days=${days}`,
+  adminAnalyticsGeography: (limit = 10) => `/admin/analytics/geography?limit=${limit}`,
   adminUsers: (search = "", status = "", limit = 30, offset = 0) =>
     `/admin/users?search=${encodeURIComponent(search)}&status=${status}&limit=${limit}&offset=${offset}`,
   adminUserAction: (id: number) => `/admin/users/${id}`,
