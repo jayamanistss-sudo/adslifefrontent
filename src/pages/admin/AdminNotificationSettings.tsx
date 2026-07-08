@@ -16,18 +16,28 @@ interface NotificationSetting {
 
 type Channel = "email_enabled" | "push_enabled" | "in_app_enabled";
 
-function Toggle({ on, onChange, label }: { readonly on: boolean; readonly onChange: () => void; readonly label: string }) {
+// Each channel gets its own accent when on, reusing existing design tokens —
+// otherwise three adjacent "on" toggles (the common case, since push/in-app
+// default true everywhere) all render the same brand orange and visually
+// fuse into one solid bar with no way to tell them apart.
+const CHANNEL_COLOR: Record<Channel, string> = {
+  email_enabled: "var(--info)",
+  push_enabled: "var(--accent)",
+  in_app_enabled: "var(--primary)",
+};
+
+function Toggle({ on, onChange, label, channel }: { readonly on: boolean; readonly onChange: () => void; readonly label: string; readonly channel: Channel }) {
   return (
     <button
       onClick={onChange}
       role="switch"
       aria-checked={on}
       aria-label={label}
-      className={`relative w-10 h-5.5 rounded-full transition-colors flex-shrink-0 ${on ? "bg-[var(--primary)]" : "bg-[var(--border)]"}`}
-      style={{ height: "22px" }}
+      className="relative w-10 rounded-full transition-colors flex-shrink-0 ring-1 ring-inset ring-black/10"
+      style={{ height: "22px", background: on ? CHANNEL_COLOR[channel] : "var(--border)" }}
     >
       <span
-        className="absolute top-[2px] w-[18px] h-[18px] rounded-full bg-white shadow transition-transform"
+        className="absolute top-[2px] w-[18px] h-[18px] rounded-full bg-white shadow-md transition-transform"
         style={{ transform: on ? "translateX(20px)" : "translateX(2px)" }}
       />
     </button>
@@ -92,11 +102,11 @@ export default function AdminNotificationSettings() {
         </div>
       </div>
 
-      <div className="flex items-center gap-5 mb-4 px-1 text-xs font-semibold text-[var(--text-muted)]">
+      <div className="flex items-center gap-8 mb-4 px-1 text-xs font-semibold text-[var(--text-muted)]">
         <span className="flex-1" />
-        <span className="w-10 flex items-center gap-1"><Mail size={13} /> Email</span>
-        <span className="w-10 flex items-center gap-1"><Smartphone size={13} /> Push</span>
-        <span className="w-10 flex items-center gap-1"><MessageSquare size={13} /> In-app</span>
+        <span className="w-10 flex items-center gap-1.5" style={{ color: "var(--info)" }}><Mail size={13} /> Email</span>
+        <span className="w-10 flex items-center gap-1.5" style={{ color: "var(--accent)" }}><Smartphone size={13} /> Push</span>
+        <span className="w-10 flex items-center gap-1.5" style={{ color: "var(--primary)" }}><MessageSquare size={13} /> In-app</span>
       </div>
 
       <div className="space-y-6">
@@ -105,18 +115,18 @@ export default function AdminNotificationSettings() {
             <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] mb-2 px-1">{category}</h2>
             <div className="card divide-y divide-[var(--border)]">
               {rows.map((row) => (
-                <div key={row.activity_type} className="flex items-center gap-5 px-4 py-3">
+                <div key={row.activity_type} className="flex items-center gap-8 px-4 py-3.5">
                   <span className={`flex-1 text-sm text-[var(--text)] ${savingType === row.activity_type ? "opacity-50" : ""}`}>
                     {row.label}
                   </span>
                   <span className="w-10 flex justify-start">
-                    <Toggle on={row.email_enabled} onChange={() => toggle(row, "email_enabled")} label={`Email for ${row.label}`} />
+                    <Toggle on={row.email_enabled} onChange={() => toggle(row, "email_enabled")} label={`Email for ${row.label}`} channel="email_enabled" />
                   </span>
                   <span className="w-10 flex justify-start">
-                    <Toggle on={row.push_enabled} onChange={() => toggle(row, "push_enabled")} label={`Push for ${row.label}`} />
+                    <Toggle on={row.push_enabled} onChange={() => toggle(row, "push_enabled")} label={`Push for ${row.label}`} channel="push_enabled" />
                   </span>
                   <span className="w-10 flex justify-start">
-                    <Toggle on={row.in_app_enabled} onChange={() => toggle(row, "in_app_enabled")} label={`In-app for ${row.label}`} />
+                    <Toggle on={row.in_app_enabled} onChange={() => toggle(row, "in_app_enabled")} label={`In-app for ${row.label}`} channel="in_app_enabled" />
                   </span>
                 </div>
               ))}
