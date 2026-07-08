@@ -37,7 +37,7 @@ function Toggle({ on, onChange, label, channel }: { readonly on: boolean; readon
       style={{ height: "22px", background: on ? CHANNEL_COLOR[channel] : "var(--border)" }}
     >
       <span
-        className="absolute top-[2px] w-[18px] h-[18px] rounded-full bg-white shadow-md transition-transform"
+        className="absolute left-0 top-[2px] w-[18px] h-[18px] rounded-full bg-white shadow-md transition-transform"
         style={{ transform: on ? "translateX(20px)" : "translateX(2px)" }}
       />
     </button>
