@@ -78,16 +78,16 @@ export default function AdminNotificationSettings() {
   }, {});
 
   if (loading) return (
-    <div className="max-w-3xl pb-6">
+    <div className="max-w-7xl mx-auto pb-6">
       <BackButton to="/admin/dashboard" />
-      <div className="space-y-3 mt-6">
-        {[1, 2, 3].map((i) => <div key={i} className="skeleton h-16 rounded-2xl" />)}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+        {[1, 2, 3, 4].map((i) => <div key={i} className="skeleton h-48 rounded-2xl" />)}
       </div>
     </div>
   );
 
   return (
-    <div className="max-w-3xl pb-6">
+    <div className="max-w-7xl mx-auto pb-6">
       <BackButton to="/admin/dashboard" />
 
       <div className="page-header">
@@ -102,34 +102,35 @@ export default function AdminNotificationSettings() {
         </div>
       </div>
 
-      <div className="flex items-center gap-8 mb-4 px-1 text-xs font-semibold text-[var(--text-muted)]">
-        <span className="flex-1" />
-        <span className="w-10 flex items-center gap-1.5" style={{ color: "var(--info)" }}><Mail size={13} /> Email</span>
-        <span className="w-10 flex items-center gap-1.5" style={{ color: "var(--accent)" }}><Smartphone size={13} /> Push</span>
-        <span className="w-10 flex items-center gap-1.5" style={{ color: "var(--primary)" }}><MessageSquare size={13} /> In-app</span>
-      </div>
-
-      <div className="space-y-6">
+      <div className="columns-1 lg:columns-2 gap-6">
         {Object.entries(grouped).map(([category, rows]) => (
-          <div key={category}>
+          <div key={category} className="break-inside-avoid mb-6">
             <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] mb-2 px-1">{category}</h2>
-            <div className="card divide-y divide-[var(--border)]">
-              {rows.map((row) => (
-                <div key={row.activity_type} className="flex items-center gap-8 px-4 py-3.5">
-                  <span className={`flex-1 text-sm text-[var(--text)] ${savingType === row.activity_type ? "opacity-50" : ""}`}>
-                    {row.label}
-                  </span>
-                  <span className="w-10 flex justify-start">
-                    <Toggle on={row.email_enabled} onChange={() => toggle(row, "email_enabled")} label={`Email for ${row.label}`} channel="email_enabled" />
-                  </span>
-                  <span className="w-10 flex justify-start">
-                    <Toggle on={row.push_enabled} onChange={() => toggle(row, "push_enabled")} label={`Push for ${row.label}`} channel="push_enabled" />
-                  </span>
-                  <span className="w-10 flex justify-start">
-                    <Toggle on={row.in_app_enabled} onChange={() => toggle(row, "in_app_enabled")} label={`In-app for ${row.label}`} channel="in_app_enabled" />
-                  </span>
-                </div>
-              ))}
+            <div className="card overflow-hidden">
+              <div className="flex items-center gap-6 px-4 py-2.5 border-b border-[var(--border)] text-xs font-semibold text-[var(--text-muted)]">
+                <span className="flex-1" />
+                <span className="w-10 flex items-center gap-1.5" style={{ color: "var(--info)" }}><Mail size={13} /> Email</span>
+                <span className="w-10 flex items-center gap-1.5" style={{ color: "var(--accent)" }}><Smartphone size={13} /> Push</span>
+                <span className="w-10 flex items-center gap-1.5" style={{ color: "var(--primary)" }}><MessageSquare size={13} /> In-app</span>
+              </div>
+              <div className="divide-y divide-[var(--border)]">
+                {rows.map((row) => (
+                  <div key={row.activity_type} className="flex items-center gap-6 px-4 py-3.5">
+                    <span className={`flex-1 text-sm text-[var(--text)] ${savingType === row.activity_type ? "opacity-50" : ""}`}>
+                      {row.label}
+                    </span>
+                    <span className="w-10 flex justify-start">
+                      <Toggle on={row.email_enabled} onChange={() => toggle(row, "email_enabled")} label={`Email for ${row.label}`} channel="email_enabled" />
+                    </span>
+                    <span className="w-10 flex justify-start">
+                      <Toggle on={row.push_enabled} onChange={() => toggle(row, "push_enabled")} label={`Push for ${row.label}`} channel="push_enabled" />
+                    </span>
+                    <span className="w-10 flex justify-start">
+                      <Toggle on={row.in_app_enabled} onChange={() => toggle(row, "in_app_enabled")} label={`In-app for ${row.label}`} channel="in_app_enabled" />
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         ))}
