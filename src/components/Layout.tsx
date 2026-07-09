@@ -3,7 +3,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Home, Trophy, User, Store, Search, Moon, Sun, LogOut,
   PanelLeftClose, PanelLeftOpen, BarChart2, ShieldCheck, Zap, Settings,
-  Users, Tag, Building2, Star, LayoutGrid, CreditCard, SlidersHorizontal, ChevronRight, Bell, Activity
+  Users, Tag, Building2, Star, LayoutGrid, CreditCard, SlidersHorizontal, ChevronRight, Bell, Activity,
+  MessageSquare, Users2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUserStore } from '../store/useUserStore';
@@ -147,6 +148,8 @@ export default function Layout({ children }: Props) {
     { to: '/admin/vendors',         icon: Building2,          label: 'Vendors' },
     { to: '/admin/all-offers',      icon: Tag,                label: 'All Offers' },
     { to: '/admin/spotlight',       icon: Star,               label: 'Spotlight' },
+    { to: '/admin/reviews',         icon: MessageSquare,      label: 'Reviews' },
+    { to: '/admin/group-deals',     icon: Users2,             label: 'Group Deals' },
     { to: '/admin/categories',      icon: LayoutGrid,         label: 'Categories' },
     { to: '/admin/subscriptions',   icon: CreditCard,         label: 'Subscriptions' },
     { to: '/admin/site-settings',   icon: SlidersHorizontal,  label: 'Site Settings' },

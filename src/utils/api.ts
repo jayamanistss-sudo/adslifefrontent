@@ -237,6 +237,11 @@ export const endpoints = {
   adminSpotlightAction: (id: number) => `/spotlight/${id}/approve`,
   adminNotificationSettings: "/admin/notification-settings",
   adminNotificationSettingUpdate: (type: string) => `/admin/notification-settings/${type}`,
+  adminReviews: (page = 1, limit = 30) => `/admin/reviews?page=${page}&limit=${limit}`,
+  adminReviewHide: (id: number) => `/admin/reviews/${id}/hide`,
+  adminReviewUnhide: (id: number) => `/admin/reviews/${id}/unhide`,
+  adminGroupDeals: (status = "", page = 1, limit = 30) => `/group-deals/admin/list?status=${status}&page=${page}&limit=${limit}`,
+  adminGroupDealCancel: (id: number) => `/group-deals/${id}/cancel`,
 
   // Vendor reviews
   vendorReviews: (page = 1) => `/vendor/reviews?page=${page}`,

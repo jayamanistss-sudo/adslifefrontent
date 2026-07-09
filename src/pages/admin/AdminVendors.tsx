@@ -120,6 +120,7 @@ export default function AdminVendors() {
       pending_review: "bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-300",
       suspended:      "bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-300",
       rejected:       "bg-red-50 dark:bg-red-950/30 text-red-500 dark:text-red-400",
+      fraud_review:   "bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400",
     })[s] ?? "bg-[var(--surface-2)] text-[var(--text-muted)]";
 
   const columnDefs = useMemo<ColDef<VendorRow>[]>(
@@ -354,6 +355,7 @@ export default function AdminVendors() {
             { value: "pending_review", label: "Pending" },
             { value: "suspended", label: "Suspended" },
             { value: "rejected", label: "Rejected" },
+            { value: "fraud_review", label: "Fraud Review" },
           ].map((tab) => (
             <button
               key={tab.value}

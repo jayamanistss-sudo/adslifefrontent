@@ -5,8 +5,8 @@ import { api, endpoints } from '../../utils/api';
 import toast from 'react-hot-toast';
 
 interface FraudFlag {
-  id: number; entity_type: string; entity_id: number;
-  flag_reason: string; confidence_score: number; status: string; flagged_at: string;
+  id: number; entity_type: string; entity_id: number; entity_name: string | null;
+  flag_reason: string; confidence_score: number; status: string; created_at: string;
 }
 
 export default function FraudDashboard() {
@@ -29,11 +29,27 @@ export default function FraudDashboard() {
     return () => clearInterval(t);
   }, [filter]);
 
-  const handleAction = async (flagId: number, action: 'dismiss' | 'action') => {
-    const status = action === 'dismiss' ? 'false_positive' : 'actioned';
-    await api.post(endpoints.fraudReview(flagId), { status });
-    toast.success(action === 'dismiss' ? 'Dismissed' : 'Action taken');
-    setFlags((fs) => fs.map((f) => f.id === flagId ? { ...f, status } : f));
+  // "Take Action" previously only flipped this flag's own status column —
+  // the flagged vendor/offer was never actually touched, so an admin had to
+  // separately find and act on it a second time. Now the chosen action is
+  // applied atomically by the same request.
+  const handleAction = async (flag: FraudFlag, downstreamAction?: 'suspend_vendor' | 'deactivate_offer') => {
+    const status = downstreamAction ? 'actioned' : 'false_positive';
+    if (downstreamAction && !window.confirm(
+      downstreamAction === 'suspend_vendor'
+        ? `Suspend vendor #${flag.entity_id}${flag.entity_name ? ` (${flag.entity_name})` : ''}? This will also deactivate all of their live offers.`
+        : `Deactivate offer #${flag.entity_id}${flag.entity_name ? ` (${flag.entity_name})` : ''}?`
+    )) return;
+    try {
+      const res = await api.post(endpoints.fraudReview(flag.id), { status, downstream_action: downstreamAction });
+      const cascaded = res.data.data?.cascaded_offers;
+      toast.success(downstreamAction
+        ? `Action taken${cascaded ? ` — deactivated ${cascaded} offer(s)` : ''}`
+        : 'Dismissed as false positive');
+      setFlags((fs) => fs.map((f) => f.id === flag.id ? { ...f, status } : f));
+    } catch {
+      toast.error('Action failed');
+    }
   };
 
   const riskColor = (score: number) =>
@@ -125,22 +141,32 @@ export default function FraudDashboard() {
                     </div>
                     <span className="text-xs font-bold text-[var(--text-muted)]">{flag.confidence_score}%</span>
                   </div>
-                  <div className="text-xs text-[var(--text-muted)] mt-1">{new Date(flag.flagged_at).toLocaleString()}</div>
+                  <div className="text-xs text-[var(--text-muted)] mt-1">{new Date(flag.created_at).toLocaleString()}</div>
                 </div>
 
                 {flag.status === 'pending' && (
                   <div className="flex flex-col gap-2 flex-shrink-0">
+                    {flag.entity_type === 'vendor' && (
+                      <button
+                        onClick={() => handleAction(flag, 'suspend_vendor')}
+                        className="flex items-center gap-1 text-xs bg-danger/10 text-danger hover:bg-danger/20 transition-colors px-3 py-1.5 rounded-xl font-medium"
+                      >
+                        <XCircle size={12} /> Suspend Vendor
+                      </button>
+                    )}
+                    {flag.entity_type === 'offer' && (
+                      <button
+                        onClick={() => handleAction(flag, 'deactivate_offer')}
+                        className="flex items-center gap-1 text-xs bg-danger/10 text-danger hover:bg-danger/20 transition-colors px-3 py-1.5 rounded-xl font-medium"
+                      >
+                        <XCircle size={12} /> Deactivate Offer
+                      </button>
+                    )}
                     <button
-                      onClick={() => handleAction(flag.id, 'action')}
-                      className="flex items-center gap-1 text-xs bg-danger/10 text-danger hover:bg-danger/20 transition-colors px-3 py-1.5 rounded-xl font-medium"
-                    >
-                      <XCircle size={12} /> Take Action
-                    </button>
-                    <button
-                      onClick={() => handleAction(flag.id, 'dismiss')}
+                      onClick={() => handleAction(flag)}
                       className="flex items-center gap-1 text-xs bg-[var(--surface-2)] text-[var(--text-secondary)] hover:bg-[var(--border)] transition-colors px-3 py-1.5 rounded-xl font-medium"
                     >
-                      <CheckCircle size={12} /> Dismiss
+                      <CheckCircle size={12} /> Dismiss (false positive)
                     </button>
                   </div>
                 )}

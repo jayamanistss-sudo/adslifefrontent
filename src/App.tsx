@@ -81,6 +81,8 @@ import AdminOffers from "./pages/admin/AdminOffers";
 import AdminVendors from "./pages/admin/AdminVendors";
 import AdminVendorDetail from "./pages/admin/AdminVendorDetail";
 import AdminSpotlight from "./pages/admin/AdminSpotlight";
+import AdminReviews from "./pages/admin/AdminReviews";
+import AdminGroupDeals from "./pages/admin/AdminGroupDeals";
 import AdminCategories from "./pages/admin/AdminCategories";
 import AdminSubscriptions from "./pages/admin/AdminSubscriptions";
 import AdminSiteSettings from "./pages/admin/AdminSiteSettings";
@@ -524,6 +526,26 @@ export default function App() {
               <ProtectedRoute roles={["admin"]}>
                 <Layout>
                   <AdminSpotlight />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/reviews"
+            element={
+              <ProtectedRoute roles={["admin"]}>
+                <Layout>
+                  <AdminReviews />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/group-deals"
+            element={
+              <ProtectedRoute roles={["admin"]}>
+                <Layout>
+                  <AdminGroupDeals />
                 </Layout>
               </ProtectedRoute>
             }
