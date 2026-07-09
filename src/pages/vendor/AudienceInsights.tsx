@@ -1,15 +1,86 @@
 import { Link } from 'react-router-dom';
+import { createPortal } from 'react-dom';
 import BackButton from '../../components/BackButton';
 import { DashboardSkeleton } from '../../components/ui/Skeleton';
 import { ErrorState, EmptyState } from '../../components/ui/EmptyState';
 import { useState, useEffect } from 'react';
-import { Users, TrendingUp, MousePointer, Bookmark, Star, Store } from 'lucide-react';
+import { Eye, MousePointer, Bookmark, Star, Store, Tag, X } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import type { AudienceData } from '../../types';
 import { useVendorId } from '../../hooks/useVendorId';
 import { useCachedApi } from '../../hooks/useCachedApi';
 import { api, endpoints } from '../../utils/api';
+
+interface InteractionRow {
+  id: number;
+  created_at: string;
+  offer_id: number;
+  offer_title: string;
+  user_name: string;
+}
+
+const ACTION_LABEL: Record<string, string> = { view: 'Views', click: 'Clicks', save: 'Saves', redeem: 'Redemptions' };
+
+function DetailModal({ action, vendorId, onClose }: { readonly action: string; readonly vendorId: number; readonly onClose: () => void }) {
+  const [rows, setRows] = useState<InteractionRow[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+
+  const load = (p: number) => {
+    setLoading(true);
+    api.get(endpoints.audienceInteractions(action, vendorId, p)).then((r) => {
+      if (r.data.success) {
+        setRows((prev) => p === 1 ? r.data.data.rows : [...prev, ...r.data.data.rows]);
+        setTotal(r.data.data.total);
+        setPage(p);
+      }
+    }).finally(() => setLoading(false));
+  };
+
+  useEffect(() => { load(1); }, [action]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return createPortal(
+    <div className="modal-overlay">
+      <div className="modal-content max-w-lg">
+        <div className="modal-header">
+          <div className="flex flex-col">
+            <h2 className="modal-title">{ACTION_LABEL[action] ?? action}</h2>
+            <span className="block w-8 h-[2.5px] bg-[var(--primary)] rounded-full mt-1" />
+          </div>
+          <button onClick={onClose} className="modal-close"><X size={18} /></button>
+        </div>
+        <div className="modal-body">
+          {loading && rows.length === 0 ? (
+            <div className="space-y-2">{[1, 2, 3, 4].map((i) => <div key={i} className="skeleton h-12 rounded-xl" />)}</div>
+          ) : rows.length === 0 ? (
+            <p className="text-sm text-[var(--text-muted)] text-center py-8">Nothing here yet</p>
+          ) : (
+            <div className="space-y-2 max-h-[420px] overflow-y-auto">
+              {rows.map((r) => (
+                <div key={r.id} className="flex items-center justify-between gap-3 p-2.5 bg-[var(--surface-2)] rounded-xl">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-[var(--text)] truncate">{r.user_name}</p>
+                    <p className="text-xs text-[var(--text-muted)] truncate">{r.offer_title}</p>
+                  </div>
+                  <span className="text-[11px] text-[var(--text-muted)] flex-shrink-0">
+                    {new Date(r.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                  </span>
+                </div>
+              ))}
+              {total > rows.length && (
+                <button onClick={() => load(page + 1)} disabled={loading} className="w-full text-sm text-[var(--primary)] font-medium py-2 hover:bg-[var(--surface-2)] rounded-xl transition-colors">
+                  {loading ? 'Loading…' : 'Load more'}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
 
 const fadeUp = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] as const } } };
 
@@ -84,6 +155,7 @@ function ReplyBox({ review, onReplied }: { readonly review: Review; readonly onR
 
 export default function AudienceInsights() {
   const [days, setDays] = useState(30);
+  const [detailAction, setDetailAction] = useState<string | null>(null);
   const [reviewPage, setReviewPage] = useState(1);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [reviewTotal, setReviewTotal] = useState(0);
@@ -110,16 +182,15 @@ export default function AudienceInsights() {
   );
 
   const data: AudienceData | null = raw ? {
-    deviceBreakdown:  raw.device_breakdown,
-    peakHours:        raw.peak_hours,
-    topCities:        raw.top_cities,
-    engagementRate:   raw.engagement_rate,
-    totalImpressions: raw.total_impressions,
-    totalClicks:      raw.total_clicks,
-    totalSaves:       raw.total_saves,
+    deviceBreakdown:   raw.device_breakdown,
+    peakHours:         raw.peak_hours,
+    topCities:         raw.top_cities,
+    engagementRate:    raw.engagement_rate,
+    totalImpressions:  raw.total_impressions,
+    totalClicks:       raw.total_clicks,
+    totalSaves:        raw.total_saves,
+    totalRedemptions:  raw.total_redemptions,
   } : null;
-
-  const hourData  = data ? data.peakHours.map((count, hr) => ({ hour: `${hr}:00`, users: count })) : [];
 
   if (!vendorId) return (
     <div className="pb-6">
@@ -149,10 +220,10 @@ export default function AudienceInsights() {
 
 
   const kpis = [
-    { label: 'Impressions',    value: data.totalImpressions?.toLocaleString() ?? '0', icon: TrendingUp, accent: '#3B82F6' },
-    { label: 'Clicks',         value: data.totalClicks?.toLocaleString()      ?? '0', icon: MousePointer, accent: '#FF6200' },
-    { label: 'Saves',          value: data.totalSaves?.toLocaleString()       ?? '0', icon: Bookmark, accent: '#F59E0B' },
-    { label: 'Engagement',     value: `${data.engagementRate ?? 0}%`,                 icon: Users, accent: '#10B981' },
+    { label: 'Views',      action: 'view',   value: data.totalImpressions?.toLocaleString() ?? '0', icon: Eye,         accent: '#3B82F6' },
+    { label: 'Clicks',     action: 'click',  value: data.totalClicks?.toLocaleString()       ?? '0', icon: MousePointer, accent: '#FF6200' },
+    { label: 'Saves',      action: 'save',   value: data.totalSaves?.toLocaleString()        ?? '0', icon: Bookmark,     accent: '#F59E0B' },
+    { label: 'Redeemed',   action: 'redeem', value: data.totalRedemptions?.toLocaleString()   ?? '0', icon: Tag,          accent: '#10B981' },
   ];
 
   return (
@@ -183,39 +254,22 @@ export default function AudienceInsights() {
         </div>
       </motion.div>
 
-      {/* KPI row */}
+      {/* KPI row — tap any tile to see who's behind the number */}
       <motion.div variants={fadeUp} className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-        {kpis.map(({ label, value, icon: Icon, accent }) => (
-          <div key={label} className="card p-5">
+        {kpis.map(({ label, action, value, icon: Icon, accent }) => (
+          <button key={label} onClick={() => setDetailAction(action)} className="card card-hover p-5 text-left">
             <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-3" style={{ background: `${accent}18` }}>
               <Icon size={17} style={{ color: accent }} />
             </div>
             <div className="font-heading font-bold text-2xl text-[var(--text)]">{value}</div>
             <div className="text-xs text-[var(--text-muted)] mt-0.5">{label}</div>
-          </div>
+          </button>
         ))}
       </motion.div>
 
-      {/* Peak hours */}
-      <motion.div variants={fadeUp} className="card p-5">
-        <h3 className="font-heading font-semibold text-[var(--text)] text-sm mb-1">Peak Engagement Hours</h3>
-        <p className="text-xs text-[var(--text-muted)] mb-4">User activity across the day — post offers when they're most active</p>
-        <ResponsiveContainer width="100%" height={180}>
-          <AreaChart data={hourData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-            <defs>
-              <linearGradient id="hourGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%"  stopColor="#10B981" stopOpacity={0.20} />
-                <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-            <XAxis dataKey="hour" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} interval={3} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
-            <Tooltip contentStyle={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '0.75rem', fontSize: '0.75rem', color: 'var(--text)' }} />
-            <Area type="monotone" dataKey="users" stroke="#10B981" fill="url(#hourGrad)" strokeWidth={2.5} dot={false} name="Active users" />
-          </AreaChart>
-        </ResponsiveContainer>
-      </motion.div>
+      {detailAction && vendorId && (
+        <DetailModal action={detailAction} vendorId={vendorId} onClose={() => setDetailAction(null)} />
+      )}
 
       {/* Customer Feedback */}
       <motion.div variants={fadeUp} className="card p-5">

@@ -111,6 +111,10 @@ export const endpoints = {
   roi: (offerId: number, days = 30) => `/analytics/roi?offer_id=${offerId}&days=${days}`,
   audience: (vendorId?: number, days = 30) =>
     vendorId ? `/analytics/audience?vendor_id=${vendorId}&days=${days}` : `/analytics/audience?days=${days}`,
+  audienceInteractions: (action: string, vendorId?: number, page = 1) =>
+    vendorId
+      ? `/analytics/audience/interactions?action=${action}&vendor_id=${vendorId}&page=${page}`
+      : `/analytics/audience/interactions?action=${action}&page=${page}`,
   heatmap: (vendorId?: number, days = 30) =>
     vendorId ? `/analytics/heatmap?vendor_id=${vendorId}&days=${days}` : `/analytics/heatmap?days=${days}`,
   benchmark: (vendorId?: number) => (vendorId ? `/analytics/benchmark?vendor_id=${vendorId}` : "/analytics/benchmark"),

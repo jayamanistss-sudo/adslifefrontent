@@ -1,10 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
+import { createPortal } from 'react-dom';
+import { QRCodeSVG } from 'qrcode.react';
 import {
   Tag, Pencil,
   Eye, MousePointer, Bookmark,
   ArrowUpRight, ArrowDownRight, Minus, Image, LifeBuoy,
   Layers, RefreshCw, Store, CheckCircle2, XCircle, Clock,
+  QrCode, X, Download,
 } from 'lucide-react';
 import BackButton from '../../components/BackButton';
 import { ErrorState } from '../../components/ui/EmptyState';
@@ -51,6 +54,60 @@ function trendColor(trend: string) {
   return 'text-[var(--text-muted)]';
 }
 
+function ShopQrModal({ vendorId, businessName, onClose }: { readonly vendorId: number; readonly businessName: string; readonly onClose: () => void }) {
+  const shopUrl = `https://adslife.in/shop/${vendorId}`;
+
+  const download = () => {
+    const svg = document.getElementById('shop-qr-svg');
+    if (!svg) return;
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const img = new window.Image();
+    const canvas = document.createElement('canvas');
+    const size = 512;
+    canvas.width = size;
+    canvas.height = size;
+    img.onload = () => {
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, size, size);
+      ctx.drawImage(img, 0, 0, size, size);
+      const link = document.createElement('a');
+      link.download = `${businessName.replace(/\s+/g, '-').toLowerCase()}-qr.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    };
+    img.src = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svgData)))}`;
+  };
+
+  return createPortal(
+    <div className="modal-overlay">
+      <div className="modal-content max-w-sm">
+        <div className="modal-header">
+          <div className="flex flex-col">
+            <h2 className="modal-title">Your Shop QR</h2>
+            <span className="block w-8 h-[2.5px] bg-[var(--primary)] rounded-full mt-1" />
+          </div>
+          <button onClick={onClose} className="modal-close"><X size={18} /></button>
+        </div>
+        <div className="modal-body flex flex-col items-center gap-4 text-center">
+          <p className="text-xs text-[var(--text-secondary)]">
+            Print or display this at your shop — customers scan it in the AdsLife app to open your profile.
+          </p>
+          <div className="p-4 bg-white rounded-2xl border border-[var(--border)]">
+            <QRCodeSVG id="shop-qr-svg" value={shopUrl} size={200} />
+          </div>
+          <p className="font-heading font-semibold text-sm text-[var(--text)]">{businessName}</p>
+          <button onClick={download} className="btn btn-primary w-full">
+            <Download size={16} /> Download QR
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 interface FollowersData {
   total: number; this_month: number; last_month: number; growth_pct: number;
   followers: Array<{ id: number; name: string; avatar_url: string | null; city: string; followed_at: string }>;
@@ -62,6 +119,7 @@ export default function VendorDashboard() {
   const [loading, setLoading]     = useState(true);
   const [trendsReady, setTrendsReady] = useState(false);
   const [error, setError]         = useState('');
+  const [showQr, setShowQr]       = useState(false);
 
   const fetchDashboard = useCallback((silent = false) => {
     if (!silent) setLoading(true);
@@ -209,6 +267,12 @@ export default function VendorDashboard() {
                 <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold capitalize ${v.status === 'approved' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'}`}>{v.status}</span>
               </div>
             </div>
+            {/* Shop QR */}
+            <button onClick={() => setShowQr(true)}
+              title="Show shop QR code"
+              className="self-start sm:self-center p-2 rounded-xl bg-white/10 text-white/70 hover:bg-white/20 hover:text-white transition-all">
+              <QrCode size={16} />
+            </button>
             {/* Refresh */}
             <button onClick={() => fetchDashboard(true)}
               className="self-start sm:self-center p-2 rounded-xl bg-white/10 text-white/70 hover:bg-white/20 hover:text-white transition-all">
@@ -395,6 +459,8 @@ export default function VendorDashboard() {
       </div>
 
       </div>{/* end main content */}
+
+      {showQr && <ShopQrModal vendorId={v.id} businessName={v.business_name} onClose={() => setShowQr(false)} />}
     </div>
   );
 

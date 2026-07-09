@@ -178,6 +178,7 @@ export interface AudienceData {
   totalImpressions: number;
   totalClicks: number;
   totalSaves: number;
+  totalRedemptions: number;
 }
 
 export interface BenchmarkData {
