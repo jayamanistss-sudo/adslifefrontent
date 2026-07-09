@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Search, Eye, MousePointer, Bookmark, Trash2, Star, ToggleLeft, ToggleRight } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Search, Eye, MousePointer, Bookmark, Trash2, Star, ToggleLeft, ToggleRight, Pencil, X, Save } from 'lucide-react';
 import BackButton from '../../components/BackButton';
 import { api, endpoints } from '../../utils/api';
 import toast from 'react-hot-toast';
@@ -10,13 +11,22 @@ import { type ColDef } from "ag-grid-community";
 interface Category { slug: string; name: string; }
 
 interface OfferRow {
-  id: number; title: string; category: string; discount_percent: string;
+  id: number; title: string; description: string | null; category: string; discount_percent: string;
   original_price: string; offer_price: string; is_active: number;
   views: number; clicks: number; saves: number;
   current_redemptions: number; max_redemptions: number;
-  valid_until: string | null; created_at: string;
-  business_name: string; vendor_id: number; vendor_email: string;
+  valid_from: string | null; valid_until: string | null; created_at: string;
+  business_name: string; vendor_id: number; vendor_email: string; vendor_status: string;
 }
+
+const VENDOR_STATUS_OPTIONS = [
+  { value: '', label: 'All Vendor Status' },
+  { value: 'approved', label: 'Vendor: Approved' },
+  { value: 'suspended', label: 'Vendor: Suspended' },
+  { value: 'fraud_review', label: 'Vendor: Fraud Review' },
+  { value: 'pending_review', label: 'Vendor: Pending' },
+  { value: 'rejected', label: 'Vendor: Rejected' },
+];
 
 export default function AdminOffers() {
   const [offers, setOffers]   = useState<OfferRow[]>([]);
@@ -25,9 +35,12 @@ export default function AdminOffers() {
   const [search, setSearch]   = useState('');
   const [category, setCategory] = useState('');
   const [status, setStatus]   = useState('');
+  const [vendorStatus, setVendorStatus] = useState('');
   const [offset, setOffset]   = useState(0);
   const [limit, setLimit]     = useState(30);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [editing, setEditing] = useState<OfferRow | null>(null);
+  const [saving, setSaving]   = useState(false);
 
   useEffect(() => {
     api.get(endpoints.categoriesList(true)).then((r) => {
@@ -39,7 +52,7 @@ export default function AdminOffers() {
 
   const load = useCallback(() => {
     setLoading(true);
-    api.get(endpoints.adminOffers(search, category, status, limit, offset))
+    api.get(endpoints.adminOffers(search, category, status, limit, offset, vendorStatus))
       .then((r) => {
         if (r.data.success) {
           setOffers(r.data.data.offers ?? []);
@@ -48,10 +61,35 @@ export default function AdminOffers() {
       })
       .catch(() => toast.error('Failed to load offers'))
       .finally(() => setLoading(false));
-  }, [search, category, status, limit, offset]);
+  }, [search, category, status, vendorStatus, limit, offset]);
 
-  useEffect(() => { setOffset(0); }, [search, category, status]);
+  useEffect(() => { setOffset(0); }, [search, category, status, vendorStatus]);
   useEffect(() => { load(); }, [load]);
+
+  const saveEdit = async () => {
+    if (!editing) return;
+    if (!editing.title.trim()) { toast.error('Title is required'); return; }
+    setSaving(true);
+    try {
+      await api.put(endpoints.adminOfferEdit(editing.id), {
+        title: editing.title,
+        description: editing.description,
+        category: editing.category,
+        discount_percent: Number(editing.discount_percent),
+        original_price: Number(editing.original_price),
+        offer_price: Number(editing.offer_price),
+        valid_from: editing.valid_from?.slice(0, 10),
+        valid_until: editing.valid_until?.slice(0, 10),
+      });
+      toast.success('Offer updated');
+      setEditing(null);
+      load();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message ?? 'Failed to update offer');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const action = useCallback(
     async (offerId: number, act: string, extra?: Record<string, unknown>) => {
@@ -101,6 +139,9 @@ export default function AdminOffers() {
               <p className="text-xs text-[var(--text-muted)] truncate max-w-32" title={o.vendor_email}>
                 {o.vendor_email}
               </p>
+              {o.vendor_status !== 'approved' && (
+                <span className="text-[10px] font-semibold text-red-500 capitalize">{o.vendor_status.replace('_', ' ')}</span>
+              )}
             </div>
           );
         },
@@ -197,6 +238,13 @@ export default function AdminOffers() {
           return (
             <div className="flex items-center gap-1 h-full py-1">
               <button
+                onClick={() => setEditing(o)}
+                title="Edit"
+                className="p-1.5 rounded-lg hover:bg-[var(--surface-2)] text-[var(--text-muted)] transition-colors"
+              >
+                <Pencil size={14} />
+              </button>
+              <button
                 onClick={() => action(o.id, o.is_active ? 'deactivate' : 'activate')}
                 title={o.is_active ? 'Deactivate' : 'Activate'}
                 className="p-1.5 rounded-lg hover:bg-[var(--surface-2)] text-[var(--text-muted)] transition-colors"
@@ -269,6 +317,25 @@ export default function AdminOffers() {
               </svg>
             </div>
           </div>
+
+          {/* Vendor-status filter — previously no way to isolate offers
+              belonging to a suspended/fraud-review vendor for cleanup */}
+          <div className="relative w-full sm:w-52">
+            <select
+              className="input pr-10 w-full appearance-none cursor-pointer bg-[var(--surface)] text-[var(--text)] border-[1.5px] border-[var(--border)] rounded-xl"
+              value={vendorStatus}
+              onChange={(e) => setVendorStatus(e.target.value)}
+            >
+              {VENDOR_STATUS_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-[var(--text-secondary)]">
+              <svg className="h-4 w-4 fill-current" viewBox="0 0 20 20">
+                <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+              </svg>
+            </div>
+          </div>
         </div>
 
         {/* Status filter (segmented tab bar) */}
@@ -331,6 +398,100 @@ export default function AdminOffers() {
         />
       </div>
       </div>
+
+      {/* Edit Modal — previously admin could only toggle status, never fix
+          a vendor's typo'd title or wrong price directly. */}
+      {editing && createPortal(
+        <div className="modal-overlay">
+          <div className="modal-content max-w-lg">
+            <div className="modal-header">
+              <h2 className="modal-title">Edit Offer</h2>
+              <button onClick={() => setEditing(null)} className="modal-close"><X size={18} /></button>
+            </div>
+            <div className="modal-body space-y-4">
+              <div>
+                <label className="modal-label">Title *</label>
+                <input
+                  className="input"
+                  value={editing.title}
+                  onChange={(e) => setEditing({ ...editing, title: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="modal-label">Description</label>
+                <textarea
+                  className="input h-24 resize-none"
+                  value={editing.description ?? ''}
+                  onChange={(e) => setEditing({ ...editing, description: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="modal-label">Category</label>
+                <select
+                  className="input"
+                  value={editing.category}
+                  onChange={(e) => setEditing({ ...editing, category: e.target.value })}
+                >
+                  {categories.map((c) => (
+                    <option key={c.slug} value={c.slug}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="modal-label">Discount %</label>
+                  <input
+                    type="number" min={0} max={100} className="input"
+                    value={editing.discount_percent}
+                    onChange={(e) => setEditing({ ...editing, discount_percent: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="modal-label">Original Price</label>
+                  <input
+                    type="number" min={0} className="input"
+                    value={editing.original_price}
+                    onChange={(e) => setEditing({ ...editing, original_price: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="modal-label">Offer Price</label>
+                  <input
+                    type="number" min={0} className="input"
+                    value={editing.offer_price}
+                    onChange={(e) => setEditing({ ...editing, offer_price: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="modal-label">Valid From</label>
+                  <input
+                    type="date" className="input"
+                    value={editing.valid_from?.slice(0, 10) ?? ''}
+                    onChange={(e) => setEditing({ ...editing, valid_from: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="modal-label">Valid Until</label>
+                  <input
+                    type="date" className="input"
+                    value={editing.valid_until?.slice(0, 10) ?? ''}
+                    onChange={(e) => setEditing({ ...editing, valid_until: e.target.value })}
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button onClick={() => setEditing(null)} className="btn btn-secondary flex-1">Cancel</button>
+              <button onClick={saveEdit} disabled={saving} className="btn btn-primary flex-1">
+                <Save size={16} /> {saving ? 'Saving…' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

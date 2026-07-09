@@ -24,6 +24,9 @@ export default function AdminCategories() {
   const [isNew, setIsNew]             = useState(false);
   const [saving, setSaving]           = useState(false);
   const [deleteId, setDeleteId]       = useState<number | null>(null);
+  const [deleteUsage, setDeleteUsage] = useState<number | null>(null);
+  const [reassignTo, setReassignTo]   = useState<number | ''>('');
+  const [checkingUsage, setCheckingUsage] = useState(false);
   const [iconDropdownOpen, setIconDropdownOpen] = useState(false);
   const iconDropdownRef               = useRef<HTMLDivElement>(null);
 
@@ -82,11 +85,30 @@ export default function AdminCategories() {
     }
   };
 
+  const openDelete = async (id: number) => {
+    setDeleteId(id);
+    setDeleteUsage(null);
+    setReassignTo('');
+    setCheckingUsage(true);
+    try {
+      const r = await api.get(endpoints.categoriesUsage(id));
+      setDeleteUsage(r.data.data.offer_count);
+    } catch {
+      setDeleteUsage(0);
+    } finally {
+      setCheckingUsage(false);
+    }
+  };
+
   const confirmDelete = async () => {
     if (!deleteId) return;
+    if (deleteUsage && deleteUsage > 0 && !reassignTo) {
+      toast.error('Choose a category to reassign these offers to first');
+      return;
+    }
     try {
-      await api.delete(endpoints.categoriesDelete(deleteId));
-      toast.success('Deleted');
+      await api.delete(endpoints.categoriesDelete(deleteId), { data: reassignTo ? { reassign_to: reassignTo } : {} });
+      toast.success(deleteUsage ? `Deleted — moved ${deleteUsage} offer(s)` : 'Deleted');
       setDeleteId(null);
       load();
     } catch {
@@ -186,7 +208,7 @@ export default function AdminCategories() {
                           <Pencil size={14} />
                         </button>
                         <button
-                          onClick={() => setDeleteId(cat.id)}
+                          onClick={() => openDelete(cat.id)}
                           className="p-2 rounded-lg text-[var(--text-secondary)] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors cursor-pointer"
                           title="Delete"
                         >
@@ -332,15 +354,36 @@ export default function AdminCategories() {
               <p className="text-sm text-[var(--text)] font-semibold">
                 Delete "{categories.find(c => c.id === deleteId)?.name}"?
               </p>
-              <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
-                This will remove the category. Existing offers with this category won't be affected.
-              </p>
+              {checkingUsage ? (
+                <p className="text-xs text-[var(--text-secondary)]">Checking how many offers use this category…</p>
+              ) : deleteUsage && deleteUsage > 0 ? (
+                <>
+                  <p className="text-xs text-amber-600 dark:text-amber-400 leading-relaxed font-medium">
+                    {deleteUsage} active offer{deleteUsage === 1 ? '' : 's'} currently use this category. Choose where to move them before deleting:
+                  </p>
+                  <select
+                    className="input rounded-lg"
+                    value={reassignTo}
+                    onChange={(e) => setReassignTo(e.target.value ? Number(e.target.value) : '')}
+                  >
+                    <option value="">Select a category…</option>
+                    {categories.filter(c => c.id !== deleteId && c.is_active).map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </>
+              ) : (
+                <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+                  No offers currently use this category — safe to delete.
+                </p>
+              )}
             </div>
             <div className="modal-footer">
               <button onClick={() => setDeleteId(null)} className="btn btn-secondary flex-1 py-2.5">Cancel</button>
               <button
                 onClick={confirmDelete}
-                className="btn bg-red-500 hover:bg-red-600 text-white flex-1 py-2.5 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                disabled={checkingUsage || (!!deleteUsage && deleteUsage > 0 && !reassignTo)}
+                className="btn bg-red-500 hover:bg-red-600 text-white flex-1 py-2.5 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
               >
                 Delete
               </button>

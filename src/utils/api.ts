@@ -199,6 +199,7 @@ export const endpoints = {
   categoriesCreate: "/categories",
   categoriesUpdate: (id: number) => `/categories/${id}`,
   categoriesDelete: (id: number) => `/categories/${id}`,
+  categoriesUsage: (id: number) => `/categories/${id}/usage`,
 
   // Upload
   uploadImage: "/upload/image",
@@ -222,9 +223,10 @@ export const endpoints = {
   adminUserDetail: (id: number) => `/admin/users/${id}`,
   adminUserAdminRole: (id: number) => `/admin/users/${id}/admin-role`,
   adminUserForceLogout: (id: number) => `/admin/users/${id}/force-logout`,
-  adminOffers: (search = "", category = "", status = "", limit = 30, offset = 0) =>
-    `/admin/offers?search=${encodeURIComponent(search)}&category=${category}&status=${status}&limit=${limit}&offset=${offset}`,
+  adminOffers: (search = "", category = "", status = "", limit = 30, offset = 0, vendorStatus = "") =>
+    `/admin/offers?search=${encodeURIComponent(search)}&category=${category}&status=${status}&limit=${limit}&offset=${offset}&vendorStatus=${vendorStatus}`,
   adminOfferAction: (id: number) => `/admin/offers/${id}`,
+  adminOfferEdit: (id: number) => `/admin/offers/${id}/edit`,
   adminVendors: (search = "", status = "", plan = "", limit = 30, offset = 0) =>
     `/admin/vendors?search=${encodeURIComponent(search)}&status=${status}&plan=${plan}&limit=${limit}&offset=${offset}`,
   adminVendorDetail: (id: number) => `/admin/vendors/${id}`,
