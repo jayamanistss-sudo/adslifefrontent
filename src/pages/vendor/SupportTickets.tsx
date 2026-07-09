@@ -5,7 +5,7 @@ import { api, endpoints } from '../../utils/api';
 import toast from 'react-hot-toast';
 
 interface Ticket {
-  id: number; subject: string; description: string; category: string;
+  id: number; subject: string; message: string; category: string;
   priority: string; status: string; admin_reply: string | null;
   replied_at: string | null; created_at: string;
 }
@@ -13,8 +13,9 @@ interface Ticket {
 const PRIORITY_STYLE: Record<string, string> = {
   low: 'badge-neutral', medium: 'badge-warning', high: 'badge-danger', urgent: 'badge-danger',
 };
+// Matches the backend TicketStatus enum exactly (open/answered/closed).
 const STATUS_STYLE: Record<string, string> = {
-  open: 'badge-warning', in_progress: 'badge-primary', resolved: 'badge-accent', closed: 'badge-neutral',
+  open: 'badge-warning', answered: 'badge-primary', closed: 'badge-neutral',
 };
 
 export default function SupportTickets() {
@@ -41,9 +42,8 @@ export default function SupportTickets() {
     if (!form.subject || !form.description) return;
     setSubmitting(true);
     try {
-      // Backend field is "message"; priority is display-only (not stored)
       const res = await api.post(endpoints.supportCreate, {
-        subject: form.subject, message: form.description, category: form.category,
+        subject: form.subject, message: form.description, category: form.category, priority: form.priority,
       });
       if (res.data.success) {
         toast.success('Support ticket created!');
@@ -156,7 +156,7 @@ export default function SupportTickets() {
 
               {expanded === t.id && (
                 <div className="px-4 pb-4 border-t border-[var(--border)] pt-3 space-y-3">
-                  <p className="text-sm text-[var(--text-secondary)]">{t.description}</p>
+                  <p className="text-sm text-[var(--text-secondary)]">{t.message}</p>
                   {t.admin_reply && (
                     <div className="bg-[var(--primary-light)] rounded-xl p-3">
                       <p className="text-xs font-semibold text-[var(--primary)] mb-1">Admin Reply</p>

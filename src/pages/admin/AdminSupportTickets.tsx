@@ -6,12 +6,15 @@ import toast from 'react-hot-toast';
 
 interface Ticket {
   id: number; user_name: string; user_email: string; subject: string;
-  description: string; category: string; priority: string; status: string;
+  message: string; category: string; priority: string; status: string;
   admin_reply: string | null; created_at: string;
 }
 
+// Matches the backend TicketStatus enum exactly (open/answered/closed) —
+// the dropdown previously offered in_progress/resolved, neither of which
+// the backend accepted, so a chosen status silently never persisted.
 const STATUS_STYLE: Record<string, string> = {
-  open: 'badge-warning', in_progress: 'badge-primary', resolved: 'badge-accent', closed: 'badge-neutral',
+  open: 'badge-warning', answered: 'badge-primary', closed: 'badge-neutral',
 };
 const PRIORITY_STYLE: Record<string, string> = {
   low: 'badge-neutral', medium: 'badge-warning', high: 'badge-danger', urgent: 'badge-danger',
@@ -23,7 +26,7 @@ export default function AdminSupportTickets() {
   const [filter, setFilter]     = useState('');
   const [expanded, setExpanded] = useState<number | null>(null);
   const [replying, setReplying] = useState<number | null>(null);
-  const [replyMap, setReplyMap] = useState<Record<number, { text: string; status: string }>>({});
+  const [replyMap, setReplyMap] = useState<Record<number, { text: string; status: string; priority: string }>>({});
 
   const load = () => {
     setLoading(true);
@@ -41,11 +44,11 @@ export default function AdminSupportTickets() {
   }, [filter]);
 
   const handleReply = async (ticketId: number) => {
-    const { text } = replyMap[ticketId] ?? { text: '' };
+    const { text, status, priority } = replyMap[ticketId] ?? { text: '', status: 'answered', priority: undefined };
     if (!text.trim()) { toast.error('Reply cannot be empty'); return; }
     setReplying(ticketId);
     try {
-      const res = await api.post(endpoints.supportReply(ticketId), { message: text });
+      const res = await api.post(endpoints.supportReply(ticketId), { message: text, status, priority });
       if (res.data.success) {
         toast.success('Reply sent!');
         load();
@@ -75,11 +78,10 @@ export default function AdminSupportTickets() {
       {/* Filter */}
       <div className="flex gap-2 mb-5 flex-wrap">
         {[
-          { v: '',            l: 'All' },
-          { v: 'open',        l: 'Open' },
-          { v: 'in_progress', l: 'In Progress' },
-          { v: 'resolved',    l: 'Resolved' },
-          { v: 'closed',      l: 'Closed' },
+          { v: '',         l: 'All' },
+          { v: 'open',     l: 'Open' },
+          { v: 'answered', l: 'Answered' },
+          { v: 'closed',   l: 'Closed' },
         ].map(({ v, l }) => (
           <button key={v} onClick={() => setFilter(v)} className={`filter-tab ${filter === v ? 'active' : ''}`}>{l}</button>
         ))}
@@ -118,7 +120,7 @@ export default function AdminSupportTickets() {
 
               {expanded === t.id && (
                 <div className="border-t border-[var(--border)] p-4 space-y-4">
-                  <p className="text-sm text-[var(--text-secondary)]">{t.description}</p>
+                  <p className="text-sm text-[var(--text-secondary)]">{t.message}</p>
 
                   {t.admin_reply && (
                     <div className="bg-[var(--primary-light)] rounded-xl p-3">
@@ -133,17 +135,27 @@ export default function AdminSupportTickets() {
                       className="input h-24 resize-none text-sm"
                       placeholder="Type your reply…"
                       value={replyMap[t.id]?.text ?? ''}
-                      onChange={(e) => setReplyMap((m) => ({ ...m, [t.id]: { ...(m[t.id] ?? { status: 'in_progress' }), text: e.target.value } }))}
+                      onChange={(e) => setReplyMap((m) => ({ ...m, [t.id]: { ...(m[t.id] ?? { status: 'answered', priority: t.priority }), text: e.target.value } }))}
                     />
                     <div className="flex items-center gap-3">
                       <select
-                        className="input w-40"
-                        value={replyMap[t.id]?.status ?? 'in_progress'}
-                        onChange={(e) => setReplyMap((m) => ({ ...m, [t.id]: { ...(m[t.id] ?? { text: '' }), status: e.target.value } }))}
+                        className="input w-36"
+                        value={replyMap[t.id]?.status ?? 'answered'}
+                        onChange={(e) => setReplyMap((m) => ({ ...m, [t.id]: { ...(m[t.id] ?? { text: '', priority: t.priority }), status: e.target.value } }))}
                       >
-                        <option value="in_progress">In Progress</option>
-                        <option value="resolved">Resolved</option>
+                        <option value="open">Open</option>
+                        <option value="answered">Answered</option>
                         <option value="closed">Closed</option>
+                      </select>
+                      <select
+                        className="input w-32"
+                        value={replyMap[t.id]?.priority ?? t.priority ?? 'medium'}
+                        onChange={(e) => setReplyMap((m) => ({ ...m, [t.id]: { ...(m[t.id] ?? { text: '', status: 'answered' }), priority: e.target.value } }))}
+                      >
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                        <option value="urgent">Urgent</option>
                       </select>
                       <button
                         onClick={() => handleReply(t.id)}
