@@ -100,7 +100,7 @@ export default function Login() {
         setUser({
           id:user.id,name:user.name,email:user.email,
           streakDays:Number.parseInt(user.streak_days)||0,
-          role:user.role,city:user.city,
+          role:user.role,adminRole:user.admin_role ?? null,city:user.city,
           lat:parseFloat(user.lat)||undefined,
           lng:parseFloat(user.lng)||undefined,
           avatarUrl: user.avatar_url ?? undefined,

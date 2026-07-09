@@ -76,6 +76,7 @@ import VendorRequests from "./pages/admin/VendorRequests";
 import AdminSupportTickets from "./pages/admin/AdminSupportTickets";
 import AdminBannerAds from "./pages/admin/AdminBannerAds";
 import AdminUsers from "./pages/admin/AdminUsers";
+import AdminUserDetail from "./pages/admin/AdminUserDetail";
 import AdminOffers from "./pages/admin/AdminOffers";
 import AdminVendors from "./pages/admin/AdminVendors";
 import AdminVendorDetail from "./pages/admin/AdminVendorDetail";
@@ -473,6 +474,16 @@ export default function App() {
               <ProtectedRoute roles={["admin"]}>
                 <Layout>
                   <AdminUsers />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/users/:id"
+            element={
+              <ProtectedRoute roles={["admin"]}>
+                <Layout>
+                  <AdminUserDetail />
                 </Layout>
               </ProtectedRoute>
             }

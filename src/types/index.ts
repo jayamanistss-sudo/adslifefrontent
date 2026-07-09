@@ -9,6 +9,7 @@ export interface User {
   lng?: number;
   streakDays: number;
   role: 'user' | 'vendor' | 'admin';
+  adminRole?: 'support' | 'moderator' | 'super' | null;
   loginCount?: number;
   emailAlerts?: boolean;
 }

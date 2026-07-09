@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Search, Ban, CheckCircle, Trash2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Search, Ban, CheckCircle, Trash2, LogOut } from "lucide-react";
 import BackButton from "../../components/BackButton";
 import { api, endpoints } from "../../utils/api";
 import toast from "react-hot-toast";
@@ -12,6 +13,7 @@ interface UserRow {
   name: string;
   email: string;
   role: string;
+  admin_role: string | null;
   city: string;
   streak_days: number;
   is_active: number;
@@ -25,6 +27,7 @@ interface UserRow {
 
 
 export default function AdminUsers() {
+  const navigate = useNavigate();
   const [users, setUsers] = useState<UserRow[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -77,19 +80,22 @@ export default function AdminUsers() {
           const u = params.data;
           if (!u) return null;
           return (
-            <div className="flex items-center gap-2 h-full py-1">
+            <button
+              onClick={() => navigate(`/admin/users/${u.id}`)}
+              className="flex items-center gap-2 h-full py-1 text-left hover:opacity-80 transition-opacity"
+            >
               <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs flex-shrink-0">
                 {u.name[0]?.toUpperCase()}
               </div>
               <div className="min-w-0 leading-tight">
                 <p className="font-medium text-[var(--text)] truncate max-w-32" title={u.name}>
-                  {u.name}
+                  {u.name}{u.admin_role ? <span className="ml-1 text-[10px] text-primary font-normal">({u.admin_role})</span> : null}
                 </p>
                 <p className="text-xs text-[var(--text-muted)] truncate max-w-32" title={u.email}>
                   {u.email}
                 </p>
               </div>
-            </div>
+            </button>
           );
         },
       },
@@ -157,8 +163,8 @@ export default function AdminUsers() {
       {
         headerName: "Actions",
         field: "id",
-        flex: 0.8,
-        minWidth: 90,
+        flex: 1,
+        minWidth: 130,
         cellRenderer: (params: any) => {
           const u = params.data;
           if (!u) return null;
@@ -181,6 +187,19 @@ export default function AdminUsers() {
                   <CheckCircle size={14} />
                 </button>
               )}
+              <button
+                onClick={async () => {
+                  if (!window.confirm(`Sign ${u.name} out on all devices?`)) return;
+                  try {
+                    const res = await api.put(endpoints.adminUserForceLogout(u.id), {});
+                    toast.success(res.data.message);
+                  } catch { toast.error("Action failed"); }
+                }}
+                title="Sign out everywhere"
+                className="p-1.5 rounded-lg hover:bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
+              >
+                <LogOut size={14} />
+              </button>
               <button
                 onClick={() => {
                   if (window.confirm(`Delete ${u.name}?`)) action(u.id, "delete");

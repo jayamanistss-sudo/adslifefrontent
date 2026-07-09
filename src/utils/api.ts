@@ -219,6 +219,9 @@ export const endpoints = {
   adminUsers: (search = "", status = "", limit = 30, offset = 0) =>
     `/admin/users?search=${encodeURIComponent(search)}&status=${status}&limit=${limit}&offset=${offset}`,
   adminUserAction: (id: number) => `/admin/users/${id}`,
+  adminUserDetail: (id: number) => `/admin/users/${id}`,
+  adminUserAdminRole: (id: number) => `/admin/users/${id}/admin-role`,
+  adminUserForceLogout: (id: number) => `/admin/users/${id}/force-logout`,
   adminOffers: (search = "", category = "", status = "", limit = 30, offset = 0) =>
     `/admin/offers?search=${encodeURIComponent(search)}&category=${category}&status=${status}&limit=${limit}&offset=${offset}`,
   adminOfferAction: (id: number) => `/admin/offers/${id}`,
