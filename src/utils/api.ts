@@ -127,7 +127,7 @@ export const endpoints = {
   // Fraud
   fraudCheckVendor: (id: number) => `/fraud/check-vendor/${id}`,
   fraudCheckOffer: (id: number) => `/fraud/check-offer/${id}`,
-  fraudFlagged: () => "/fraud/flagged",
+  fraudFlagged: (status = "", type = "") => `/fraud/flagged?status=${status}&type=${type}`,
   fraudReview: (id: number) => `/fraud/review/${id}`,
 
   // Targeting

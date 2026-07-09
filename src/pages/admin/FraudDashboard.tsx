@@ -16,7 +16,9 @@ export default function FraudDashboard() {
 
   const load = () => {
     setLoading(true);
-    api.get(endpoints.fraudFlagged()).then((res) => {
+    // The filter dropdowns below were never actually wired to the request —
+    // this always fetched pending-only regardless of what was selected.
+    api.get(endpoints.fraudFlagged(filter.status, filter.type)).then((res) => {
       if (res.data.success) setFlags(res.data.data);
     }).finally(() => setLoading(false));
   };
@@ -34,7 +36,10 @@ export default function FraudDashboard() {
   // separately find and act on it a second time. Now the chosen action is
   // applied atomically by the same request.
   const handleAction = async (flag: FraudFlag, downstreamAction?: 'suspend_vendor' | 'deactivate_offer') => {
-    const status = downstreamAction ? 'actioned' : 'false_positive';
+    // Matches the real FraudFlagStatus enum (pending/reviewed/dismissed) —
+    // previously sent values ('actioned'/'false_positive') that didn't
+    // exist in the DB enum at all, so this write silently 500'd every time.
+    const status = downstreamAction ? 'reviewed' : 'dismissed';
     if (downstreamAction && !window.confirm(
       downstreamAction === 'suspend_vendor'
         ? `Suspend vendor #${flag.entity_id}${flag.entity_name ? ` (${flag.entity_name})` : ''}? This will also deactivate all of their live offers.`
@@ -45,7 +50,7 @@ export default function FraudDashboard() {
       const cascaded = res.data.data?.cascaded_offers;
       toast.success(downstreamAction
         ? `Action taken${cascaded ? ` — deactivated ${cascaded} offer(s)` : ''}`
-        : 'Dismissed as false positive');
+        : 'Dismissed');
       setFlags((fs) => fs.map((f) => f.id === flag.id ? { ...f, status } : f));
     } catch {
       toast.error('Action failed');
@@ -84,7 +89,6 @@ export default function FraudDashboard() {
           <option value="pending">Pending</option>
           <option value="reviewed">Reviewed</option>
           <option value="dismissed">Dismissed</option>
-          <option value="actioned">Actioned</option>
         </select>
         <select
           value={filter.type}
@@ -94,7 +98,6 @@ export default function FraudDashboard() {
           <option value="">All Types</option>
           <option value="vendor">Vendor</option>
           <option value="offer">Offer</option>
-          <option value="user">User</option>
         </select>
       </div>
 
@@ -122,7 +125,7 @@ export default function FraudDashboard() {
                     </span>
                     <span className={`text-xs px-2 py-0.5 rounded-full capitalize ${
                       flag.status === 'pending' ? 'bg-yellow-50 text-yellow-700' :
-                      flag.status === 'actioned' ? 'bg-danger/10 text-danger' :
+                      flag.status === 'reviewed' ? 'bg-danger/10 text-danger' :
                       'bg-[var(--surface-2)] text-[var(--text-muted)]'
                     }`}>
                       {flag.status}
