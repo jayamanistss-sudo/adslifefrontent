@@ -21,7 +21,7 @@ export default function GoogleAuthButton({ label = 'Continue with Google' }: Pro
       try {
         const res = await api.post(endpoints.googleAuth, { access_token: tokenResponse.access_token });
         if (res.data.success) {
-          const { user, token, is_new } = res.data.data;
+          const { user, is_new } = res.data.data;
           setUser({
             id: user.id, name: user.name, email: user.email,
             streakDays: Number.parseInt(user.streak_days) || 0,
@@ -29,7 +29,7 @@ export default function GoogleAuthButton({ label = 'Continue with Google' }: Pro
             lat: user.lat ? Number.parseFloat(user.lat) : undefined,
             lng: user.lng ? Number.parseFloat(user.lng) : undefined,
             avatarUrl: user.avatar_url ?? undefined,
-          }, token);
+          });
           toast.success(is_new ? `Welcome to AdsLife, ${user.name}! 🎉` : `Welcome back, ${user.name}!`);
           navigate('/feed');
         }

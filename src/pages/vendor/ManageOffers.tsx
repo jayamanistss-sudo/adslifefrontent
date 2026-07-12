@@ -337,6 +337,7 @@ export default function ManageOffers() {
   const [form, setForm] = useState(emptyForm);
   const [categories, setCategories] = useState<Category[]>([]);
   const [vendorCategory, setVendorCategory] = useState<string>('');
+  const [aiGenerationLocked, setAiGenerationLocked] = useState(false);
 
   // AI generation
   const [aiOpen, setAiOpen]         = useState(false);
@@ -359,6 +360,10 @@ export default function ManageOffers() {
   useEffect(() => {
     load();
     // load vendor profile (to get their category) and category list in parallel
+    api.get(endpoints.vendorDashboard).then((r) => {
+      setAiGenerationLocked(!!r.data?.data?.locked?.ai_generation);
+    }).catch(() => {});
+
     Promise.all([
       api.get(endpoints.vendorProfile).catch(() => null),
       api.get(endpoints.categoriesList(true)).catch(() => null),
@@ -729,9 +734,18 @@ export default function ManageOffers() {
           <p className="page-subtitle">Create and manage your promotional offers</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => { setAiOpen(true); setAiResult(null); }} className="btn btn-secondary btn-sm">
-            <Sparkles size={14} /> AI Generate
-          </button>
+          {aiGenerationLocked ? (
+            <Link to="/vendor/select-plan" className="btn btn-secondary btn-sm relative overflow-hidden">
+              <span style={{ filter: 'blur(3px)' }} className="flex items-center gap-1.5"><Sparkles size={14} /> AI Generate</span>
+              <span className="absolute inset-0 flex items-center justify-center bg-white/50 dark:bg-black/50">
+                <span className="text-[10px] font-bold bg-[var(--primary)] text-white px-2.5 py-1 rounded-full shadow-sm">Upgrade</span>
+              </span>
+            </Link>
+          ) : (
+            <button onClick={() => { setAiOpen(true); setAiResult(null); }} className="btn btn-secondary btn-sm">
+              <Sparkles size={14} /> AI Generate
+            </button>
+          )}
           <button onClick={openCreate} className="btn btn-primary btn-sm">
             <Plus size={14} /> Add Offer
           </button>

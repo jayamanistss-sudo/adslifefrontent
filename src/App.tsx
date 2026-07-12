@@ -38,9 +38,12 @@ import { api, endpoints } from "./utils/api";
 // Pages
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import BecomeVendor from "./pages/BecomeVendor";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
+import DeleteAccount from "./pages/DeleteAccount";
 import Feed from "./pages/Feed";
 import Leaderboard from "./pages/Leaderboard";
 import Profile from "./pages/Profile";
@@ -48,12 +51,14 @@ import Settings from "./pages/Settings";
 import OfferDetail from "./pages/OfferDetail";
 import VendorProfile from "./pages/VendorProfile";
 import OffersMap from "./pages/OffersMap";
-import PayTest from "./pages/PayTest";
+import CashfreeTest from "./pages/CashfreeTest";
 
 // Vendor pages
 import VendorDashboard from "./pages/vendor/VendorDashboard";
 import HeatmapAnalytics from "./pages/vendor/HeatmapAnalytics";
 import AudienceInsights from "./pages/vendor/AudienceInsights";
+import VendorReviews from "./pages/vendor/VendorReviews";
+import VendorPayments from "./pages/vendor/VendorPayments";
 import BenchmarkPage from "./pages/vendor/BenchmarkPage";
 import ROICalculator from "./pages/vendor/ROICalculator";
 import ABTestDashboard from "./pages/vendor/ABTestDashboard";
@@ -83,43 +88,34 @@ import AdminVendorDetail from "./pages/admin/AdminVendorDetail";
 import AdminSpotlight from "./pages/admin/AdminSpotlight";
 import AdminReviews from "./pages/admin/AdminReviews";
 import AdminGroupDeals from "./pages/admin/AdminGroupDeals";
+import AdminSecurityLogs from "./pages/admin/AdminSecurityLogs";
+import AdminPayments from "./pages/admin/AdminPayments";
+import AdminNotificationTemplates from "./pages/admin/AdminNotificationTemplates";
+import AdminLeaderboard from "./pages/admin/AdminLeaderboard";
+import AdminFeaturedOffers from "./pages/admin/AdminFeaturedOffers";
+import AdminFeedTuning from "./pages/admin/AdminFeedTuning";
 import AdminCategories from "./pages/admin/AdminCategories";
 import AdminSubscriptions from "./pages/admin/AdminSubscriptions";
 import AdminSiteSettings from "./pages/admin/AdminSiteSettings";
 import AdminNotificationSettings from "./pages/admin/AdminNotificationSettings";
 
-/** Returns true if the stored JWT is still valid (not expired). */
-function isTokenValid(): boolean {
-  try {
-    const token = localStorage.getItem("adslife_token");
-    if (!token) return false;
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    // exp is in seconds
-    return typeof payload.exp === "number" && payload.exp * 1000 > Date.now();
-  } catch {
-    return false;
-  }
-}
-
 function ProtectedRoute({ children, roles }: { readonly children: React.ReactNode; readonly roles?: string[] }) {
-  const { isAuthenticated, user, logout } = useUserStore();
-  const tokenExpired = isAuthenticated && !isTokenValid();
+  const { isAuthenticated, authChecked, user } = useUserStore();
 
-  // Rendering must stay pure — the actual logout (a store mutation) happens
-  // in an effect; the redirect below can still happen in this same render
-  // since tokenExpired is already known.
-  useEffect(() => {
-    if (tokenExpired) logout();
-  }, [tokenExpired, logout]);
-
-  if (tokenExpired) return <Navigate to="/login" replace />;
+  // The httpOnly cookie isn't JS-readable, so there's no way to know
+  // synchronously on first render whether this is a logged-in user
+  // refreshing the page or a genuinely logged-out visitor — authChecked
+  // only flips true once App's boot-time /auth/me call resolves either way.
+  // Redirecting before that would bounce every already-logged-in user to
+  // /login on every page load.
+  if (!authChecked) return null;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (roles && user && !roles.includes(user.role)) return <Navigate to="/feed" replace />;
   return <>{children}</>;
 }
 
 export default function App() {
-  const { isAuthenticated, updateUser } = useUserStore();
+  const { setAuthChecked } = useUserStore();
 
   useEffect(() => {
     if ("serviceWorker" in navigator) {
@@ -127,37 +123,46 @@ export default function App() {
     }
   }, []);
 
-  // On startup, refresh user data from DB so a role change (e.g. vendor approval)
-  // is reflected immediately without requiring the user to log out and back in.
+  // Boot-time session check — the only source of truth for "is this user
+  // logged in" now that the JWT lives solely in the httpOnly cookie.
+  // Previously gated behind a localStorage-derived isAuthenticated flag and
+  // only refreshed already-known-logged-in users' data; now this call
+  // itself is what determines isAuthenticated in the first place, for every
+  // visitor including anonymous ones (skipAuthRedirect keeps their 401 from
+  // bouncing them to /login).
   useEffect(() => {
-    if (!isAuthenticated) return;
-    api.get(endpoints.authMe).then((res) => {
+    api.get(endpoints.authMe, { skipAuthRedirect: true }).then((res) => {
       if (res.data.success) {
         const u = res.data.data;
-        updateUser({
-          name:        u.name,
-          phone:       u.phone      ?? undefined,
-          city:        u.city       ?? undefined,
-          avatarUrl:   u.avatar_url ?? undefined,
-          role:        u.role,
+        setAuthChecked({
+          id: u.id,
+          name: u.name,
+          email: u.email,
+          streakDays: Number.parseInt(u.streak_count) || 0,
+          role: u.role,
+          adminRole: u.admin_role ?? null,
+          city: u.city ?? undefined,
+          phone: u.phone ?? undefined,
+          lat: u.lat != null ? Number.parseFloat(u.lat) : undefined,
+          lng: u.lng != null ? Number.parseFloat(u.lng) : undefined,
+          avatarUrl: u.avatar_url ?? undefined,
+          loginCount: u.login_count,
           emailAlerts: u.email_alerts,
+          pushEnabled: u.push_enabled,
         });
-        // Backend returns a new token when role has changed (e.g. user → vendor).
-        // Update localStorage and the store so subsequent API calls use the new role.
-        if (res.data.token) {
-          localStorage.setItem("adslife_token", res.data.token);
-          useUserStore.setState({ token: res.data.token });
-        }
+      } else {
+        setAuthChecked(null);
       }
-    }).catch(() => {});
-  }, [isAuthenticated]);
+    }).catch(() => setAuthChecked(null));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <ErrorBoundary>
       <BrowserRouter>
         <Toaster
           position="top-center"
-          containerStyle={{ zIndex: 10001 }}
+          containerStyle={{ zIndex: 999999 }}
           toastOptions={{
             duration: 3500,
             style: {
@@ -182,9 +187,12 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/become-vendor" element={<BecomeVendor />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/privacy" element={<Privacy />} />
+          <Route path="/delete-account" element={<DeleteAccount />} />
 
           {/* Public routes — no login needed */}
           <Route
@@ -240,9 +248,14 @@ export default function App() {
           <Route
             path="/pay-test"
             element={
-              <ProtectedRoute>
+              // Was reachable by any logged-in user — its own comment claims
+              // "sandbox keys, no real money moves," but VITE_CASHFREE_ENV is
+              // 'production' for both dev and prod builds, so it actually ran
+              // live Cashfree charges. Admin-only until it's wired to force
+              // sandbox mode regardless of the site-wide env setting.
+              <ProtectedRoute roles={["admin"]}>
                 <Layout>
-                  <PayTest />
+                  <CashfreeTest />
                 </Layout>
               </ProtectedRoute>
             }
@@ -295,6 +308,26 @@ export default function App() {
               <ProtectedRoute roles={["vendor", "admin"]}>
                 <Layout>
                   <AudienceInsights />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/vendor/reviews"
+            element={
+              <ProtectedRoute roles={["vendor", "admin"]}>
+                <Layout>
+                  <VendorReviews />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/vendor/payments"
+            element={
+              <ProtectedRoute roles={["vendor", "admin"]}>
+                <Layout>
+                  <VendorPayments />
                 </Layout>
               </ProtectedRoute>
             }
@@ -546,6 +579,66 @@ export default function App() {
               <ProtectedRoute roles={["admin"]}>
                 <Layout>
                   <AdminGroupDeals />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/security-logs"
+            element={
+              <ProtectedRoute roles={["admin"]}>
+                <Layout>
+                  <AdminSecurityLogs />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/payments"
+            element={
+              <ProtectedRoute roles={["admin"]}>
+                <Layout>
+                  <AdminPayments />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/notification-templates"
+            element={
+              <ProtectedRoute roles={["admin"]}>
+                <Layout>
+                  <AdminNotificationTemplates />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/leaderboard"
+            element={
+              <ProtectedRoute roles={["admin"]}>
+                <Layout>
+                  <AdminLeaderboard />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/featured-offers"
+            element={
+              <ProtectedRoute roles={["admin"]}>
+                <Layout>
+                  <AdminFeaturedOffers />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/feed-tuning"
+            element={
+              <ProtectedRoute roles={["admin"]}>
+                <Layout>
+                  <AdminFeedTuning />
                 </Layout>
               </ProtectedRoute>
             }

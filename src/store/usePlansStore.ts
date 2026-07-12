@@ -6,6 +6,7 @@ export interface Plan {
   name: string;
   slug: string;
   price: number;
+  annual_price: number | null;
   duration_days: number;
   max_offers: number;
   features: string[];
@@ -21,6 +22,7 @@ interface PlansState {
   createPlan: (plan: Partial<Plan>) => Promise<boolean>;
   updatePlan: (id: number, plan: Partial<Plan>) => Promise<boolean>;
   deletePlan: (id: number) => Promise<boolean>;
+  seedPlans: () => Promise<number>;
 }
 
 export const usePlansStore = create<PlansState>((set, get) => ({
@@ -35,7 +37,10 @@ export const usePlansStore = create<PlansState>((set, get) => ({
       if (res.data.success) {
         // price is a numeric-string ("0.00") from Postgres — coerce once here
         // so every consumer can safely compare/format it as a number.
-        const fetchedPlans = (res.data.data || []).map((p: Plan) => ({ ...p, price: Number(p.price) }));
+        const fetchedPlans = (res.data.data || []).map((p: Plan) => ({
+          ...p, price: Number(p.price),
+          annual_price: p.annual_price != null ? Number(p.annual_price) : null,
+        }));
         set({ plans: fetchedPlans, loaded: true });
         return fetchedPlans;
       }
@@ -98,5 +103,21 @@ export const usePlansStore = create<PlansState>((set, get) => ({
       set({ loading: false });
     }
     return false;
+  },
+  seedPlans: async () => {
+    set({ loading: true });
+    try {
+      const res = await api.post(endpoints.plansSeed);
+      if (res.data.success) {
+        await get().fetchPlans(true);
+        return res.data.data?.inserted ?? 0;
+      }
+    } catch (err) {
+      console.error("Failed to seed plans:", err);
+      throw err;
+    } finally {
+      set({ loading: false });
+    }
+    return 0;
   },
 }));

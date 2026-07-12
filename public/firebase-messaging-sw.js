@@ -15,12 +15,18 @@ self.addEventListener('message', (event) => {
       messaging.onBackgroundMessage((payload) => {
         const { title = 'AdsLife', body = '' } = payload.notification ?? {};
         const data = payload.data ?? {};
+        // data.route (e.g. support replies, promo/reengagement pushes) was
+        // previously ignored entirely — every one of those opened /feed
+        // instead of the intended destination, even though the backend
+        // already sends the right route. offer_id is still the fallback
+        // for the few push types that only carry that.
+        const url = data.route ?? (data.offer_id ? `/offer/${data.offer_id}` : '/feed');
         self.registration.showNotification(title, {
           body,
           icon: '/favicon.svg',
           badge: '/favicon.svg',
           tag: data.offer_id ? `offer-${data.offer_id}` : 'adslife',
-          data: { url: data.offer_id ? `/offer/${data.offer_id}` : '/feed' },
+          data: { url },
         });
       });
     }

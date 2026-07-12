@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { RefreshCw, Check, AlertCircle } from 'lucide-react';
 import BackButton from '../../components/BackButton';
 import { api, endpoints } from '../../utils/api';
-import { openRazorpayForOrder } from '../../utils/razorpay';
+import { openCashfreeForOrder } from '../../utils/cashfree';
 import { formatPlanPrice } from '../../utils/formatPlan';
 import { useUserStore } from '../../store/useUserStore';
 import toast from 'react-hot-toast';
@@ -10,7 +10,7 @@ import toast from 'react-hot-toast';
 // Matches GET /vendor/my-plan's actual response shape — NOT
 // {plan, plan_name, plan_price}. See SelectPlan.tsx for the same fix.
 interface VendorPlan {
-  subscription_plan: string; name: string; price: number;
+  subscription_plan: string; name: string; price: number; annual_price: number | null;
   max_offers: number; features: string[]; status: string;
 }
 
@@ -19,12 +19,16 @@ export default function RenewPlan() {
   const [vendorPlan, setVendorPlan] = useState<VendorPlan | null>(null);
   const [loading, setLoading]       = useState(true);
   const [renewing, setRenewing]     = useState(false);
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
 
   useEffect(() => {
     api.get(endpoints.vendorMyPlan).then((r) => {
       // price comes back as a numeric-string ("0.00") from Postgres — coerce
       // once here so every comparison/format below can treat it as a number.
-      if (r.data.success) setVendorPlan({ ...r.data.data, price: Number(r.data.data.price) });
+      if (r.data.success) setVendorPlan({
+        ...r.data.data, price: Number(r.data.data.price),
+        annual_price: r.data.data.annual_price != null ? Number(r.data.data.annual_price) : null,
+      });
     }).finally(() => setLoading(false));
   }, [user]);
 
@@ -43,15 +47,16 @@ export default function RenewPlan() {
       const plan     = plans.find((p) => p.slug === vendorPlan.subscription_plan);
       if (!plan) { toast.error('Plan not found'); return; }
 
-      const orderRes = await api.post(endpoints.paymentCreateOrder, { plan_id: plan.id, purpose: 'plan_renewal' });
+      const cycle = billingCycle === 'annual' && vendorPlan.annual_price != null ? 'annual' : 'monthly';
+      const orderRes = await api.post(endpoints.paymentCreateOrder, { plan_id: plan.id, purpose: 'plan_renewal', billing_cycle: cycle });
       if (!orderRes.data.success) { toast.error('Could not create payment order'); return; }
 
-      await openRazorpayForOrder(
+      await openCashfreeForOrder(
         orderRes.data.data,
-        { description: 'Plan renewal', prefill: orderRes.data.data.prefill },
-        async (resp) => {
-          const v = await api.post('/payment/confirm', resp);
-          if (!v.data.success) throw new Error('Verification failed');
+        { description: `Plan renewal (${cycle})`, prefill: orderRes.data.data.prefill },
+        async (orderId) => {
+          const v = await api.post('/payment/confirm', { order_id: orderId });
+          if (!v.data.success || v.data.data.status !== 'paid') throw new Error('Payment not completed');
         },
       );
 
@@ -60,8 +65,7 @@ export default function RenewPlan() {
       if (vendorRes.data.success) setVendorPlan({ ...vendorRes.data.data, price: Number(vendorRes.data.data.price) });
     } catch (err: any) {
       const msg = err.response?.data?.error ?? err?.message ?? 'Renewal failed';
-      if (msg === 'Payment cancelled') toast('Payment cancelled', { icon: '↩️' });
-      else toast.error(msg);
+      toast.error(msg);
     } finally {
       setRenewing(false);
     }
@@ -121,14 +125,37 @@ export default function RenewPlan() {
 
         <div className="divider" />
 
+        {vendorPlan.price > 0 && vendorPlan.annual_price != null && (
+          <div className="flex items-center gap-1 bg-[var(--surface-2)] p-1 rounded-xl border border-[var(--border)] w-fit mb-4">
+            {(['monthly', 'annual'] as const).map((c) => (
+              <button
+                key={c}
+                onClick={() => setBillingCycle(c)}
+                className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                  billingCycle === c
+                    ? 'bg-[var(--surface)] text-[var(--text)] shadow-sm border border-[var(--border)]'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text)] border border-transparent'
+                }`}
+              >
+                {c === 'monthly' ? 'Monthly' : 'Annual'}
+                {c === 'annual' && <span className="badge badge-accent !text-[10px] !py-0">Save ~17%</span>}
+              </button>
+            ))}
+          </div>
+        )}
+
         <div className="flex items-center justify-between mt-4">
           <div>
             <p className="text-xs text-[var(--text-muted)]">Renewal amount</p>
             <p className="font-heading font-bold text-2xl text-[var(--text)]">
-              {formatPlanPrice(vendorPlan.price)}
+              {billingCycle === 'annual' && vendorPlan.annual_price != null
+                ? formatPlanPrice(vendorPlan.annual_price)
+                : formatPlanPrice(vendorPlan.price)}
             </p>
             {vendorPlan.price > 0 && (
-              <p className="text-xs text-[var(--text-muted)]">for 30 days</p>
+              <p className="text-xs text-[var(--text-muted)]">
+                for {billingCycle === 'annual' && vendorPlan.annual_price != null ? 365 : 30} days
+              </p>
             )}
           </div>
           <button
@@ -153,7 +180,7 @@ export default function RenewPlan() {
 
       <div className="card p-4 bg-[var(--surface-2)]">
         <p className="text-xs text-[var(--text-secondary)]">
-          Payment is processed securely via Razorpay. You will receive a confirmation notification after successful payment.
+          Payment is processed securely via Cashfree. You will receive a confirmation notification after successful payment.
         </p>
       </div>
     </div>

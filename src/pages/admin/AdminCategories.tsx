@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Plus, Pencil, Trash2, Save, X, ChevronDown } from 'lucide-react';
+import { Plus, Pencil, Trash2, Save, X, ChevronDown, Database } from 'lucide-react';
 import { api, endpoints } from '../../utils/api';
 import toast from 'react-hot-toast';
 import CategoryIcon from '../../components/CategoryIcon';
@@ -28,6 +28,7 @@ export default function AdminCategories() {
   const [reassignTo, setReassignTo]   = useState<number | ''>('');
   const [checkingUsage, setCheckingUsage] = useState(false);
   const [iconDropdownOpen, setIconDropdownOpen] = useState(false);
+  const [seeding, setSeeding]         = useState(false);
   const iconDropdownRef               = useRef<HTMLDivElement>(null);
 
   const load = async () => {
@@ -116,6 +117,21 @@ export default function AdminCategories() {
     }
   };
 
+  const seedDefaults = async () => {
+    setSeeding(true);
+    try {
+      const res = await api.post(endpoints.categoriesSeed);
+      if (!res.data.success) { toast.error(res.data.error ?? 'Seed failed'); return; }
+      const inserted = res.data.data?.inserted ?? 0;
+      toast.success(inserted > 0 ? `Seeded ${inserted} default categor${inserted === 1 ? 'y' : 'ies'}` : 'Categories already exist — nothing to seed');
+      load();
+    } catch {
+      toast.error('Seed failed');
+    } finally {
+      setSeeding(false);
+    }
+  };
+
   return (
     <div className="pb-8">
       <BackButton to="/admin/dashboard" label="Admin Panel" />
@@ -128,12 +144,21 @@ export default function AdminCategories() {
             Manage categories shown in Browse &amp; offer forms
           </p>
         </div>
-        <button
-          onClick={openNew}
-          className="btn btn-primary"
-        >
-          <Plus size={16} /> Add Category
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={seedDefaults}
+            disabled={seeding}
+            className="btn btn-secondary btn-sm"
+          >
+            <Database size={14} /> {seeding ? 'Seeding…' : 'Seed Defaults'}
+          </button>
+          <button
+            onClick={openNew}
+            className="btn btn-primary"
+          >
+            <Plus size={16} /> Add Category
+          </button>
+        </div>
       </div>
 
       {/* Table Container */}

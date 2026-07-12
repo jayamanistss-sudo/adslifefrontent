@@ -3,20 +3,21 @@ import toast from 'react-hot-toast';
 import { getPublicOrigin } from '../utils/api';
 import { useNotificationStore } from '../store/useNotificationStore';
 
-// The backend gateway is at namespace "/notifications" and expects the JWT
-// either in handshake.auth.token or an Authorization header — see
-// backend-nest/src/gateway/notifications.gateway.ts.
+// The backend gateway is at namespace "/notifications" and authenticates via
+// the same httpOnly cookie that authenticates every REST call now (falls
+// back to handshake.auth.token / an Authorization header for mobile, which
+// has no cookie jar) — see backend-nest/src/gateway/notifications.gateway.ts.
 let socket: Socket | null = null;
 
 /** Connect once after login so every notification type reaches an active
- *  tab in real time — call disconnectNotificationSocket() on logout. */
+ *  tab in real time — call disconnectNotificationSocket() on logout. Callers
+ *  already know the user is authenticated (post-login, or after the boot
+ *  session check confirms one) before calling this. */
 export function connectNotificationSocket(): void {
   if (socket?.connected) return;
-  const token = localStorage.getItem('adslife_token');
-  if (!token) return;
 
   socket = io(`${getPublicOrigin()}/notifications`, {
-    auth: { token },
+    withCredentials: true,
     // Polling first, then opportunistically upgrade — Socket.IO's own
     // recommended order. Listing websocket first makes the client attempt a
     // cold direct upgrade with no fallback; if that fails (as it does behind

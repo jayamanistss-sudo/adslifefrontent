@@ -1,22 +1,21 @@
 import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { CreditCard, Loader2 } from 'lucide-react';
-import { startRazorpayCheckout, type RazorpayResult } from '../utils/razorpay';
+import { startCashfreeCheckout, type CashfreeResult } from '../utils/cashfree';
 import { useUserStore } from '../store/useUserStore';
 
 interface Props {
-  /** Amount in paise (min 100 = ₹1) */
-  readonly amountPaise: number;
-  readonly description?: string;
+  /** Amount in rupees (min ₹1) */
+  readonly amountRupees: number;
   readonly receipt?: string;
   readonly label?: string;
   readonly className?: string;
-  readonly onSuccess?: (result: RazorpayResult) => void;
+  readonly onSuccess?: (result: CashfreeResult) => void;
 }
 
-/** Drop-in "Pay with Razorpay" button — order, modal and verification included. */
-export default function RazorpayButton({
-  amountPaise, description, receipt, label, className, onSuccess,
+/** Drop-in "Pay with Cashfree" button — order, modal and verification included. */
+export default function CashfreeButton({
+  amountRupees, receipt, label, className, onSuccess,
 }: Props) {
   const { user } = useUserStore();
   const [busy, setBusy] = useState(false);
@@ -26,18 +25,12 @@ export default function RazorpayButton({
     if (!user) { toast.error('Login to make a payment'); return; }
     setBusy(true);
     try {
-      const result = await startRazorpayCheckout({
-        amountPaise,
-        description,
-        receipt,
-        prefill: { name: user.name, email: user.email, contact: user.phone },
-      });
+      const result = await startCashfreeCheckout({ amountRupees, receipt });
       toast.success('✅ Payment successful and verified!');
       onSuccess?.(result);
     } catch (err: any) {
       const msg = err?.message ?? 'Payment failed';
-      if (msg === 'Payment cancelled') toast('Payment cancelled', { icon: '↩️' });
-      else toast.error(msg);
+      toast.error(msg);
     } finally {
       setBusy(false);
     }
@@ -46,7 +39,7 @@ export default function RazorpayButton({
   return (
     <button onClick={pay} disabled={busy} className={className ?? 'btn btn-primary'}>
       {busy ? <Loader2 size={16} className="animate-spin" /> : <CreditCard size={16} />}
-      {label ?? `Pay ₹${(amountPaise / 100).toLocaleString('en-IN')}`}
+      {label ?? `Pay ₹${amountRupees.toLocaleString('en-IN')}`}
     </button>
   );
 }

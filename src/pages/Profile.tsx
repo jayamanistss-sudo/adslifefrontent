@@ -4,11 +4,11 @@ import {
   LogOut, Store, ChevronRight, X, CheckCircle,
   MapPin, Search, LocateFixed, Upload, ImagePlus,
   ChevronLeft, Building2, FileText, Camera, Layers, Check,
-  Bookmark, Bell, BellOff, ExternalLink, Tag, Copy, Gift, MessageCircle, Info, Coins, Pencil
+  Bookmark, Bell, BellOff, ExternalLink, Tag, Copy, Gift, MessageCircle, Info, Coins, Pencil, ChevronDown
 } from 'lucide-react';
 import CategoryIcon from '../components/CategoryIcon';
 import { EmptyState } from '../components/ui/EmptyState';
-import { openRazorpayForOrder } from '../utils/razorpay';
+import { openCashfreeForOrder } from '../utils/cashfree';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useUserStore } from '../store/useUserStore';
@@ -144,6 +144,7 @@ interface VendorForm {
   website: string;
   gst_number: string;
   logo_url: string;
+  referral_code: string;
 }
 
 // ─── Step 1: Business Info ───────────────────────────────────────────────────
@@ -525,6 +526,22 @@ function Step3({ form, update }: {
         </div>
       </div>
 
+      {/* Referral code */}
+      <div>
+        <label className="modal-label font-bold text-[11px] uppercase tracking-wider text-[var(--text-secondary)]">
+          Referral Code
+          <span className="text-[var(--text-muted)] font-normal ml-1 text-xs lowercase">(optional)</span>
+        </label>
+        <input
+          type="text"
+          value={form.referral_code}
+          onChange={(e) => update('referral_code', e.target.value.toUpperCase())}
+          placeholder="e.g. ADS7K9XQP2"
+          className="input mt-1.5 font-mono tracking-wider uppercase"
+        />
+        <p className="text-[10px] text-[var(--text-muted)] mt-1.5">Have a code from a friend? Enter it to give you both a coin reward</p>
+      </div>
+
       {/* Trust notice */}
       <div className="bg-[var(--primary-light)] border border-[var(--primary)]/20 rounded-2xl p-4 flex gap-3 text-xs text-[var(--text-secondary)]">
         <CheckCircle size={15} className="text-[var(--primary)] flex-shrink-0 mt-0.5" />
@@ -552,6 +569,7 @@ function BecomeVendorModal({ onClose, onSuccess }: {
     business_name: '', category: '', description: '',
     address: '', city: '', lat: null, lng: null,
     phone: '', website: '', gst_number: '', logo_url: '',
+    referral_code: '',
   });
 
   useEffect(() => {
@@ -612,8 +630,9 @@ function BecomeVendorModal({ onClose, onSuccess }: {
   const submitApplication = async (paymentOrderId?: string) => {
     const res = await api.post(endpoints.vendorApplySubmit, {
       ...form,
+      referral_code: form.referral_code.trim() || undefined,
       plan_id: selectedPlan!.id,
-      ...(paymentOrderId ? { payment_order_id: paymentOrderId } : {}),
+      ...(paymentOrderId ? { order_id: paymentOrderId } : {}),
     });
     if (res.data.success) {
       toast.success('Application submitted! Our team will review it shortly.');
@@ -638,12 +657,12 @@ function BecomeVendorModal({ onClose, onSuccess }: {
         return;
       }
 
-      await openRazorpayForOrder(
+      await openCashfreeForOrder(
         orderRes.data.data,
         { description: 'Vendor plan', prefill: orderRes.data.data.prefill },
-        async (resp) => {
-          const v = await api.post('/payment/confirm', resp);
-          if (!v.data.success) throw new Error('Verification failed');
+        async (orderId) => {
+          const v = await api.post('/payment/confirm', { order_id: orderId });
+          if (!v.data.success || v.data.data.status !== 'paid') throw new Error('Payment not completed');
         },
       );
       await submitApplication(orderRes.data.data.order_id);
@@ -651,8 +670,7 @@ function BecomeVendorModal({ onClose, onSuccess }: {
       const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
         ?? (err as Error)?.message
         ?? 'Failed to submit';
-      if (msg === 'Payment cancelled') toast('Payment cancelled', { icon: '↩️' });
-      else toast.error(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -770,10 +788,14 @@ export default function Profile() {
   const [savedLoading,  setSavedLoading]  = useState(false);
   const [followedVendors, setFollowedVendors] = useState<FollowedVendor[]>([]);
   const [followedLoading, setFollowedLoading] = useState(false);
-  const [referral, setReferral] = useState<{ referral_code: string; coins: number; referral_count: number } | null>(null);
+  const [referral, setReferral] = useState<{
+    referral_code: string; coins: number; referral_count: number;
+    referred: { name: string; coins_awarded: number; joined_at: string }[];
+  } | null>(null);
+  const [showReferredList, setShowReferredList] = useState(false);
   const [myRank, setMyRank] = useState<{ score: number; rank: number | null; city?: string; total_ranked?: number } | null>(null);
   const [refCopied, setRefCopied] = useState(false);
-  const [vendorApp, setVendorApp] = useState<{ status: string; business_name: string } | null>(null);
+  const [vendorApp, setVendorApp] = useState<{ status: string; business_name: string; admin_note?: string | null } | null>(null);
   const navigate = useNavigate();
 
   const refreshVendorAppStatus = () => {
@@ -813,7 +835,15 @@ export default function Profile() {
     toast.success('Unsubscribed');
   };
 
-  const handleLogout = () => { logout(); navigate('/login'); };
+  // Must hit the backend before clearing local state — logout() alone never
+  // revoked the JWT server-side (token_invalidated_at never got set), so a
+  // copy of the token stayed valid until its natural 24h expiry even though
+  // the UI showed the user as logged out. Matches Layout.tsx's logout button.
+  const handleLogout = async () => {
+    try { await api.post(endpoints.logout); } catch { /* still clear local state below */ }
+    logout();
+    navigate('/login');
+  };
 
   const handleVendorSuccess = () => {
     setShowVendorModal(false);
@@ -909,6 +939,9 @@ export default function Profile() {
             <div className="text-left">
               <p className="font-heading font-bold text-base text-[var(--text)]">Vendor Application Not Approved</p>
               <p className="text-[var(--text-secondary)] text-xs mt-0.5 font-medium">{vendorApp.business_name} — tap to update details and reapply</p>
+              {vendorApp.admin_note && (
+                <p className="text-[var(--text-secondary)] text-xs mt-1.5 italic">"{vendorApp.admin_note}"</p>
+              )}
             </div>
           </div>
           <ChevronRight size={20} className="text-[var(--text-secondary)]" />
@@ -1040,9 +1073,29 @@ export default function Profile() {
                 </div>
 
                 {referral.referral_count > 0 && (
-                  <p className="text-xs opacity-85 mt-4 text-center font-semibold relative z-10 flex items-center justify-center gap-1.5 bg-black/10 py-1.5 rounded-xl border border-white/5">
+                  <button
+                    onClick={() => setShowReferredList((v) => !v)}
+                    className="w-full text-xs opacity-85 mt-4 text-center font-semibold relative z-10 flex items-center justify-center gap-1.5 bg-black/10 hover:bg-black/15 py-1.5 rounded-xl border border-white/5 cursor-pointer transition-colors"
+                  >
                     🎉 {referral.referral_count} friend{referral.referral_count > 1 ? 's' : ''} joined using your invite link!
-                  </p>
+                    <ChevronDown size={14} className={`transition-transform ${showReferredList ? 'rotate-180' : ''}`} />
+                  </button>
+                )}
+
+                {showReferredList && referral.referred.length > 0 && (
+                  <div className="mt-2 relative z-10 bg-black/10 border border-white/5 rounded-xl divide-y divide-white/10 max-h-56 overflow-y-auto">
+                    {referral.referred.map((r, i) => (
+                      <div key={i} className="flex items-center justify-between px-3.5 py-2.5 text-xs">
+                        <span className="font-semibold truncate">{r.name}</span>
+                        <span className="flex items-center gap-2 flex-shrink-0 ml-2 opacity-85">
+                          <span className="text-[10px]">{new Date(r.joined_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
+                          <span className="flex items-center gap-0.5 text-yellow-300 font-bold">
+                            <Coins size={11} /> +{r.coins_awarded}
+                          </span>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
             )}

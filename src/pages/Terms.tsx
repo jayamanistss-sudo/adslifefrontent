@@ -30,23 +30,27 @@ const SECTIONS = [
     body: `If you register as a Vendor, you confirm you're authorized to represent the listed business, that the offers you post are accurate and genuinely available, and that you'll honor published terms for any customer who redeems through AdsLife. We may remove listings or suspend Vendor accounts that post misleading, fraudulent, or fake offers.`,
   },
   {
-    title: '7. Reporting & Fraud',
+    title: '7. Vendor Plans, Payments & Refunds',
+    body: `Vendors can subscribe to paid plans and purchase banner ad placements to unlock additional features and visibility. All payments are processed by Cashfree Payments, a licensed third-party payment gateway — AdsLife never receives or stores your full card number, UPI ID, or bank account details. Plan and banner fees are generally non-refundable once a billing cycle starts or a banner goes live, except where required by law or at AdsLife's discretion (e.g. a verified billing error). Prices, plan features, and banner placements may change with notice; continuing to use a paid feature after a price change confirms your acceptance of the new price at renewal.`,
+  },
+  {
+    title: '8. Reporting & Fraud',
     body: `Users can report offers that look fake, misleading, expired, or scam-like. We review reports and may flag, suspend, or remove offers and accounts found to violate these terms.`,
   },
   {
-    title: '8. Prohibited Conduct',
+    title: '9. Prohibited Conduct',
     body: `You agree not to misuse the platform — this includes posting false offers, manipulating ratings or referrals, scraping data, attempting to bypass security, or impersonating another person or business.`,
   },
   {
-    title: '9. Disclaimers & Liability',
-    body: `AdsLife is provided "as is." We don't guarantee uninterrupted availability, the accuracy of every listed offer, or that any specific deal will be available when you arrive. To the extent permitted by law, AdsLife isn't liable for losses arising from your interactions with Vendors or reliance on listed offers.`,
+    title: '10. Disclaimers & Liability',
+    body: `AdsLife is provided "as is." We don't guarantee uninterrupted availability, the accuracy of every listed offer, or that any specific deal will be available when you arrive. To the extent permitted by law, AdsLife isn't liable for losses arising from your interactions with Vendors, payment processing by Cashfree, or reliance on listed offers.`,
   },
   {
-    title: '10. Changes to These Terms',
+    title: '11. Changes to These Terms',
     body: `We may update these Terms from time to time. Continued use of AdsLife after changes take effect means you accept the revised Terms.`,
   },
   {
-    title: '11. Contact',
+    title: '12. Contact',
     body: `Questions about these Terms? Reach us at starttechss@gmail.com.`,
   },
 ];
@@ -65,7 +69,7 @@ export default function Terms() {
         </Link>
         <div className="p-8 card rounded-3xl sm:p-10">
           <h1 className="mb-1 text-2xl font-bold text-[var(--text)] sm:text-3xl">Terms of Service</h1>
-          <p className="mb-8 text-sm text-[var(--text-muted)]">Last updated: June 2026</p>
+          <p className="mb-8 text-sm text-[var(--text-muted)]">Last updated: July 2026</p>
 
           {customContent ? (
             <div

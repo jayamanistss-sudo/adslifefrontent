@@ -50,6 +50,7 @@ function mapApiOffer(o: any): Offer {
     businessName: o.business_name, vendorLogo: o.vendor_logo, vendorCity: o.vendor_city,
     vendorLat: o.vlat ? Number.parseFloat(o.vlat) : undefined, vendorLng: o.vlng ? Number.parseFloat(o.vlng) : undefined,
     distance: o.distance === undefined ? undefined : Number.parseFloat(o.distance),
+    vendorBadgeTier: o.vendor_badge_tier,
   };
 }
 

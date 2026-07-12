@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { createPortal } from 'react-dom';
+import toast from 'react-hot-toast';
 import { QRCodeSVG } from 'qrcode.react';
 import {
   Tag, Pencil,
-  Eye, MousePointer, Bookmark,
+  Eye, MousePointer, Bookmark, Star,
   ArrowUpRight, ArrowDownRight, Minus, Image, LifeBuoy,
   Layers, RefreshCw, Store, CheckCircle2, XCircle, Clock,
   QrCode, X, Download,
@@ -20,7 +21,7 @@ import {
 interface DashboardData {
   vendor: {
     id: number; business_name: string; city: string; status: string;
-    logo_url: string; total_followers: number;
+    logo_url: string; total_followers: number; total_reviews: number; avg_rating: number;
     subscription_plan: string; plan_name: string; plan_max_offers: number;
   };
   stats: {
@@ -40,12 +41,147 @@ interface DashboardData {
   }>;
   peak_hours: number[];
   daily_trend: Array<{ stat_date: string; impressions: number; clicks: number; saves: number }>;
+  locked: {
+    view_count: boolean; click_count: boolean; save_count: boolean;
+    redeemed_count: boolean; subscriber_count: boolean;
+    analytics_views_graph: boolean; engagement: boolean; review_access: boolean;
+  };
 }
 
 function TrendIcon({ trend }: { trend: string }) {
   if (trend.startsWith('+') && trend !== '+0%') return <ArrowUpRight size={12} className="text-emerald-600" />;
   if (trend.startsWith('-')) return <ArrowDownRight size={12} className="text-red-500" />;
   return <Minus size={12} className="text-[var(--text-muted)]" />;
+}
+
+// Neither review count nor the full subscriber list had a click-to-drill-down
+// before — the dashboard only ever showed a top-5 preview of each.
+function FollowersModal({ vendorId, onClose }: { readonly vendorId: number; readonly onClose: () => void }) {
+  const [rows, setRows] = useState<Array<{ id: number; name: string; avatar_url: string | null; city: string; followed_at: string }>>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+
+  const load = (p: number) => {
+    setLoading(true);
+    api.get(endpoints.vendorFollowers(vendorId, 20, p)).then((r) => {
+      if (r.data.success) {
+        setRows((prev) => p === 1 ? r.data.data.followers : [...prev, ...r.data.data.followers]);
+        setTotal(r.data.data.total);
+        setPage(p);
+      }
+    }).finally(() => setLoading(false));
+  };
+
+  useEffect(() => { load(1); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return createPortal(
+    <div className="modal-overlay">
+      <div className="modal-content max-w-lg">
+        <div className="modal-header">
+          <div className="flex flex-col">
+            <h2 className="modal-title">Followers</h2>
+            <span className="block w-8 h-[2.5px] bg-[var(--primary)] rounded-full mt-1" />
+          </div>
+          <button onClick={onClose} className="modal-close"><X size={18} /></button>
+        </div>
+        <div className="modal-body">
+          {loading && rows.length === 0 ? (
+            <div className="space-y-2">{[1, 2, 3, 4].map((i) => <div key={i} className="skeleton h-12 rounded-xl" />)}</div>
+          ) : rows.length === 0 ? (
+            <p className="text-sm text-[var(--text-muted)] text-center py-8">No followers yet</p>
+          ) : (
+            <div className="space-y-2 max-h-[420px] overflow-y-auto">
+              {rows.map((f) => (
+                <div key={f.id} className="flex items-center gap-3 p-2.5 bg-[var(--surface-2)] rounded-xl">
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 text-primary font-bold text-sm overflow-hidden">
+                    {f.avatar_url ? <img src={f.avatar_url} alt="" className="w-full h-full object-cover" /> : f.name?.[0]?.toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-[var(--text)] truncate">{f.name}</p>
+                    <p className="text-xs text-[var(--text-muted)] truncate">{f.city || '—'}</p>
+                  </div>
+                  <span className="text-[11px] text-[var(--text-muted)] flex-shrink-0">
+                    {new Date(f.followed_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                  </span>
+                </div>
+              ))}
+              {total > rows.length && (
+                <button onClick={() => load(page + 1)} disabled={loading} className="w-full text-sm text-[var(--primary)] font-medium py-2 hover:bg-[var(--surface-2)] rounded-xl transition-colors">
+                  {loading ? 'Loading…' : 'Load more'}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+function ReviewsModal({ onClose }: { readonly onClose: () => void }) {
+  const [rows, setRows] = useState<Array<{ id: number; rating: number; comment: string | null; createdAt: string; userName: string; offerTitle: string }>>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+
+  const load = (p: number) => {
+    setLoading(true);
+    api.get(endpoints.vendorReviews(p)).then((r) => {
+      if (r.data.success) {
+        setRows((prev) => p === 1 ? r.data.data : [...prev, ...r.data.data]);
+        setTotal(r.data.total ?? 0);
+        setPage(p);
+      }
+    }).finally(() => setLoading(false));
+  };
+
+  useEffect(() => { load(1); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return createPortal(
+    <div className="modal-overlay">
+      <div className="modal-content max-w-lg">
+        <div className="modal-header">
+          <div className="flex flex-col">
+            <h2 className="modal-title">Reviews</h2>
+            <span className="block w-8 h-[2.5px] bg-[var(--primary)] rounded-full mt-1" />
+          </div>
+          <button onClick={onClose} className="modal-close"><X size={18} /></button>
+        </div>
+        <div className="modal-body">
+          {loading && rows.length === 0 ? (
+            <div className="space-y-2">{[1, 2, 3, 4].map((i) => <div key={i} className="skeleton h-14 rounded-xl" />)}</div>
+          ) : rows.length === 0 ? (
+            <p className="text-sm text-[var(--text-muted)] text-center py-8">No reviews yet</p>
+          ) : (
+            <div className="space-y-2 max-h-[420px] overflow-y-auto">
+              {rows.map((r) => (
+                <div key={r.id} className="p-2.5 bg-[var(--surface-2)] rounded-xl">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-medium text-[var(--text)] truncate">{r.userName}</span>
+                    <div className="flex gap-0.5 flex-shrink-0">
+                      {[1, 2, 3, 4, 5].map((s) => (
+                        <Star key={s} size={11} className={s <= r.rating ? 'text-amber-400 fill-amber-400' : 'text-[var(--border)]'} />
+                      ))}
+                    </div>
+                  </div>
+                  {r.offerTitle && <p className="text-[11px] text-[var(--text-muted)] mt-0.5 truncate">on "{r.offerTitle}"</p>}
+                  {r.comment && <p className="text-xs text-[var(--text-secondary)] mt-1 leading-relaxed line-clamp-2">{r.comment}</p>}
+                </div>
+              ))}
+              {total > rows.length && (
+                <button onClick={() => load(page + 1)} disabled={loading} className="w-full text-sm text-[var(--primary)] font-medium py-2 hover:bg-[var(--surface-2)] rounded-xl transition-colors">
+                  {loading ? 'Loading…' : 'Load more'}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
 }
 
 function trendColor(trend: string) {
@@ -57,27 +193,62 @@ function trendColor(trend: string) {
 function ShopQrModal({ vendorId, businessName, onClose }: { readonly vendorId: number; readonly businessName: string; readonly onClose: () => void }) {
   const shopUrl = `https://adslife.in/shop/${vendorId}`;
 
+  // The AdsLife logo + name are baked into the exported PNG itself (not
+  // just shown in the modal) — a printed or shared copy of this QR should
+  // still be self-explanatory about which app to scan it with.
   const download = () => {
     const svg = document.getElementById('shop-qr-svg');
     if (!svg) return;
     const svgData = new XMLSerializer().serializeToString(svg);
-    const img = new window.Image();
+    const qrImg = new window.Image();
+    const logoImg = new window.Image();
+    const qrSize = 512;
+    const pad = 48;
+    const headerH = 90;
+    const footerH = 70;
     const canvas = document.createElement('canvas');
-    const size = 512;
-    canvas.width = size;
-    canvas.height = size;
-    img.onload = () => {
+    canvas.width = qrSize + pad * 2;
+    canvas.height = qrSize + pad * 2 + headerH + footerH;
+
+    let logoLoaded = false, qrLoaded = false;
+    const tryRender = () => {
+      if (!logoLoaded || !qrLoaded) return;
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
       ctx.fillStyle = '#fff';
-      ctx.fillRect(0, 0, size, size);
-      ctx.drawImage(img, 0, 0, size, size);
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Header: logo + "AdsLife"
+      const logoSize = 44;
+      ctx.drawImage(logoImg, pad, pad, logoSize, logoSize);
+      ctx.fillStyle = '#FF6200';
+      ctx.font = '700 28px "Plus Jakarta Sans", system-ui, sans-serif';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('AdsLife', pad + logoSize + 12, pad + logoSize / 2);
+
+      // QR code
+      ctx.drawImage(qrImg, pad, pad + headerH, qrSize, qrSize);
+
+      // Footer: business name
+      ctx.fillStyle = '#1E293B';
+      ctx.font = '600 24px "Plus Jakarta Sans", system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(businessName, canvas.width / 2, pad + headerH + qrSize + footerH / 2);
+
       const link = document.createElement('a');
       link.download = `${businessName.replace(/\s+/g, '-').toLowerCase()}-qr.png`;
       link.href = canvas.toDataURL('image/png');
       link.click();
     };
-    img.src = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svgData)))}`;
+    // Only onload was wired — if either image ever failed to load,
+    // tryRender() would simply never fire and "Download" would silently do
+    // nothing, with no indication to the vendor that anything went wrong.
+    logoImg.onload = () => { logoLoaded = true; tryRender(); };
+    qrImg.onload = () => { qrLoaded = true; tryRender(); };
+    logoImg.onerror = () => toast.error('Could not generate the QR image — try again');
+    qrImg.onerror = () => toast.error('Could not generate the QR image — try again');
+    logoImg.src = '/adslife-logo.svg';
+    qrImg.src = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svgData)))}`;
   };
 
   return createPortal(
@@ -85,7 +256,10 @@ function ShopQrModal({ vendorId, businessName, onClose }: { readonly vendorId: n
       <div className="modal-content max-w-sm">
         <div className="modal-header">
           <div className="flex flex-col">
-            <h2 className="modal-title">Your Shop QR</h2>
+            <div className="flex items-center gap-2">
+              <img src="/adslife-logo.svg" alt="" className="w-5 h-5" />
+              <h2 className="modal-title">Your Shop QR</h2>
+            </div>
             <span className="block w-8 h-[2.5px] bg-[var(--primary)] rounded-full mt-1" />
           </div>
           <button onClick={onClose} className="modal-close"><X size={18} /></button>
@@ -111,6 +285,7 @@ function ShopQrModal({ vendorId, businessName, onClose }: { readonly vendorId: n
 interface FollowersData {
   total: number; this_month: number; last_month: number; growth_pct: number;
   followers: Array<{ id: number; name: string; avatar_url: string | null; city: string; followed_at: string }>;
+  locked: { subscriber_count: boolean; subscriber_details: boolean };
 }
 
 export default function VendorDashboard() {
@@ -120,6 +295,8 @@ export default function VendorDashboard() {
   const [trendsReady, setTrendsReady] = useState(false);
   const [error, setError]         = useState('');
   const [showQr, setShowQr]       = useState(false);
+  const [showFollowers, setShowFollowers] = useState(false);
+  const [showReviews, setShowReviews]     = useState(false);
 
   const fetchDashboard = useCallback((silent = false) => {
     if (!silent) setLoading(true);
@@ -283,21 +460,34 @@ export default function VendorDashboard() {
           {/* Hero stats strip */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
-              { label: 'Impressions',  value: s.impressions.toLocaleString(), trend: s.impressions_trend, accent: '#60a5fa' },
-              { label: 'Clicks',       value: s.clicks.toLocaleString(),      trend: s.clicks_trend,      accent: '#FF6200' },
-              { label: 'Saves',        value: s.saves.toLocaleString(),       trend: s.saves_trend,       accent: '#fbbf24' },
-              { label: 'Engagement',   value: trendsReady ? `${s.engagement_rate}%` : '—', trend: s.engagement_trend, accent: '#a78bfa' },
-            ].map(({ label, value, trend, accent }) => (
-              <div key={label} className="bg-white/8 rounded-xl p-4 border border-white/10 backdrop-blur-sm">
+              { label: 'Impressions',  value: s.impressions.toLocaleString(), trend: s.impressions_trend, accent: '#60a5fa', locked: data.locked.view_count },
+              { label: 'Clicks',       value: s.clicks.toLocaleString(),      trend: s.clicks_trend,      accent: '#FF6200', locked: data.locked.click_count },
+              { label: 'Saves',        value: s.saves.toLocaleString(),       trend: s.saves_trend,       accent: '#fbbf24', locked: data.locked.save_count },
+              { label: 'Engagement',   value: trendsReady ? `${s.engagement_rate}%` : '—', trend: s.engagement_trend, accent: '#a78bfa', locked: data.locked.engagement },
+            ].map(({ label, value, trend, accent, locked }) => (
+              <div key={label} className="relative bg-white/8 rounded-xl p-4 border border-white/10 backdrop-blur-sm overflow-hidden">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-white/50 text-xs font-medium">{label}</span>
-                  {trendsReady && trend !== '—' && (
+                  {!locked && trendsReady && trend !== '—' && (
                     <span className={`text-[10px] font-semibold flex items-center gap-0.5 ${trendColor(trend)}`}>
                       <TrendIcon trend={trend} />{trend}
                     </span>
                   )}
                 </div>
-                <div className="font-heading font-bold text-2xl" style={{ color: accent }}>{value}</div>
+                <div
+                  className="font-heading font-bold text-2xl"
+                  style={{ color: accent, ...(locked ? { filter: 'blur(6px)', userSelect: 'none' } : {}) }}
+                >
+                  {value}
+                </div>
+                {locked && (
+                  <Link
+                    to="/vendor/select-plan"
+                    className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/30 transition-colors"
+                  >
+                    <span className="text-[10px] font-bold bg-white text-[var(--primary)] px-2.5 py-1 rounded-full shadow-sm">Upgrade</span>
+                  </Link>
+                )}
               </div>
             ))}
           </div>
@@ -305,21 +495,35 @@ export default function VendorDashboard() {
       </div>
 
       {/* ── Offers at a glance ───────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6">
         {[
           { label: 'Total Offers',  value: o.total,             icon: Store,        accent: '#64748b', bg: 'from-slate-50  to-slate-100  dark:from-slate-800/30 dark:to-slate-900/20' },
           { label: 'Active',        value: o.active,            icon: CheckCircle2, accent: '#16a34a', bg: 'from-green-50  to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/10' },
           { label: 'Inactive',      value: o.inactive,          icon: XCircle,      accent: '#dc2626', bg: 'from-red-50    to-rose-50    dark:from-red-900/20   dark:to-rose-900/10' },
-          { label: 'Redemptions',   value: o.total_redemptions, icon: Clock,        accent: '#ea580c', bg: 'from-orange-50 to-amber-50   dark:from-orange-900/20 dark:to-amber-900/10' },
-        ].map(({ label, value, icon: Icon, accent, bg }) => (
-          <div key={label} className={`card p-5 bg-gradient-to-br ${bg}`}>
+          { label: 'Redemptions',   value: o.total_redemptions, icon: Clock,        accent: '#ea580c', bg: 'from-orange-50 to-amber-50   dark:from-orange-900/20 dark:to-amber-900/10', locked: data.locked.redeemed_count },
+          { label: 'Reviews',       value: v.total_reviews,     icon: Star,         accent: '#d97706', bg: 'from-amber-50  to-yellow-50  dark:from-amber-900/20  dark:to-yellow-900/10', onClick: () => setShowReviews(true), locked: data.locked.review_access },
+        ].map(({ label, value, icon: Icon, accent, bg, onClick, locked }) => (
+          <div
+            key={label}
+            className={`relative card p-5 bg-gradient-to-br ${bg} overflow-hidden ${onClick && !locked ? 'card-hover cursor-pointer' : ''}`}
+            onClick={locked ? undefined : onClick}
+            role={onClick && !locked ? 'button' : undefined}
+          >
             <div className="flex items-center justify-between mb-3">
               <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: `${accent}18` }}>
                 <Icon size={17} style={{ color: accent }} />
               </div>
             </div>
-            <div className="font-heading font-bold text-3xl text-[var(--text)]">{value}</div>
-            <div className="text-xs text-[var(--text-muted)] mt-0.5 font-medium">{label}</div>
+            <div className="font-heading font-bold text-3xl text-[var(--text)]" style={locked ? { filter: 'blur(6px)', userSelect: 'none' } : undefined}>{value}</div>
+            <div className="text-xs text-[var(--text-muted)] mt-0.5 font-medium">{label}{onClick && !locked ? ' · view all' : ''}</div>
+            {locked && (
+              <Link
+                to="/vendor/select-plan"
+                className="absolute inset-0 flex items-center justify-center bg-white/40 dark:bg-black/40 hover:bg-white/55 dark:hover:bg-black/55 transition-colors"
+              >
+                <span className="text-[10px] font-bold bg-[var(--primary)] text-white px-2.5 py-1 rounded-full shadow-sm">Upgrade</span>
+              </Link>
+            )}
           </div>
         ))}
       </div>
@@ -340,7 +544,12 @@ export default function VendorDashboard() {
               <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />Saves</span>
             </div>
           </div>
-          {dailyData.length > 0 ? (
+          {data.locked.analytics_views_graph ? (
+            <div className="h-44 flex flex-col items-center justify-center gap-2 text-sm text-[var(--text-muted)]">
+              <span>This chart isn't included in your current plan</span>
+              <Link to="/vendor/select-plan" className="text-xs font-bold text-[var(--primary)] px-3 py-1.5 rounded-full border border-[var(--primary)]/30 hover:bg-[var(--primary)]/10 transition-colors">Upgrade to unlock</Link>
+            </div>
+          ) : dailyData.length > 0 ? (
             <ResponsiveContainer width="100%" height={180}>
               <BarChart data={dailyData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
@@ -387,7 +596,7 @@ export default function VendorDashboard() {
         </div>
       </div>
 
-      {/* ── Recent Offers + Subscribers row ──────────── */}
+      {/* ── Recent Offers + Followers row ──────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 mb-6">
 
         {/* Recent Offers — wider */}
@@ -422,25 +631,48 @@ export default function VendorDashboard() {
           )}
         </div>
 
-        {/* Subscribers — narrower */}
+        {/* Followers — narrower */}
         <div className="card p-0 overflow-hidden lg:col-span-2">
           <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)]">
-            <h3 className="font-heading font-semibold text-[var(--text)] text-sm">Subscribers</h3>
-            <Link to="/vendor/audience" className="text-xs text-[var(--primary)] font-semibold hover:underline">Insights</Link>
+            <h3 className="font-heading font-semibold text-[var(--text)] text-sm">Followers</h3>
+            <div className="flex items-center gap-3">
+              {v.total_followers > 0 && !data.locked.subscriber_count && (
+                <button onClick={() => setShowFollowers(true)} className="text-xs text-[var(--primary)] font-semibold hover:underline">View all</button>
+              )}
+              <Link to="/vendor/audience" className="text-xs text-[var(--primary)] font-semibold hover:underline">Insights</Link>
+            </div>
           </div>
-          <div className="px-5 py-4 border-b border-[var(--border)] flex items-center gap-4">
+          <div className="relative px-5 py-4 border-b border-[var(--border)] flex items-center gap-4 overflow-hidden">
             <div>
-              <div className="font-heading font-bold text-3xl text-[var(--text)]">{(followers?.total ?? v.total_followers).toLocaleString()}</div>
+              <div
+                className="font-heading font-bold text-3xl text-[var(--text)]"
+                style={data.locked.subscriber_count ? { filter: 'blur(6px)', userSelect: 'none' } : undefined}
+              >
+                {(followers?.total ?? v.total_followers).toLocaleString()}
+              </div>
               <div className="text-xs text-[var(--text-muted)]">total</div>
             </div>
-            {followers && (
+            {followers && !data.locked.subscriber_count && (
               <div className={`px-3 py-1.5 rounded-xl text-sm font-bold ${(followers.growth_pct ?? 0) >= 0 ? 'bg-[var(--accent-light)] text-emerald-700 dark:text-emerald-400' : 'bg-[var(--danger-light)] text-red-600 dark:text-red-400'}`}>
                 {(followers.growth_pct ?? 0) >= 0 ? '+' : ''}{followers.growth_pct ?? 0}% this month
               </div>
             )}
+            {data.locked.subscriber_count && (
+              <Link
+                to="/vendor/select-plan"
+                className="absolute inset-0 flex items-center justify-center bg-white/40 dark:bg-black/40 hover:bg-white/55 dark:hover:bg-black/55 transition-colors"
+              >
+                <span className="text-[10px] font-bold bg-[var(--primary)] text-white px-2.5 py-1 rounded-full shadow-sm">Upgrade</span>
+              </Link>
+            )}
           </div>
           <div className="divide-y divide-[var(--border)]">
-            {followers && followers.followers.length > 0 ? followers.followers.map((f) => (
+            {followers?.locked.subscriber_details ? (
+              <div className="flex flex-col items-center justify-center gap-2 py-8 text-sm text-[var(--text-muted)]">
+                <span>The follower list isn't included in your current plan</span>
+                <Link to="/vendor/select-plan" className="text-xs font-bold text-[var(--primary)] px-3 py-1.5 rounded-full border border-[var(--primary)]/30 hover:bg-[var(--primary)]/10 transition-colors">Upgrade to unlock</Link>
+              </div>
+            ) : followers && followers.followers.length > 0 ? followers.followers.map((f) => (
               <div key={f.id} className="flex items-center gap-3 px-5 py-2.5">
                 <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 text-primary font-bold text-sm overflow-hidden">
                   {f.avatar_url ? <img src={f.avatar_url} alt="" className="w-full h-full object-cover" /> : f.name?.[0]?.toUpperCase()}
@@ -452,7 +684,7 @@ export default function VendorDashboard() {
                 <span className="text-xs text-[var(--text-muted)] whitespace-nowrap">{new Date(f.followed_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
               </div>
             )) : (
-              <div className="text-center py-8 text-sm text-[var(--text-muted)]">No subscribers yet</div>
+              <div className="text-center py-8 text-sm text-[var(--text-muted)]">No followers yet</div>
             )}
           </div>
         </div>
@@ -461,6 +693,8 @@ export default function VendorDashboard() {
       </div>{/* end main content */}
 
       {showQr && <ShopQrModal vendorId={v.id} businessName={v.business_name} onClose={() => setShowQr(false)} />}
+      {showFollowers && <FollowersModal vendorId={v.id} onClose={() => setShowFollowers(false)} />}
+      {showReviews && <ReviewsModal onClose={() => setShowReviews(false)} />}
     </div>
   );
 

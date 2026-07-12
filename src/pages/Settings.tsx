@@ -167,6 +167,99 @@ function ProfileInfoSection() {
   );
 }
 
+// ─── Personal location section ──────────────────────────────────────────────
+// Mobile already had this (a map pin feeding PUT /auth/location, used for
+// "near me" ranking) — web had no equivalent, so a user who denies browser
+// geolocation has no manual fallback here. Mirrors EditVendorProfile.tsx's
+// Leaflet map pattern (same CDN load, same click/drag-to-pin behavior).
+declare const L: any;
+
+function LocationSection() {
+  const { user, updateUser } = useUserStore();
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapObj = useRef<any>(null);
+  const markerRef = useRef<any>(null);
+  const [lat, setLat] = useState<number | null>(user?.lat ?? null);
+  const [lng, setLng] = useState<number | null>(user?.lng ?? null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!mapRef.current || mapObj.current) return;
+    const script = document.createElement('script');
+    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+    script.onload = () => {
+      const initLat = lat ?? 13.0827;
+      const initLng = lng ?? 80.2707;
+      const map = L.map(mapRef.current!).setView([initLat, initLng], 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+      if (lat != null && lng != null) {
+        markerRef.current = L.marker([lat, lng], { draggable: true }).addTo(map);
+        markerRef.current.on('dragend', (e: any) => {
+          const { lat: la, lng: lo } = e.target.getLatLng();
+          setLat(la); setLng(lo);
+        });
+      }
+      map.on('click', (e: any) => {
+        const { lat: la, lng: lo } = e.latlng;
+        setLat(la); setLng(lo);
+        if (markerRef.current) markerRef.current.setLatLng([la, lo]);
+        else markerRef.current = L.marker([la, lo], { draggable: true }).addTo(map);
+      });
+      mapObj.current = map;
+    };
+    document.head.appendChild(script);
+    if (!document.querySelector('link[href*="leaflet"]')) {
+      const css = document.createElement('link');
+      css.rel = 'stylesheet';
+      css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      document.head.appendChild(css);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleLocate = () => {
+    navigator.geolocation?.getCurrentPosition(({ coords }) => {
+      const { latitude: la, longitude: lo } = coords;
+      setLat(la); setLng(lo);
+      if (mapObj.current) {
+        mapObj.current.setView([la, lo], 15);
+        if (markerRef.current) markerRef.current.setLatLng([la, lo]);
+        else markerRef.current = L.marker([la, lo], { draggable: true }).addTo(mapObj.current);
+      }
+    }, () => toast.error('Could not get your location'));
+  };
+
+  const handleSave = async () => {
+    if (lat == null || lng == null) { toast.error('Pin a location on the map first'); return; }
+    setSaving(true);
+    try {
+      const res = await api.put(endpoints.authLocation, { lat, lng, source: 'manual' });
+      if (res.data.success) {
+        updateUser({ lat, lng });
+        toast.success('Location saved!');
+      }
+    } catch {
+      toast.error('Could not save location');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <SectionCard icon={MapPin} title="Your Location" subtitle="Used to show nearby offers — drag the pin or tap the map">
+      <div ref={mapRef} className="w-full rounded-xl overflow-hidden border border-[var(--border)] mb-4" style={{ height: '220px' }} />
+      <div className="flex items-center justify-between gap-3">
+        <button type="button" onClick={handleLocate} className="btn btn-secondary py-2.5 px-4 text-sm">
+          Use my current location
+        </button>
+        <button onClick={handleSave} disabled={saving || lat == null} className="btn btn-primary py-2.5 px-5 disabled:opacity-50">
+          {saving ? 'Saving…' : 'Save Location'}
+        </button>
+      </div>
+    </SectionCard>
+  );
+}
+
 // ─── Email change section ───────────────────────────────────────────────────
 function EmailSection() {
   const { user, updateUser } = useUserStore();
@@ -304,8 +397,13 @@ function PasswordSection() {
         // Backend invalidates the current JWT on password change — the local
         // session is now stale, so sign out immediately instead of leaving
         // the user on a page whose next API call would silently 401.
+        // logout() alone only clears local state — it never revokes the
+        // cookie server-side (see Profile.tsx's handleLogout, which this
+        // was inconsistent with), leaving a dead-but-uncleared cookie and
+        // skipping the /auth/logout audit-log entry.
         toast.success('Password changed! Please sign in again.');
         reset();
+        try { await api.post(endpoints.logout); } catch { /* still clear local state below */ }
         logout();
         navigate('/login');
       }
@@ -376,12 +474,14 @@ function PasswordSection() {
 function NotificationsSection() {
   const { user, updateUser } = useUserStore();
   const [emailAlerts, setEmailAlerts] = useState(user?.emailAlerts !== false);
-  const [saving, setSaving] = useState(false);
+  const [pushEnabled, setPushEnabled] = useState(user?.pushEnabled !== false);
+  const [savingEmail, setSavingEmail] = useState(false);
+  const [savingPush, setSavingPush] = useState(false);
 
-  const toggle = async () => {
+  const toggleEmail = async () => {
     const next = !emailAlerts;
     setEmailAlerts(next);
-    setSaving(true);
+    setSavingEmail(true);
     try {
       const res = await api.put(endpoints.authProfile, { email_alerts: next });
       if (res.data.success) {
@@ -391,20 +491,62 @@ function NotificationsSection() {
       setEmailAlerts(!next);
       toast.error('Could not update notification preference');
     } finally {
-      setSaving(false);
+      setSavingEmail(false);
+    }
+  };
+
+  // Mobile had a "Push Notifications" switch with no backend behind it at
+  // all — toggling it did nothing. Web had no equivalent control whatsoever.
+  // Both now hit the same push_enabled column the backend gates every FCM
+  // send on.
+  const togglePush = async () => {
+    const next = !pushEnabled;
+    setPushEnabled(next);
+    setSavingPush(true);
+    try {
+      const res = await api.put(endpoints.authProfile, { push_enabled: next });
+      if (res.data.success) {
+        updateUser({ pushEnabled: res.data.data.push_enabled });
+      }
+    } catch {
+      setPushEnabled(!next);
+      toast.error('Could not update notification preference');
+    } finally {
+      setSavingPush(false);
     }
   };
 
   return (
-    <SectionCard icon={Mail} title="Notifications" subtitle="Choose what you get emailed about">
+    <SectionCard icon={Mail} title="Notifications" subtitle="Choose what you get notified about">
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="text-sm text-[var(--text)] font-semibold">Push Notifications</div>
+          <p className="text-xs text-[var(--text-muted)] mt-0.5">Offers, badges and alerts on this device</p>
+        </div>
+        <button
+          onClick={togglePush}
+          disabled={savingPush}
+          role="switch"
+          aria-checked={pushEnabled}
+          className="relative w-11 h-6 rounded-full transition-colors cursor-pointer flex-shrink-0 disabled:opacity-60"
+          style={{ background: pushEnabled ? 'var(--primary)' : 'var(--border-strong)' }}
+        >
+          <motion.span
+            className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm"
+            animate={{ left: pushEnabled ? '1.375rem' : '0.125rem' }}
+            transition={{ type: 'spring', stiffness: 500, damping: 32 }}
+          />
+        </button>
+      </div>
+      <div className="divider my-3" />
       <div className="flex items-center justify-between">
         <div>
           <div className="text-sm text-[var(--text)] font-semibold">Email Alerts</div>
           <p className="text-xs text-[var(--text-muted)] mt-0.5">Get an email when a shop you follow posts a new offer</p>
         </div>
         <button
-          onClick={toggle}
-          disabled={saving}
+          onClick={toggleEmail}
+          disabled={savingEmail}
           role="switch"
           aria-checked={emailAlerts}
           className="relative w-11 h-6 rounded-full transition-colors cursor-pointer flex-shrink-0 disabled:opacity-60"
@@ -473,6 +615,7 @@ export default function Settings() {
       </div>
 
       <ProfileInfoSection />
+      <LocationSection />
       <EmailSection />
       <PasswordSection />
       <NotificationsSection />

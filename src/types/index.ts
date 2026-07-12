@@ -12,6 +12,7 @@ export interface User {
   adminRole?: 'support' | 'moderator' | 'super' | null;
   loginCount?: number;
   emailAlerts?: boolean;
+  pushEnabled?: boolean;
 }
 
 export interface Vendor {
@@ -30,7 +31,7 @@ export interface Vendor {
   website?: string;
   gstNumber?: string;
   status: 'pending' | 'approved' | 'rejected' | 'suspended';
-  subscriptionPlan: 'free' | 'growth' | 'professional' | 'enterprise';
+  subscriptionPlan: 'starter' | 'growth' | 'pro';
   totalFollowers: number;
 }
 
@@ -72,6 +73,7 @@ export interface Offer {
   vendorWebsite?: string;
   vendorCategory?: string;
   vendorDescription?: string;
+  vendorBadgeTier?: 'none' | 'standard' | 'premium';
   distance?: number;
   score?: number;
   avgRating?: number | null;
@@ -172,7 +174,6 @@ export interface VendorStats {
 }
 
 export interface AudienceData {
-  deviceBreakdown: { mobile: number; desktop: number; tablet: number };
   peakHours: number[];
   topCities: { city: string; count: number }[];
   engagementRate: number;
@@ -180,6 +181,11 @@ export interface AudienceData {
   totalClicks: number;
   totalSaves: number;
   totalRedemptions: number;
+  followersCount: number;
+  locked: {
+    view_count: boolean; click_count: boolean; save_count: boolean;
+    redeemed_count: boolean; subscriber_count: boolean; analytics_city_graph: boolean;
+  };
 }
 
 export interface BenchmarkData {

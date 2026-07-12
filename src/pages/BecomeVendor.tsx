@@ -17,7 +17,7 @@ const BENEFITS = [
 ];
 
 export default function BecomeVendor() {
-  const { user, token, setUser } = useUserStore();
+  const { user, isAuthenticated, setUser } = useUserStore();
   const navigate = useNavigate();
   const [step, setStep] = useState<'landing' | 'form'>('landing');
   const [submitting, setSubmitting] = useState(false);
@@ -25,7 +25,7 @@ export default function BecomeVendor() {
   const [form, setForm] = useState({
     business_name: '', category: '', city: '', address: '',
     phone: '', website: '', description: '',
-    lat: '', lng: '',
+    lat: '', lng: '', referral_code: '',
   });
   const [categories, setCategories] = useState<{ id: number; name: string; slug: string }[]>([]);
 
@@ -165,6 +165,7 @@ export default function BecomeVendor() {
         ...form,
         lat: form.lat ? parseFloat(form.lat) : undefined,
         lng: form.lng ? parseFloat(form.lng) : undefined,
+        referral_code: form.referral_code.trim() || undefined,
       };
       const res = await api.post(endpoints.vendorApplySubmit, payload);
       if (res.data.success) setDone(true);
@@ -178,13 +179,23 @@ export default function BecomeVendor() {
 
   // Poll /auth/me after submission so vendor permissions activate without logout/login
   useEffect(() => {
-    if (!done || !token) return;
+    if (!done || !isAuthenticated) return;
     const poll = setInterval(async () => {
       try {
         const res = await api.get(endpoints.authMe);
-        if (res.data?.data?.role === 'vendor') {
-          const newToken = res.data.token ?? token;
-          setUser(res.data.data, newToken);
+        const u = res.data?.data;
+        if (u?.role === 'vendor') {
+          setUser({
+            id: u.id, name: u.name, email: u.email,
+            streakDays: Number.parseInt(u.streak_days) || 0,
+            role: u.role, adminRole: u.admin_role ?? null, city: u.city ?? undefined,
+            phone: u.phone ?? undefined,
+            lat: u.lat != null ? Number.parseFloat(u.lat) : undefined,
+            lng: u.lng != null ? Number.parseFloat(u.lng) : undefined,
+            avatarUrl: u.avatar_url ?? undefined,
+            emailAlerts: u.email_alerts,
+            pushEnabled: u.push_enabled,
+          });
           toast.success('🎉 Your vendor account is now active!');
           clearInterval(poll);
           navigate('/vendor/dashboard');
@@ -192,7 +203,7 @@ export default function BecomeVendor() {
       } catch {}
     }, 10000); // check every 10s
     return () => clearInterval(poll);
-  }, [done, token]);
+  }, [done, isAuthenticated]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (done) return (
     <div className="flex items-center justify-center min-h-screen p-6 bg-[var(--surface-2)]">
@@ -300,6 +311,15 @@ export default function BecomeVendor() {
             <div>
               <label className="label">About your business</label>
               <textarea className="w-full input" rows={3} placeholder="What do you sell? What makes you special?" value={form.description} onChange={e => set('description', e.target.value)} />
+            </div>
+            <div>
+              <label className="label">Referral Code (optional)</label>
+              <input
+                className="w-full input uppercase"
+                placeholder="e.g. ADS7K9XQP2"
+                value={form.referral_code}
+                onChange={e => set('referral_code', e.target.value.toUpperCase())}
+              />
             </div>
             {!user && (
               <div className="p-3 text-sm border rounded-xl" style={{ background: 'var(--warning-light)', borderColor: 'rgba(245,158,11,0.25)', color: '#78350F' }}>

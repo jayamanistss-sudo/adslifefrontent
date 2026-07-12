@@ -19,7 +19,7 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Fetch shared secrets (Firebase/Google/Razorpay) from server
+      - name: Fetch shared secrets (Firebase/Google/Cashfree) from server
         run: |
           echo "${{ secrets.DEPLOY_SSH_KEY }}" > /tmp/deploy_key
           chmod 600 /tmp/deploy_key

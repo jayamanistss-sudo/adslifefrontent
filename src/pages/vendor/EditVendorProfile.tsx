@@ -138,7 +138,7 @@ export default function EditVendorProfile() {
       fd.append('image', file);
       const res = await api.post(endpoints.uploadImage, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
       if (res.data.success) { upd('logo_url', res.data.data.url as string); toast.success('Logo uploaded!'); }
-    } catch { toast.error('Upload failed — max 10 MB'); }
+    } catch { toast.error('Upload failed — max 5 MB'); }
     finally { setUploading(false); }
   };
 
@@ -182,6 +182,12 @@ export default function EditVendorProfile() {
     }
     if (form.gst_number && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(form.gst_number)) {
       toast.error('GST Number format is invalid (e.g. 22AAAAA0000A1Z5)'); return;
+    }
+    // The apply flow (Profile.tsx) already validates this; this edit form
+    // didn't, so a malformed URL here surfaced as a raw 400 from the
+    // backend's @IsUrl() instead of inline feedback.
+    if (form.website && !/^https?:\/\/[^\s/$.?#].[^\s]*$/i.test(form.website)) {
+      toast.error('Website must be a valid URL starting with http:// or https://'); return;
     }
     if (!form.lat || !form.lng) {
       toast.error('Please pin your business location on the map'); return;

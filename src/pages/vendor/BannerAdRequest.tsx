@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { Image, Video, Clock, Plus, Upload, X, Check, Calendar, Trash2 } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Image, Video, Clock, Plus, Upload, X, Check, Calendar, Trash2, Eye, MousePointerClick } from 'lucide-react';
 import BackButton from '../../components/BackButton';
+import BannerCropModal from '../../components/BannerCropModal';
 import { api, endpoints } from '../../utils/api';
-import { openRazorpayForOrder } from '../../utils/razorpay';
+import { openCashfreeForOrder } from '../../utils/cashfree';
 import { useUserStore } from '../../store/useUserStore';
 import toast from 'react-hot-toast';
 
@@ -21,6 +23,79 @@ interface BannerAd {
   duration_days: number; banner_plan_id: number | null; plan_name: string | null;
   price: number | null; position: string;
   status: string; review_note: string | null; expires_at: string | null; created_at: string;
+  views: number; clicks: number;
+}
+
+interface ViewerRow {
+  id: number;
+  created_at: string;
+  user_name: string;
+  avatar_url: string | null;
+}
+
+// No banner ad click/view tracking existed at all — a vendor had no way to
+// know whether their (paid) banner was actually being seen or tapped.
+function ViewersModal({ bannerId, type, onClose }: { readonly bannerId: number; readonly type: 'view' | 'click'; readonly onClose: () => void }) {
+  const [rows, setRows] = useState<ViewerRow[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+
+  const load = (p: number) => {
+    setLoading(true);
+    api.get(endpoints.bannerViewers(bannerId, type, p)).then((r) => {
+      if (r.data.success) {
+        setRows((prev) => p === 1 ? r.data.data.rows : [...prev, ...r.data.data.rows]);
+        setTotal(r.data.data.total);
+        setPage(p);
+      }
+    }).finally(() => setLoading(false));
+  };
+
+  useEffect(() => { load(1); }, [bannerId, type]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return createPortal(
+    <div className="modal-overlay">
+      <div className="modal-content max-w-lg">
+        <div className="modal-header">
+          <div className="flex flex-col">
+            <h2 className="modal-title">{type === 'view' ? 'Viewers' : 'Clicks'}</h2>
+            <span className="block w-8 h-[2.5px] bg-[var(--primary)] rounded-full mt-1" />
+          </div>
+          <button onClick={onClose} className="modal-close"><X size={18} /></button>
+        </div>
+        <div className="modal-body">
+          {loading && rows.length === 0 ? (
+            <div className="space-y-2">{[1, 2, 3, 4].map((i) => <div key={i} className="skeleton h-12 rounded-xl" />)}</div>
+          ) : rows.length === 0 ? (
+            <p className="text-sm text-[var(--text-muted)] text-center py-8">Nothing here yet</p>
+          ) : (
+            <div className="space-y-2 max-h-[420px] overflow-y-auto">
+              {rows.map((r) => (
+                <div key={r.id} className="flex items-center gap-3 p-2.5 bg-[var(--surface-2)] rounded-xl">
+                  <div className="w-8 h-8 rounded-full bg-[var(--primary)]/15 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    {r.avatar_url
+                      ? <img src={r.avatar_url} alt="" className="w-full h-full object-cover" />
+                      : <span className="text-xs font-bold text-[var(--primary)]">{r.user_name?.[0] ?? '?'}</span>}
+                  </div>
+                  <p className="text-sm font-medium text-[var(--text)] truncate flex-1">{r.user_name}</p>
+                  <span className="text-[11px] text-[var(--text-muted)] flex-shrink-0">
+                    {new Date(r.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                  </span>
+                </div>
+              ))}
+              {total > rows.length && (
+                <button onClick={() => load(page + 1)} disabled={loading} className="w-full text-sm text-[var(--primary)] font-medium py-2 hover:bg-[var(--surface-2)] rounded-xl transition-colors">
+                  {loading ? 'Loading…' : 'Load more'}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -40,7 +115,7 @@ const BANNER_MIN_WIDTH = 1200;
 const BANNER_MAX_VIDEO_SECONDS = 30;
 const BANNER_SIZE_HINT = 'Wide banner, 2:1–5:1 ratio · min width 1200px';
 
-function readImageDimensions(file: File): Promise<{ width: number; height: number }> {
+function readImageDimensions(file: Blob): Promise<{ width: number; height: number }> {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
     const img = new window.Image();
@@ -84,6 +159,7 @@ export default function BannerAdRequest() {
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({
     title: '', image_url: '', media_type: 'image' as 'image' | 'video',
@@ -94,12 +170,43 @@ export default function BannerAdRequest() {
     setForm((f) => ({ ...f, media_type: type, image_url: '' }));
   };
 
+  // Returns whether the upload actually succeeded, so the crop modal (see
+  // below) knows whether it's safe to close — closing unconditionally on
+  // confirm meant a validation failure (crop zoomed in past the 1200px
+  // floor) showed an error toast with no crop UI left to retry from, forcing
+  // the vendor to re-pick the file and re-crop from scratch.
+  const uploadImageBlob = async (blob: Blob): Promise<boolean> => {
+    setUploading(true);
+    try {
+      const dims = await readImageDimensions(blob).catch(() => null);
+      if (dims) {
+        const sizeError = validateBannerSize(dims.width, dims.height);
+        if (sizeError) { toast.error(sizeError); return false; }
+      }
+      const fd = new FormData();
+      fd.append('image', blob, 'banner.jpg');
+      const res = await api.post(endpoints.uploadImage, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      if (res.data.success) {
+        setForm((f) => ({ ...f, image_url: res.data.data.url as string }));
+        toast.success('Image uploaded!');
+        return true;
+      }
+      toast.error(res.data.error ?? 'Upload failed');
+      return false;
+    } catch {
+      toast.error('Upload failed — max 5 MB');
+      return false;
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setUploading(true);
-    try {
-      if (form.media_type === 'video') {
+    if (form.media_type === 'video') {
+      setUploading(true);
+      try {
         const meta = await readVideoMeta(file).catch(() => null);
         if (!meta) { toast.error('Could not read video file'); return; }
         if (meta.duration > BANNER_MAX_VIDEO_SECONDS) {
@@ -116,24 +223,17 @@ export default function BannerAdRequest() {
           setForm((f) => ({ ...f, image_url: res.data.data.url as string }));
           toast.success('Video uploaded!');
         }
-      } else {
-        const dims = await readImageDimensions(file).catch(() => null);
-        if (!dims) { toast.error('Could not read image file'); return; }
-        const sizeError = validateBannerSize(dims.width, dims.height);
-        if (sizeError) { toast.error(sizeError); return; }
-
-        const fd = new FormData();
-        fd.append('image', file);
-        const res = await api.post(endpoints.uploadImage, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-        if (res.data.success) {
-          setForm((f) => ({ ...f, image_url: res.data.data.url as string }));
-          toast.success('Image uploaded!');
-        }
+      } catch {
+        toast.error('Upload failed — max 50 MB');
+      } finally {
+        setUploading(false);
+        e.target.value = '';
       }
-    } catch {
-      toast.error(form.media_type === 'video' ? 'Upload failed — max 50 MB' : 'Upload failed — max 5 MB');
-    } finally {
-      setUploading(false);
+    } else {
+      // Crop first — any source image/shape can be framed into the
+      // required wide banner ratio instead of vendors being rejected
+      // outright for not already owning a pre-shaped image.
+      setCropSrc(URL.createObjectURL(file));
       e.target.value = '';
     }
   };
@@ -141,6 +241,7 @@ export default function BannerAdRequest() {
   const { user } = useUserStore();
   const [payingId, setPayingId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [viewersModal, setViewersModal] = useState<{ bannerId: number; type: 'view' | 'click' } | null>(null);
 
   const deleteBanner = async (ad: BannerAd) => {
     if (deletingId) return;
@@ -179,20 +280,21 @@ export default function BannerAdRequest() {
     try {
       const res = await api.post(`/banner-ads/${ad.id}/pay`);
       if (!res.data.success) { toast.error(res.data.error ?? 'Could not start payment'); return; }
-      await openRazorpayForOrder(
+      await openCashfreeForOrder(
         res.data.data,
         { description: `Banner Ad — ${ad.plan_name ?? 'campaign'}`, prefill: { name: user?.name, email: user?.email, contact: user?.phone } },
-        async (resp) => {
-          const v = await api.post(`/banner-ads/${ad.id}/confirm-payment`, resp);
-          if (!v.data.success) throw new Error('Verification failed');
+        async (orderId) => {
+          const v = await api.post(`/banner-ads/${ad.id}/confirm-payment`, { order_id: orderId });
+          // Matches the same tightening applied to RenewPlan.tsx/SelectPlan.tsx
+          // — success:true alone isn't proof the banner is actually live yet.
+          if (!v.data.success || v.data.data?.status !== 'live') throw new Error(v.data.error ?? 'Payment not completed');
         },
       );
       toast.success('🎉 Payment successful — your banner is now live!');
       load();
     } catch (err: any) {
       const msg = err?.message ?? 'Payment failed';
-      if (msg === 'Payment cancelled') toast('Payment cancelled', { icon: '↩️' });
-      else toast.error(msg);
+      toast.error(msg);
     } finally {
       setPayingId(null);
     }
@@ -428,6 +530,20 @@ export default function BannerAdRequest() {
                 {ad.review_note && (
                   <p className="text-xs text-[var(--text-muted)] mt-1 italic">Admin note: {ad.review_note}</p>
                 )}
+                <div className="flex items-center gap-3 mt-1.5">
+                  <button
+                    onClick={() => setViewersModal({ bannerId: ad.id, type: 'view' })}
+                    className="flex items-center gap-1 text-xs text-[var(--text-muted)] hover:text-[var(--primary)] transition-colors"
+                  >
+                    <Eye size={12} /> {ad.views.toLocaleString()} view{ad.views !== 1 ? 's' : ''}
+                  </button>
+                  <button
+                    onClick={() => setViewersModal({ bannerId: ad.id, type: 'click' })}
+                    className="flex items-center gap-1 text-xs text-[var(--text-muted)] hover:text-[var(--primary)] transition-colors"
+                  >
+                    <MousePointerClick size={12} /> {ad.clicks.toLocaleString()} click{ad.clicks !== 1 ? 's' : ''}
+                  </button>
+                </div>
                 {ad.status === 'approved' && (
                   <button
                     onClick={() => payForBanner(ad)}
@@ -469,6 +585,31 @@ export default function BannerAdRequest() {
           <span key={s} className={`badge ${STATUS_STYLES[s]}`}>{l}</span>
         ))}
       </div>
+
+      {viewersModal && (
+        <ViewersModal
+          bannerId={viewersModal.bannerId}
+          type={viewersModal.type}
+          onClose={() => setViewersModal(null)}
+        />
+      )}
+
+      {cropSrc && (
+        <BannerCropModal
+          imageSrc={cropSrc}
+          onCancel={() => { URL.revokeObjectURL(cropSrc); setCropSrc(null); }}
+          onConfirm={async (blob) => {
+            const ok = await uploadImageBlob(blob);
+            if (ok) {
+              URL.revokeObjectURL(cropSrc);
+              setCropSrc(null);
+            }
+            // On failure the modal stays open so the vendor can adjust the
+            // crop (zoom out, reposition) and try again without re-picking
+            // the file from their device.
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -80,6 +80,16 @@ export default function AdminVendors() {
 
   const action = useCallback(
     async (vendorId: number, act: string, extra?: Record<string, string>) => {
+      // These three grid quick-actions fired immediately on click — every
+      // other approve/reject control in the vendor flow already confirms
+      // first (AdminVendorDetail's suspend/reject, VendorRequests' approve/
+      // reject); this grid was the inconsistent gap.
+      const confirmMsg: Record<string, string> = {
+        approve: 'Approve this vendor?',
+        suspend: 'Suspend this vendor? Their offers will stop showing to customers.',
+        reject: 'Reject this vendor?',
+      };
+      if (confirmMsg[act] && !window.confirm(confirmMsg[act])) return;
       try {
         const res = await api.put(endpoints.adminVendorAction(vendorId), { action: act, ...extra });
         toast.success(res.data.message);

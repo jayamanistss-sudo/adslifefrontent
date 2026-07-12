@@ -130,6 +130,14 @@ export default function FraudDashboard() {
                     }`}>
                       {flag.status}
                     </span>
+                    {/* User reports were only distinguishable from automated
+                        fraud-detector flags by reading the note text — now
+                        surfaced as its own badge so it reads at a glance. */}
+                    {flag.flag_reason.includes('[user report]') && (
+                      <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400">
+                        👤 User reported
+                      </span>
+                    )}
                   </div>
                   <p className="text-sm text-[var(--text-secondary)] mb-2">{flag.flag_reason}</p>
                   <div className="flex items-center gap-2">

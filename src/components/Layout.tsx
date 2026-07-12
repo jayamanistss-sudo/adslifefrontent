@@ -4,7 +4,7 @@ import {
   Home, Trophy, User, Store, Search, Moon, Sun, LogOut,
   PanelLeftClose, PanelLeftOpen, BarChart2, ShieldCheck, Zap, Settings,
   Users, Tag, Building2, Star, LayoutGrid, CreditCard, SlidersHorizontal, ChevronRight, Bell, Activity,
-  MessageSquare, Users2,
+  MessageSquare, Users2, ShieldAlert, Sparkles, Sliders,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUserStore } from '../store/useUserStore';
@@ -15,6 +15,7 @@ import AnimatedBackground from './AnimatedBackground';
 import RequirePhoneModal from './RequirePhoneModal';
 import { api, endpoints } from '../utils/api';
 import { haptic } from '../utils/haptics';
+import { markSpaSessionStarted } from '../utils/spaSession';
 
 interface Props { readonly children: React.ReactNode }
 
@@ -30,6 +31,12 @@ export default function Layout({ children }: Props) {
   const { settings: site, fetch: fetchSite } = useSiteSettings();
   const { load: loadSaved } = useSavedStore();
   useEffect(() => { fetchSite(); }, []);
+  // Runs on every route's Layout mount (child effects fire before parent
+  // effects on the same commit, so a page reading hasSpaSessionStarted() in
+  // its OWN mount effect still sees the pre-this-page value) — marks "the
+  // SPA is already running" for pages that need to distinguish a fresh
+  // external open (QR scan, shared link) from ordinary in-app navigation.
+  useEffect(() => { markSpaSessionStarted(); }, []);
   useEffect(() => { if (isAuthenticated && user) loadSaved(user.id); }, [isAuthenticated, user?.id]);
   // Daily streak check-in — once per browser session
   useEffect(() => {
@@ -137,8 +144,11 @@ export default function Layout({ children }: Props) {
   ];
 
   const vendorNav: NavItem[] = user?.role === 'vendor' || user?.role === 'admin' ? [
-    { to: '/vendor/dashboard', icon: Store,    label: 'Dashboard' },
-    { to: '/vendor/audience',  icon: BarChart2, label: 'Analytics' },
+    { to: '/vendor/dashboard', icon: Store,         label: 'Dashboard' },
+    { to: '/vendor/audience',  icon: BarChart2,     label: 'Analytics' },
+    { to: '/vendor/offers',    icon: Tag,           label: 'My Offers' },
+    { to: '/vendor/reviews',   icon: MessageSquare, label: 'Reviews' },
+    { to: '/vendor/payments',  icon: CreditCard,    label: 'Payments' },
   ] : [];
 
   const adminNav: NavItem[] = user?.role === 'admin' ? [
@@ -147,14 +157,20 @@ export default function Layout({ children }: Props) {
     { to: '/admin/users',           icon: Users,              label: 'Users' },
     { to: '/admin/vendors',         icon: Building2,          label: 'Vendors' },
     { to: '/admin/all-offers',      icon: Tag,                label: 'All Offers' },
+    { to: '/admin/featured-offers', icon: Star,               label: 'Featured Offers' },
     { to: '/admin/spotlight',       icon: Star,               label: 'Spotlight' },
     { to: '/admin/reviews',         icon: MessageSquare,      label: 'Reviews' },
     { to: '/admin/group-deals',     icon: Users2,             label: 'Group Deals' },
     { to: '/admin/categories',      icon: LayoutGrid,         label: 'Categories' },
     { to: '/admin/subscriptions',   icon: CreditCard,         label: 'Subscriptions' },
+    { to: '/admin/payments',        icon: CreditCard,         label: 'Payments' },
     { to: '/admin/site-settings',   icon: SlidersHorizontal,  label: 'Site Settings' },
     { to: '/admin/notification-settings', icon: Bell,         label: 'Notifications' },
+    { to: '/admin/notification-templates', icon: Sparkles,    label: 'Notification Templates' },
+    { to: '/admin/leaderboard',     icon: Trophy,             label: 'Leaderboard' },
     { to: '/admin/fraud',           icon: Zap,                label: 'Fraud Center' },
+    { to: '/admin/feed-tuning',     icon: Sliders,            label: 'Feed Tuning' },
+    { to: '/admin/security-logs',   icon: ShieldAlert,        label: 'Security & Logs' },
   ] : [];
 
   const mobileNav = [

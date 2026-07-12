@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Settings, Upload, Save, Globe, Search, Mail, Phone, Image, FileText } from "lucide-react";
+import { Settings, Upload, Save, Globe, Search, Mail, Phone, Image, FileText, Gift, KeyRound, CreditCard, Eye, EyeOff } from "lucide-react";
 import { api, endpoints } from "../../utils/api";
 import toast from "react-hot-toast";
 import { useSiteSettings } from "../../store/useSiteSettings";
@@ -16,6 +16,16 @@ interface SiteSettings {
   contact_phone: string;
   terms_content: string;
   privacy_content: string;
+  referral_reward_referrer: string;
+  referral_reward_referred: string;
+  smtp_host: string;
+  smtp_port: string;
+  smtp_user: string;
+  smtp_password: string;
+  cashfree_app_id: string;
+  cashfree_secret_key: string;
+  cashfree_webhook_secret: string;
+  cashfree_env: string;
 }
 
 const defaults: SiteSettings = {
@@ -29,6 +39,16 @@ const defaults: SiteSettings = {
   contact_phone: "",
   terms_content: "",
   privacy_content: "",
+  referral_reward_referrer: "50",
+  referral_reward_referred: "20",
+  smtp_host: "",
+  smtp_port: "587",
+  smtp_user: "",
+  smtp_password: "",
+  cashfree_app_id: "",
+  cashfree_secret_key: "",
+  cashfree_webhook_secret: "",
+  cashfree_env: "sandbox",
 };
 
 export default function AdminSiteSettings() {
@@ -37,19 +57,42 @@ export default function AdminSiteSettings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [showSecrets, setShowSecrets] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  // The backend now sends '••••••••' instead of the real value for any
+  // configured secret (never the plaintext) — this remembers which fields
+  // loaded as "already set" so a focus-then-blur-without-typing doesn't
+  // submit an empty string and wipe the real stored secret.
+  const originalSecretsRef = useRef<Record<string, string>>({});
 
   useEffect(() => {
     api
       .get(`${endpoints.siteSettings}/all`)
       .then((r) => {
-        if (r.data.success) setForm({ ...defaults, ...r.data.data });
+        if (r.data.success) {
+          setForm({ ...defaults, ...r.data.data });
+          originalSecretsRef.current = {
+            smtp_password: r.data.data.smtp_password ?? "",
+            cashfree_secret_key: r.data.data.cashfree_secret_key ?? "",
+            cashfree_webhook_secret: r.data.data.cashfree_webhook_secret ?? "",
+          };
+        }
       })
       .catch(() => toast.error("Failed to load settings"))
       .finally(() => setLoading(false));
   }, []);
 
   const set = (key: keyof SiteSettings, val: string) => setForm((f) => ({ ...f, [key]: val }));
+
+  const SECRET_MASK = "••••••••";
+  const handleSecretFocus = (key: keyof SiteSettings) => {
+    if (form[key] === SECRET_MASK) set(key, "");
+  };
+  const handleSecretBlur = (key: keyof SiteSettings) => {
+    if (form[key] === "" && originalSecretsRef.current[key as string] === SECRET_MASK) {
+      set(key, SECRET_MASK);
+    }
+  };
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -294,6 +337,164 @@ export default function AdminSiteSettings() {
                     className="input pl-9"
                     placeholder="+91 99999 99999"
                   />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Referral Rewards — previously hardcoded literals in
+              referral.service.ts with no admin lever at all */}
+          <div className="card p-5">
+            <h3 className="font-heading font-semibold text-sm text-[var(--text)] mb-4 flex items-center gap-2">
+              <Gift size={15} className="text-[var(--primary)]" /> Referral Rewards
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-semibold text-[var(--text-secondary)] block mb-1.5">Coins to Referrer</label>
+                <input
+                  type="number" min={0}
+                  value={form.referral_reward_referrer}
+                  onChange={(e) => set("referral_reward_referrer", e.target.value)}
+                  className="input"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-[var(--text-secondary)] block mb-1.5">Coins to New User</label>
+                <input
+                  type="number" min={0}
+                  value={form.referral_reward_referred}
+                  onChange={(e) => set("referral_reward_referred", e.target.value)}
+                  className="input"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Integrations — SMTP + Cashfree credentials previously only
+              lived in the server .env file; rotating either required SSH
+              access and a pm2 restart. Both services now read live from
+              site_settings (falling back to .env if unset here), so saving
+              this form takes effect immediately, no restart needed. */}
+          <div className="card p-5">
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="font-heading font-semibold text-sm text-[var(--text)] flex items-center gap-2">
+                <KeyRound size={15} className="text-[var(--primary)]" /> Integrations
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowSecrets((v) => !v)}
+                className="flex items-center gap-1.5 text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--primary)] transition-colors"
+              >
+                {showSecrets ? <EyeOff size={13} /> : <Eye size={13} />}
+                {showSecrets ? "Hide" : "Show"} secrets
+              </button>
+            </div>
+            <p className="text-xs text-[var(--text-muted)] mb-4">
+              Changes here take effect immediately on save — no server restart needed. Leave a field blank to keep using the server's .env value.
+            </p>
+
+            <div className="space-y-5">
+              {/* SMTP */}
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)] flex items-center gap-1.5 mb-3">
+                  <Mail size={13} /> SMTP Email
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-semibold text-[var(--text-secondary)] block mb-1.5">SMTP Host</label>
+                    <input
+                      value={form.smtp_host}
+                      onChange={(e) => set("smtp_host", e.target.value)}
+                      className="input"
+                      placeholder="smtp.gmail.com"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-[var(--text-secondary)] block mb-1.5">SMTP Port</label>
+                    <input
+                      type="number"
+                      value={form.smtp_port}
+                      onChange={(e) => set("smtp_port", e.target.value)}
+                      className="input"
+                      placeholder="587"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-[var(--text-secondary)] block mb-1.5">SMTP Username</label>
+                    <input
+                      value={form.smtp_user}
+                      onChange={(e) => set("smtp_user", e.target.value)}
+                      className="input"
+                      placeholder="you@gmail.com"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-[var(--text-secondary)] block mb-1.5">SMTP Password</label>
+                    <input
+                      type={showSecrets ? "text" : "password"}
+                      value={form.smtp_password}
+                      onChange={(e) => set("smtp_password", e.target.value)}
+                      onFocus={() => handleSecretFocus("smtp_password")}
+                      onBlur={() => handleSecretBlur("smtp_password")}
+                      className="input"
+                      placeholder="App password"
+                      autoComplete="new-password"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <hr className="border-[var(--border)] opacity-60" />
+
+              {/* Cashfree */}
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)] flex items-center gap-1.5 mb-3">
+                  <CreditCard size={13} /> Cashfree Payments
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-semibold text-[var(--text-secondary)] block mb-1.5">Environment</label>
+                    <select
+                      value={form.cashfree_env}
+                      onChange={(e) => set("cashfree_env", e.target.value)}
+                      className="input"
+                    >
+                      <option value="sandbox">Sandbox</option>
+                      <option value="production">Production</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-[var(--text-secondary)] block mb-1.5">App ID</label>
+                    <input
+                      value={form.cashfree_app_id}
+                      onChange={(e) => set("cashfree_app_id", e.target.value)}
+                      className="input font-mono text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-[var(--text-secondary)] block mb-1.5">Secret Key</label>
+                    <input
+                      type={showSecrets ? "text" : "password"}
+                      value={form.cashfree_secret_key}
+                      onChange={(e) => set("cashfree_secret_key", e.target.value)}
+                      onFocus={() => handleSecretFocus("cashfree_secret_key")}
+                      onBlur={() => handleSecretBlur("cashfree_secret_key")}
+                      className="input font-mono text-xs"
+                      autoComplete="new-password"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-[var(--text-secondary)] block mb-1.5">Webhook Secret</label>
+                    <input
+                      type={showSecrets ? "text" : "password"}
+                      value={form.cashfree_webhook_secret}
+                      onChange={(e) => set("cashfree_webhook_secret", e.target.value)}
+                      onFocus={() => handleSecretFocus("cashfree_webhook_secret")}
+                      onBlur={() => handleSecretBlur("cashfree_webhook_secret")}
+                      className="input font-mono text-xs"
+                      autoComplete="new-password"
+                    />
+                  </div>
                 </div>
               </div>
             </div>

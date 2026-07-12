@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   Plus, Pencil, Trash2, ToggleLeft, ToggleRight, Save, X,
-  CreditCard, Image, Calendar, Tag,
+  CreditCard, Image, Calendar, Tag, Database,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import BackButton from "../../components/BackButton";
@@ -39,11 +39,33 @@ const emptyPlan = (): Partial<Plan> => ({
 });
 
 // Canonical, code-checked feature keys — must match PLAN_FEATURE_KEYS in
-// backend-nest/src/plan-features/plan-features.service.ts.
-const FEATURE_FLAG_OPTIONS: { key: string; label: string; description: string }[] = [
-  { key: "banner_ads", label: "Banner Ads", description: "Vendor can request & pay for banner ad placements" },
-  { key: "spotlight", label: "Spotlight", description: "Vendor can request spotlight placement" },
-  { key: "advanced_analytics", label: "Analytics Tools", description: "ROI, audience, heatmap, benchmark, A/B testing" },
+// backend-nest/src/plan-features/plan-features.service.ts. `group` is
+// display-only, used to break the growing list into scannable sections.
+const FEATURE_FLAG_OPTIONS: { key: string; label: string; description: string; group: string }[] = [
+  { key: "spotlight", label: "Spotlight", description: "Vendor can request spotlight placement — capped at 1 free promotion per rolling 30 days", group: "Core" },
+  { key: "ai_generation", label: "AI Offer Generation", description: "Vendor can use AI to draft offers from their website", group: "Core" },
+  { key: "verified_badge", label: "Verified Badge (standard)", description: "Standard verified checkmark on offers & shop page", group: "Core" },
+  { key: "verified_badge_premium", label: "Verified Badge (premium)", description: "Gold premium verified checkmark — takes priority over standard", group: "Core" },
+
+  { key: "analytics_saves_clicks", label: "Analytics — Saves & Clicks (ROI/Heatmap/Benchmark)", description: "ROI, audience, heatmap, benchmark endpoints", group: "Analytics" },
+  { key: "analytics_full", label: "Analytics — Full (Customer Engagement)", description: "Engagement rate + A/B testing", group: "Analytics" },
+  { key: "view_count", label: "Views — Count", description: "Vendor can see the total view number on dashboard & offers", group: "Analytics" },
+  { key: "view_details", label: "Views — Details", description: "Vendor can drill into who/when viewed (Audience Insights)", group: "Analytics" },
+  { key: "click_count", label: "Clicks — Count", description: "Vendor can see the total click number", group: "Analytics" },
+  { key: "click_details", label: "Clicks — Details", description: "Vendor can drill into who/when clicked", group: "Analytics" },
+  { key: "save_count", label: "Saves — Count", description: "Vendor can see the total save number", group: "Analytics" },
+  { key: "save_details", label: "Saves — Details", description: "Vendor can drill into who/when saved", group: "Analytics" },
+  { key: "redeemed_count", label: "Redemptions — Count", description: "Vendor can see the total redemption number", group: "Analytics" },
+  { key: "redeemed_details", label: "Redemptions — Details", description: "Vendor can drill into who/when redeemed", group: "Analytics" },
+  { key: "analytics_views_graph", label: "Views Graph", description: "Daily views trend chart on the dashboard", group: "Analytics" },
+  { key: "analytics_city_graph", label: "City Graph", description: "Top-cities breakdown chart in Audience Insights", group: "Analytics" },
+
+  { key: "review_access", label: "Reviews", description: "Vendor can view & reply to customer reviews", group: "Engagement" },
+  { key: "subscriber_count", label: "Followers — Count", description: "Vendor can see the total follower number", group: "Engagement" },
+  { key: "subscriber_details", label: "Followers — Details", description: "Vendor can see the list of individual followers", group: "Engagement" },
+
+  { key: "offer_mail_notification", label: "Offer Activity Emails", description: "Daily email summarizing views/clicks/saves/redemptions/reviews", group: "Notifications" },
+  { key: "monthly_report_auto_send", label: "Monthly Report Email", description: "Automated summary emailed on the 1st of each month", group: "Notifications" },
 ];
 
 // ─── Component ──────────────────────────────────────────────────────────────
@@ -51,12 +73,13 @@ export default function AdminSubscriptions() {
   const [tab, setTab] = useState<"subscription" | "banner">("subscription");
 
   // ── Subscription Plans state ────────────────────────────────────────────
-  const { plans, loading: plansLoading, fetchPlans, createPlan, updatePlan, deletePlan } = usePlansStore();
+  const { plans, loading: plansLoading, fetchPlans, createPlan, updatePlan, deletePlan, seedPlans } = usePlansStore();
   const [editing, setEditing]       = useState<Partial<Plan> | null>(null);
   const [isNew, setIsNew]           = useState(false);
   const [saving, setSaving]         = useState(false);
   const [deleteId, setDeleteId]     = useState<number | null>(null);
   const [featureInput, setFeatureInput] = useState("");
+  const [seeding, setSeeding]        = useState(false);
 
   // ── Banner Plans state ──────────────────────────────────────────────────
   const [bannerPlans, setBannerPlans]       = useState<BannerPlan[]>([]);
@@ -65,6 +88,7 @@ export default function AdminSubscriptions() {
   const [bannerIsNew, setBannerIsNew]       = useState(false);
   const [bannerSaving, setBannerSaving]     = useState(false);
   const [bannerDeleteId, setBannerDeleteId] = useState<number | null>(null);
+  const [bannerSeeding, setBannerSeeding]   = useState(false);
 
   useEffect(() => { fetchPlans(); }, [fetchPlans]);
 
@@ -124,6 +148,16 @@ export default function AdminSubscriptions() {
     catch (err: unknown) { toast.error((err as any).response?.data?.error ?? (err as any).message ?? "Failed to delete"); }
   };
 
+  const seedDefaultPlans = async () => {
+    setSeeding(true);
+    try {
+      const inserted = await seedPlans();
+      toast.success(inserted > 0 ? `Seeded ${inserted} default plan(s)` : "Plans already exist — nothing to seed");
+    } catch (err: unknown) {
+      toast.error((err as any).response?.data?.error ?? "Seed failed");
+    } finally { setSeeding(false); }
+  };
+
   // ── Banner Plan helpers ─────────────────────────────────────────────────
   const openBannerNew  = () => { setBannerEditing(emptyBannerPlan()); setBannerIsNew(true); };
   const openBannerEdit = (p: BannerPlan) => { setBannerEditing({ ...p }); setBannerIsNew(false); };
@@ -181,6 +215,19 @@ export default function AdminSubscriptions() {
     }
   };
 
+  const seedDefaultBannerPlans = async () => {
+    setBannerSeeding(true);
+    try {
+      const res = await api.post("/banner-plans/seed");
+      if (!res.data.success) { toast.error(res.data.error ?? "Seed failed"); return; }
+      const inserted = res.data.data?.inserted ?? 0;
+      toast.success(inserted > 0 ? `Seeded ${inserted} default banner plan(s)` : "Banner plans already exist — nothing to seed");
+      loadBannerPlans();
+    } catch (err: unknown) {
+      toast.error((err as any).response?.data?.error ?? "Seed failed");
+    } finally { setBannerSeeding(false); }
+  };
+
   // ── Render ─────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
@@ -196,12 +243,21 @@ export default function AdminSubscriptions() {
             <p className="page-subtitle">Manage subscription and banner advertising plans</p>
           </div>
         </div>
-        <button
-          onClick={tab === "subscription" ? openNew : openBannerNew}
-          className="btn btn-primary btn-sm"
-        >
-          <Plus size={16} /> {tab === "subscription" ? "Add Plan" : "Add Banner Plan"}
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={tab === "subscription" ? seedDefaultPlans : seedDefaultBannerPlans}
+            disabled={tab === "subscription" ? seeding : bannerSeeding}
+            className="btn btn-secondary btn-sm"
+          >
+            <Database size={14} /> {(tab === "subscription" ? seeding : bannerSeeding) ? "Seeding…" : "Seed Defaults"}
+          </button>
+          <button
+            onClick={tab === "subscription" ? openNew : openBannerNew}
+            className="btn btn-primary btn-sm"
+          >
+            <Plus size={16} /> {tab === "subscription" ? "Add Plan" : "Add Banner Plan"}
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -260,6 +316,9 @@ export default function AdminSubscriptions() {
                   </span>
                   {plan.price > 0 && <span className="text-xs text-[var(--text-secondary)] mb-1">/mo</span>}
                 </div>
+                {plan.annual_price != null && (
+                  <p className="text-xs text-[var(--text-secondary)]">₹{Number(plan.annual_price).toLocaleString()}/yr annual option</p>
+                )}
                 <div className="flex gap-3 text-xs text-[var(--text-secondary)]">
                   <span className="bg-[var(--bg)] px-2 py-1 rounded-lg">{plan.duration_days}d</span>
                   <span className="bg-[var(--bg)] px-2 py-1 rounded-lg">{plan.max_offers} offers</span>
@@ -429,6 +488,19 @@ export default function AdminSubscriptions() {
                 </div>
               </div>
               <div>
+                <label className="modal-label">Annual Price (₹/yr, optional)</label>
+                <input
+                  type="number" value={editing.annual_price ?? ""} min={0}
+                  onChange={(e) => setEditing({ ...editing, annual_price: e.target.value === "" ? null : parseFloat(e.target.value) || 0 })}
+                  className="input" placeholder="Leave blank for no annual option"
+                />
+                {editing.annual_price != null && editing.price != null && editing.price > 0 && (
+                  <p className="text-xs text-[var(--text-muted)] mt-1">
+                    ≈ ₹{Math.round(editing.annual_price / 12).toLocaleString()}/mo — {Math.round((1 - editing.annual_price / (editing.price * 12)) * 100)}% off monthly
+                  </p>
+                )}
+              </div>
+              <div>
                 <label className="modal-label">Max Offers</label>
                 <input type="number" value={editing.max_offers ?? 5} min={1} onChange={(e) => setEditing({ ...editing, max_offers: parseInt(e.target.value) || 1 })} className="input" />
               </div>
@@ -452,23 +524,28 @@ export default function AdminSubscriptions() {
                 <label className="modal-label">Feature Access</label>
                 <p className="text-[11px] text-[var(--text-secondary)] mb-2">These actually gate access — unlike Features above, which is just display copy.</p>
                 <div className="space-y-1.5">
-                  {FEATURE_FLAG_OPTIONS.map((f) => {
+                  {FEATURE_FLAG_OPTIONS.map((f, i) => {
                     const on = (editing.feature_flags ?? []).includes(f.key);
+                    const showGroupHeader = i === 0 || FEATURE_FLAG_OPTIONS[i - 1].group !== f.group;
                     return (
-                      <button
-                        type="button"
-                        key={f.key}
-                        onClick={() => toggleFeatureFlag(f.key)}
-                        className="w-full flex items-center justify-between bg-[var(--bg)] p-2.5 rounded-xl border border-[var(--border)] text-left"
-                      >
-                        <div>
-                          <span className="text-sm font-semibold text-[var(--text)]">{f.label}</span>
-                          <p className="text-xs text-[var(--text-secondary)]">{f.description}</p>
-                        </div>
-                        {on
-                          ? <ToggleRight size={30} className="text-green-500 flex-shrink-0" />
-                          : <ToggleLeft  size={30} className="text-[var(--text-muted)] flex-shrink-0" />}
-                      </button>
+                      <div key={f.key}>
+                        {showGroupHeader && (
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)] mt-3 mb-1 first:mt-0">{f.group}</p>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => toggleFeatureFlag(f.key)}
+                          className="w-full flex items-center justify-between bg-[var(--bg)] p-2.5 rounded-xl border border-[var(--border)] text-left"
+                        >
+                          <div>
+                            <span className="text-sm font-semibold text-[var(--text)]">{f.label}</span>
+                            <p className="text-xs text-[var(--text-secondary)]">{f.description}</p>
+                          </div>
+                          {on
+                            ? <ToggleRight size={30} className="text-green-500 flex-shrink-0" />
+                            : <ToggleLeft  size={30} className="text-[var(--text-muted)] flex-shrink-0" />}
+                        </button>
+                      </div>
                     );
                   })}
                 </div>

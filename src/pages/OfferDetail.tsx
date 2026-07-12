@@ -110,9 +110,15 @@ export default function OfferDetail() {
 
   useEffect(() => {
     if (!id) return;
+    // Guard against this request settling after the user has already
+    // navigated away (e.g. offer no longer exists, or they hit Back before
+    // the fetch finished) — without this, the stale .catch() below fires
+    // toast.error('Offer not found') on whatever page they're on now.
+    let cancelled = false;
     setLoading(true);
     api.get(endpoints.offerDetail(Number(id)))
       .then(r => {
+        if (cancelled) return;
         if (r.data.success) {
           setOffer(r.data.data as Offer);
           // Reconcile the shared saved-store with the server's authoritative
@@ -130,8 +136,9 @@ export default function OfferDetail() {
           }
         }
       })
-      .catch(() => toast.error('Offer not found'))
-      .finally(() => setLoading(false));
+      .catch(() => { if (!cancelled) toast.error('Offer not found'); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, [id]);
 
   useEffect(() => {
@@ -144,20 +151,30 @@ export default function OfferDetail() {
 
   useEffect(() => {
     if (!id) return;
+    let cancelled = false;
     api.get(endpoints.offerReviews(Number(id))).then(r => {
-      if (!r.data.success) return;
+      if (cancelled || !r.data.success) return;
       setReviews(r.data.data as OfferReview[]);
       setAvgRating(r.data.avgRating ?? null);
       setReviewCnt(r.data.reviewCount ?? 0);
       if (r.data.myReview) { setMyRating(r.data.myReview.rating); setMyComment(r.data.myReview.comment ?? ''); }
     }).catch(() => {});
+    return () => { cancelled = true; };
   }, [id]);
 
   useEffect(() => {
     if (!user || !offer?.vendorId) return;
-    api.get(endpoints.vendorFollowStatus(offer.vendorId)).then(r => {
+    let cancelled = false;
+    // This is a public page — `user` is a locally-cached object that can
+    // outlive the actual session (cookie expired since the last visit). A
+    // real 401 here must never trigger the global redirect-to-/login
+    // interceptor (see api.ts), or a guest just opening a shared offer link
+    // gets yanked to the login page instead of seeing the offer.
+    api.get(endpoints.vendorFollowStatus(offer.vendorId), { skipAuthRedirect: true }).then(r => {
+      if (cancelled) return;
       if (r.data.success) { setFollowing(r.data.data.following); setFollowCnt(r.data.data.followers_count); }
     }).catch(() => {});
+    return () => { cancelled = true; };
   }, [offer?.vendorId, user?.id]);
 
   useEffect(() => {
@@ -320,10 +337,14 @@ export default function OfferDetail() {
   const isUrgent  = tl === 'Ending soon' || tl === '1d left';
   const savings   = (offer.originalPrice ?? 0) - (offer.offerPrice ?? 0);
   const hasVid    = !!offer.videoUrl;
-  const imageSlides = [
+  // Deduped — bannerUrl/imageUrl is very often the same URL as images[0], so
+  // without this a 2-image offer produced 3 "slides" with the first two
+  // identical: swiping/tapping from slide 0 to slide 1 showed no visible
+  // change, reading as a broken carousel. Set preserves insertion order.
+  const imageSlides = Array.from(new Set([
     ...(offer.bannerUrl || offer.imageUrl ? [offer.bannerUrl || offer.imageUrl!] : []),
     ...(offer.images ?? []),
-  ];
+  ].filter(Boolean)));
   const hasImg = imageSlides.length > 0;
   const heroImg = imageSlides[Math.min(heroIdx, imageSlides.length - 1)];
   const heroPrev = () => setHeroIdx(i => (i - 1 + imageSlides.length) % imageSlides.length);
@@ -387,7 +408,14 @@ export default function OfferDetail() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
-                className="absolute inset-0 w-full h-full block group"
+                drag={imageSlides.length > 1 ? 'x' : false}
+                dragConstraints={{ left: 0, right: 0 }}
+                dragElastic={0.6}
+                onDragEnd={(_, info) => {
+                  if (info.offset.x < -60 || info.velocity.x < -400) heroNext();
+                  else if (info.offset.x > 60 || info.velocity.x > 400) heroPrev();
+                }}
+                className={`absolute inset-0 w-full h-full block group ${imageSlides.length > 1 ? 'cursor-grab active:cursor-grabbing' : ''}`}
               >
                 <img src={heroImg} alt={offer.title}
                   className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" />
@@ -668,7 +696,7 @@ export default function OfferDetail() {
                   <p className="text-xs text-[var(--text-secondary)] capitalize mt-0.5">
                     {offer.vendorCategory}{offer.vendorCity ? ` · ${offer.vendorCity}` : ''}
                   </p>
-                  {followCnt > 0 && <p className="text-[11px] text-[var(--text-muted)] mt-0.5">{followCnt.toLocaleString()} subscribers</p>}
+                  {followCnt > 0 && <p className="text-[11px] text-[var(--text-muted)] mt-0.5">{followCnt.toLocaleString()} followers</p>}
                 </div>
               </Link>
               {user && (
@@ -789,8 +817,15 @@ export default function OfferDetail() {
                 initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.97 }}
                 transition={{ duration: 0.18 }}
                 src={heroImg} alt={offer.title}
-                className="max-w-full max-h-[90vh] object-contain rounded-2xl shadow-2xl"
-                onClick={e => e.stopPropagation()} />
+                className={`max-w-full max-h-[90vh] object-contain rounded-2xl shadow-2xl ${imageSlides.length > 1 ? 'cursor-grab active:cursor-grabbing' : ''}`}
+                onClick={e => e.stopPropagation()}
+                drag={imageSlides.length > 1 ? 'x' : false}
+                dragConstraints={{ left: 0, right: 0 }}
+                dragElastic={0.6}
+                onDragEnd={(_, info) => {
+                  if (info.offset.x < -60 || info.velocity.x < -400) heroNext();
+                  else if (info.offset.x > 60 || info.velocity.x > 400) heroPrev();
+                }} />
             </AnimatePresence>
 
             {imageSlides.length > 1 && (

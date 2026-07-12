@@ -96,7 +96,7 @@ export default function Login() {
     try {
       const res = await api.post(endpoints.login, form);
       if (res.data.success) {
-        const {user,token} = res.data.data;
+        const {user} = res.data.data;
         setUser({
           id:user.id,name:user.name,email:user.email,
           streakDays:Number.parseInt(user.streak_days)||0,
@@ -104,7 +104,7 @@ export default function Login() {
           lat:parseFloat(user.lat)||undefined,
           lng:parseFloat(user.lng)||undefined,
           avatarUrl: user.avatar_url ?? undefined,
-        },token);
+        });
         toast.success(`Welcome back, ${user.name}!`);
         navigate('/feed');
       }
@@ -155,7 +155,10 @@ export default function Login() {
             </div>
 
             <div className="auth-stagger-4">
-              <label className="label">Password</label>
+              <div className="flex items-center justify-between">
+                <label className="label">Password</label>
+                <Link to="/forgot-password" className="text-xs text-[var(--primary)] font-semibold hover:underline underline-offset-2">Forgot password?</Link>
+              </div>
               <div className="auth-input-wrap">
                 <Lock size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none"/>
                 <input id="login-password" type={showPw?'text':'password'} required autoComplete="current-password"

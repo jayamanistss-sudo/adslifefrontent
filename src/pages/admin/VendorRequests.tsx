@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Store, CheckCircle, XCircle, Eye, MapPin, Phone, Globe, CreditCard } from 'lucide-react';
 import BackButton from '../../components/BackButton';
 import { api, endpoints } from '../../utils/api';
@@ -19,31 +19,63 @@ const STATUS_STYLE: Record<string, string> = {
   rejected: 'badge-danger',
 };
 
+const PAGE_SIZE = 30;
+
 export default function VendorRequests() {
   const [apps, setApps]         = useState<VendorApp[]>([]);
+  const [total, setTotal]       = useState(0);
+  const [counts, setCounts]     = useState({ all: 0, pending: 0, approved: 0, rejected: 0 });
+  const [page, setPage]         = useState(1);
+  const pageRef = useRef(1);
+  pageRef.current = page;
   const [loading, setLoading]   = useState(true);
   const [filter, setFilter]     = useState('');
   const [expanded, setExpanded] = useState<number | null>(null);
   const [reviewing, setReviewing] = useState<number | null>(null);
   const [noteMap, setNoteMap]   = useState<Record<number, string>>({});
 
-  const load = () => {
+  // Previously fetched the entire table unconditionally — fine at current
+  // volume, but paginated server-side now so it doesn't degrade as
+  // applications accumulate. Status filtering moved server-side too, so tab
+  // counts come from the backend's whole-table counts, not just what's
+  // currently loaded on screen.
+  const load = (p: number) => {
     setLoading(true);
-    api.get(endpoints.adminVendorRequests()).then((r) => {
-      if (r.data.success) setApps(r.data.data);
+    api.get(endpoints.adminVendorRequests(filter, p, PAGE_SIZE)).then((r) => {
+      if (r.data.success) {
+        const { apps: rows, total: t, counts: c } = r.data.data;
+        setApps((prev) => (p === 1 ? rows : [...prev, ...rows]));
+        setTotal(t);
+        setCounts(c);
+        setPage(p);
+      }
     }).finally(() => setLoading(false));
   };
 
-  useEffect(load, []);
+  useEffect(() => { load(1); }, [filter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Live-refresh whenever a vendor application changes locally via PowerSync
-  // (new submission, status change from another admin session, etc.)
+  // (new submission, status change from another admin session, etc.). Was
+  // unconditionally calling load(1) — which resets apps to just page 1's
+  // rows — every 30s regardless of how many pages the admin had already
+  // loaded via "Load more", silently truncating their scrolled-down list
+  // back to the top. Only auto-refresh while still on page 1; an admin
+  // deeper in the list can refresh manually without losing their place.
   useEffect(() => {
-    const t = setInterval(load, 30000);
+    const t = setInterval(() => {
+      if (pageRef.current === 1) load(1);
+    }, 30000);
     return () => clearInterval(t);
-  }, []);
+  }, [filter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleReview = async (appId: number, action: 'approve' | 'reject') => {
+    // Previously fired immediately on click — every other approve/reject
+    // control in the vendor-review flow (AdminVendorDetail's suspend/reject)
+    // already confirms first; this was the one inconsistent gap.
+    const confirmMsg = action === 'approve'
+      ? 'Approve this vendor application?'
+      : 'Reject this vendor application? The applicant will be notified.';
+    if (!window.confirm(confirmMsg)) return;
     setReviewing(appId);
     try {
       const res = await api.put(endpoints.adminReviewVendor(appId), {
@@ -52,7 +84,7 @@ export default function VendorRequests() {
       });
       if (res.data.success) {
         toast.success(action === 'approve' ? 'Vendor approved!' : 'Application rejected');
-        load();
+        load(1);
         setExpanded(null);
       }
     } catch (err: any) {
@@ -61,15 +93,6 @@ export default function VendorRequests() {
       setReviewing(null);
     }
   };
-
-  const counts = {
-    all:      apps.length,
-    pending:  apps.filter((a) => a.status === 'pending').length,
-    approved: apps.filter((a) => a.status === 'approved').length,
-    rejected: apps.filter((a) => a.status === 'rejected').length,
-  };
-
-  const visibleApps = filter ? apps.filter((a) => a.status === filter) : apps;
 
   return (
     <div className="max-w-4xxl pb-6">
@@ -101,16 +124,16 @@ export default function VendorRequests() {
         ))}
       </div>
 
-      {loading ? (
+      {loading && apps.length === 0 ? (
         <div className="space-y-3">{[1,2,3].map((i) => <div key={i} className="skeleton h-24 rounded-xl" />)}</div>
-      ) : visibleApps.length === 0 ? (
+      ) : apps.length === 0 ? (
         <div className="card p-10 text-center">
           <Store size={36} className="mx-auto text-[var(--text-muted)] mb-3" />
           <p className="font-heading font-semibold text-[var(--text-secondary)]">No applications found</p>
         </div>
       ) : (
         <div className="space-y-3">
-          {visibleApps.map((app) => (
+          {apps.map((app) => (
             <div key={app.id} className="card overflow-hidden">
               {/* Header row */}
               <div className="flex items-center gap-4 p-4">
@@ -234,6 +257,15 @@ export default function VendorRequests() {
               )}
             </div>
           ))}
+          {apps.length < total && (
+            <button
+              onClick={() => load(page + 1)}
+              disabled={loading}
+              className="w-full text-sm text-[var(--primary)] font-medium py-2.5 hover:bg-[var(--surface-2)] rounded-xl transition-colors"
+            >
+              {loading ? 'Loading…' : `Load more (${apps.length} of ${total})`}
+            </button>
+          )}
         </div>
       )}
     </div>

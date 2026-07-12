@@ -177,8 +177,20 @@ function OfferCard({ offer, onSave, index = 0 }: Props) {
             <div className="min-w-0">
               <div className="flex items-center gap-1">
                 <span className="text-[11px] sm:text-[13px] font-bold text-[var(--text)] truncate leading-tight">{offer.businessName}</span>
-                <BadgeCheck size={12} style={{ color: 'var(--info)' }} className="flex-shrink-0 sm:hidden" />
-                <BadgeCheck size={14} style={{ color: 'var(--info)' }} className="flex-shrink-0 hidden sm:block" />
+                {offer.vendorBadgeTier && offer.vendorBadgeTier !== 'none' && (
+                  <span title={offer.vendorBadgeTier === 'premium' ? 'Premium verified' : 'Verified'}>
+                    <BadgeCheck
+                      size={12}
+                      style={{ color: offer.vendorBadgeTier === 'premium' ? '#F59E0B' : 'var(--info)' }}
+                      className="flex-shrink-0 sm:hidden"
+                    />
+                    <BadgeCheck
+                      size={14}
+                      style={{ color: offer.vendorBadgeTier === 'premium' ? '#F59E0B' : 'var(--info)' }}
+                      className="flex-shrink-0 hidden sm:block"
+                    />
+                  </span>
+                )}
               </div>
               <div className="flex items-center gap-1 text-[9px] sm:text-[11px] text-[var(--text-muted)] mt-0.5">
                 <MapPin size={8} className="flex-shrink-0 sm:hidden" />

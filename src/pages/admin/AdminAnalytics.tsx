@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   Activity, Server, Users, ShieldAlert, AlertTriangle, Gauge, Bell, ShieldX,
-  LogIn, UserCheck, Store, MapPin,
+  LogIn, UserCheck, Store, MapPin, Tag, Mail,
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import toast from 'react-hot-toast';
@@ -48,6 +48,15 @@ interface GeographyData {
   vendors_by_city: { city: string; cnt: string }[];
   redemptions_by_city: { city: string; cnt: string }[];
   revenue_by_city: { city: string; total: string }[];
+}
+
+interface CategoryPerformanceData {
+  by_category: { category: string; slug: string; offer_count: string; total_views: string; total_clicks: string; total_saves: string; total_redemptions: string }[];
+}
+
+interface CampaignData {
+  by_type: { type: string; sent: number; opened: number; open_rate: number }[];
+  delivery_by_status: { status: string; cnt: string }[];
 }
 
 // ─── Small building blocks ──────────────────────────────────────────────────
@@ -150,6 +159,8 @@ export default function AdminAnalytics() {
   const [logins, setLogins] = useState<LoginsData | null>(null);
   const [vendorActivity, setVendorActivity] = useState<VendorActivityData | null>(null);
   const [geography, setGeography] = useState<GeographyData | null>(null);
+  const [categoryPerf, setCategoryPerf] = useState<CategoryPerformanceData | null>(null);
+  const [campaigns, setCampaigns] = useState<CampaignData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -158,12 +169,16 @@ export default function AdminAnalytics() {
       api.get(endpoints.adminAnalyticsLogins(30)),
       api.get(endpoints.adminAnalyticsVendorActivity(30)),
       api.get(endpoints.adminAnalyticsGeography(10)),
+      api.get(endpoints.adminAnalyticsCategories(20)),
+      api.get(endpoints.adminAnalyticsCampaigns(30)),
     ])
-      .then(([o, l, v, g]) => {
+      .then(([o, l, v, g, c, cp]) => {
         if (o.data.success) setOverview(o.data.data);
         if (l.data.success) setLogins(l.data.data);
         if (v.data.success) setVendorActivity(v.data.data);
         if (g.data.success) setGeography(g.data.data);
+        if (c.data.success) setCategoryPerf(c.data.data);
+        if (cp.data.success) setCampaigns(cp.data.data);
       })
       .catch(() => toast.error('Failed to load analytics'))
       .finally(() => setLoading(false));
@@ -325,6 +340,65 @@ export default function AdminAnalytics() {
           color="var(--warning)"
           formatValue={(n) => `₹${n.toLocaleString()}`}
           rows={(geography?.revenue_by_city ?? []).map((c) => ({ label: c.city, value: Number(c.total) }))}
+        />
+      </div>
+
+      {/* ── Category Performance ──────────────────────────────────────── */}
+      <SectionHeader icon={<Tag size={18} />} title="Category Performance" subtitle="Which categories actually drive engagement — previously invisible" />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <RankedList
+          title="Views by Category"
+          color="var(--info)"
+          rows={(categoryPerf?.by_category ?? []).map((c) => ({ label: c.category, value: Number(c.total_views) }))}
+        />
+        <RankedList
+          title="Redemptions by Category"
+          color="var(--accent)"
+          rows={(categoryPerf?.by_category ?? []).map((c) => ({ label: c.category, value: Number(c.total_redemptions) }))}
+        />
+      </div>
+      <div className="card p-0 overflow-hidden">
+        <div className="overflow-x-auto overflow-y-hidden">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="bg-[var(--surface-2)] text-[var(--text-muted)]">
+                <th className="text-left px-4 py-2.5 font-semibold">Category</th>
+                <th className="text-right px-4 py-2.5 font-semibold">Offers</th>
+                <th className="text-right px-4 py-2.5 font-semibold">Views</th>
+                <th className="text-right px-4 py-2.5 font-semibold">Clicks</th>
+                <th className="text-right px-4 py-2.5 font-semibold">Saves</th>
+                <th className="text-right px-4 py-2.5 font-semibold">Redemptions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[var(--border)]">
+              {(categoryPerf?.by_category ?? []).map((c) => (
+                <tr key={c.slug} className="hover:bg-[var(--surface-2)] transition-colors">
+                  <td className="px-4 py-2.5 font-medium">{c.category}</td>
+                  <td className="px-4 py-2.5 text-right text-[var(--text-muted)]">{c.offer_count}</td>
+                  <td className="px-4 py-2.5 text-right text-[var(--text-muted)]">{c.total_views}</td>
+                  <td className="px-4 py-2.5 text-right text-[var(--text-muted)]">{c.total_clicks}</td>
+                  <td className="px-4 py-2.5 text-right text-[var(--text-muted)]">{c.total_saves}</td>
+                  <td className="px-4 py-2.5 text-right font-semibold text-primary">{c.total_redemptions}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* ── Notification Campaigns ────────────────────────────────────── */}
+      <SectionHeader icon={<Mail size={18} />} title="Notification Campaigns" subtitle="Sent / opened per activity type — previously invisible whether any of it worked" />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <RankedList
+          title="Sent (30d)"
+          color="var(--primary)"
+          rows={(campaigns?.by_type ?? []).map((c) => ({ label: c.type, value: c.sent }))}
+        />
+        <RankedList
+          title="Open Rate % (30d)"
+          color="var(--accent)"
+          formatValue={(n) => `${n}%`}
+          rows={(campaigns?.by_type ?? []).map((c) => ({ label: c.type, value: c.open_rate }))}
         />
       </div>
     </div>

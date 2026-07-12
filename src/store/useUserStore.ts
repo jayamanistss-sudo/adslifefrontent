@@ -5,56 +5,45 @@ import { connectNotificationSocket, disconnectNotificationSocket } from "../serv
 
 interface UserState {
   user: User | null;
-  token: string | null;
   isAuthenticated: boolean;
-  setUser: (user: User, token: string) => void;
+  // False until the initial cookie-session check (App.tsx, on mount) resolves.
+  // ProtectedRoute must wait for this instead of trusting isAuthenticated's
+  // default — there's no JS-readable token to derive it from synchronously
+  // anymore, so an already-logged-in user would otherwise get bounced to
+  // /login on every page load/refresh before the check completes.
+  authChecked: boolean;
+  setUser: (user: User) => void;
   updateUser: (fields: Partial<User>) => void;
+  // Called once by App.tsx's bootstrap check with the /auth/me result (or
+  // null if the cookie session is absent/invalid).
+  setAuthChecked: (user: User | null) => void;
   logout: () => void;
 }
 
-function isTokenValid(token: string): boolean {
+// The JWT itself is no longer kept anywhere JS can read — it lives only in
+// the httpOnly cookie the backend already sets on login/register (auth.
+// controller.ts's setAuthCookie), which was already authenticating every
+// request ahead of the Bearer header. Keeping a second, JS-readable copy in
+// localStorage was pure unnecessary XSS attack surface. This cache is only
+// the *user object* (name/avatar/etc.) for a fast initial paint — never
+// trusted to mean "logged in" on its own; authChecked/isAuthenticated is
+// only ever set from a real server response.
+function loadCachedUser(): User | null {
   try {
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    return typeof payload.exp === "number" && payload.exp * 1000 > Date.now();
+    return JSON.parse(localStorage.getItem("adslife_user") || "null");
   } catch {
-    return false;
+    return null;
   }
-}
-
-function loadFromStorage(): { user: User | null; token: string | null } {
-  try {
-    const token = localStorage.getItem("adslife_token");
-    // Clear storage immediately if the token is expired
-    if (token && !isTokenValid(token)) {
-      localStorage.removeItem("adslife_token");
-      localStorage.removeItem("adslife_user");
-      return { user: null, token: null };
-    }
-    const user = JSON.parse(localStorage.getItem("adslife_user") || "null");
-    return { user, token };
-  } catch {
-    return { user: null, token: null };
-  }
-}
-
-const stored = loadFromStorage();
-
-// Already logged in from a previous session — register for push and connect
-// realtime on load too.
-if (stored.token && isTokenValid(stored.token)) {
-  registerPushToken();
-  connectNotificationSocket();
 }
 
 export const useUserStore = create<UserState>((set) => ({
-  user: stored.user,
-  token: stored.token,
-  isAuthenticated: !!stored.token && isTokenValid(stored.token),
+  user: loadCachedUser(),
+  isAuthenticated: false,
+  authChecked: false,
 
-  setUser: (user, token) => {
+  setUser: (user) => {
     localStorage.setItem("adslife_user", JSON.stringify(user));
-    localStorage.setItem("adslife_token", token);
-    set({ user, token, isAuthenticated: true });
+    set({ user, isAuthenticated: true, authChecked: true });
     registerPushToken();
     connectNotificationSocket();
   },
@@ -68,14 +57,22 @@ export const useUserStore = create<UserState>((set) => ({
     });
   },
 
+  setAuthChecked: (user) => {
+    if (user) {
+      localStorage.setItem("adslife_user", JSON.stringify(user));
+      set({ user, isAuthenticated: true, authChecked: true });
+      registerPushToken();
+      connectNotificationSocket();
+    } else {
+      localStorage.removeItem("adslife_user");
+      set({ user: null, isAuthenticated: false, authChecked: true });
+    }
+  },
+
   logout: () => {
-    // Best-effort, fire-and-forget — must run before the token is cleared
-    // (the API client reads it from localStorage), but logout itself
-    // shouldn't wait on it.
     unregisterPushToken().catch(() => {});
     disconnectNotificationSocket();
     localStorage.removeItem("adslife_user");
-    localStorage.removeItem("adslife_token");
-    set({ user: null, token: null, isAuthenticated: false });
+    set({ user: null, isAuthenticated: false });
   },
 }));

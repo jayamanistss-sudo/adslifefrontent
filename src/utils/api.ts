@@ -1,5 +1,14 @@
 import axios from "axios";
 
+// Lets App.tsx's boot-time session check opt out of the global 401 redirect
+// below (every anonymous visitor hits that 401 once, and shouldn't get
+// bounced to /login for it) without an `any` cast at every call site.
+declare module "axios" {
+  export interface AxiosRequestConfig {
+    skipAuthRedirect?: boolean;
+  }
+}
+
 const currentHost = globalThis.window === undefined ? "adslife.in" : globalThis.window.location.hostname;
 
 function getBaseURL(): string {
@@ -32,12 +41,13 @@ export const api = axios.create({
   baseURL: BASE_URL,
   headers: { "Content-Type": "application/json" },
   timeout: 15000,
-});
-
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("adslife_token");
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
+  // The JWT now lives only in the httpOnly cookie auth.controller.ts's
+  // setAuthCookie() sets on login/register — it already authenticated every
+  // request ahead of the Bearer header below, which was a redundant,
+  // JS-readable (i.e. XSS-stealable) copy of the same token. withCredentials
+  // makes axios actually send that cookie; frontend + API share the same
+  // origin here so this doesn't change CORS exposure.
+  withCredentials: true,
 });
 
 api.interceptors.response.use(
@@ -46,9 +56,10 @@ api.interceptors.response.use(
     return res;
   },
   (err) => {
-    if (err.response?.status === 401) {
-      localStorage.removeItem("adslife_token");
-      localStorage.removeItem("adslife_user");
+    // App.tsx's boot-time session check hits this same 401 path for every
+    // anonymous visitor (no cookie yet) — skipAuthRedirect keeps that from
+    // bouncing every logged-out user straight to /login.
+    if (err.response?.status === 401 && !err.config?.skipAuthRedirect) {
       if (globalThis.location.pathname !== "/login") {
         globalThis.location.href = "/login";
       }
@@ -62,9 +73,12 @@ export const endpoints = {
   login: "/auth/login",
   logout: "/auth/logout",
   register: "/auth/register",
+  forgotPassword: "/auth/forgot-password",
+  resetPassword: "/auth/reset-password",
   googleAuth: "/auth/google",
   becomeVendor: "/auth/become-vendor",
   authProfile: "/auth/profile",
+  authLocation: "/auth/location",
   authMe: "/auth/me",
   authChangePassword: "/auth/change-password",
   emailChangeRequest: "/auth/email-change/request",
@@ -97,7 +111,7 @@ export const endpoints = {
   vendorProfile: "/vendor/profile",
   vendorFollow: "/vendor/follow",
   vendorFollowStatus: (vendorId: number) => `/vendor/follow-status?vendor_id=${vendorId}`,
-  vendorFollowers: (vendorId: number, limit = 20) => `/vendor/${vendorId}/followers?limit=${limit}`,
+  vendorFollowers: (vendorId: number, limit = 20, page = 1) => `/vendor/${vendorId}/followers?limit=${limit}&page=${page}`,
   vendorFollowing: "/vendor/following",
   vendorMyPlan: "/vendor/my-plan",
   budgetSuggest: (vendorId: number, goal: string, category: string) =>
@@ -173,6 +187,7 @@ export const endpoints = {
   plansList: "/plans",
   plansCreate: "/plans",
   plansUpdate: (id: number) => `/plans/${id}`,
+  plansSeed: "/plans/seed",
 
   // Payment
   paymentCreateOrder: "/payment/create-order",
@@ -189,9 +204,14 @@ export const endpoints = {
   bannerListAdmin: "/banner-ads/admin",
   bannerRequest: "/banner-ads/request",
   bannerReview: (id: number) => `/banner-ads/${id}/review`,
+  bannerView: (id: number) => `/banner-ads/${id}/view`,
+  bannerClick: (id: number) => `/banner-ads/${id}/click`,
+  bannerViewers: (id: number, type: "view" | "click", page = 1) =>
+    `/banner-ads/${id}/viewers?type=${type}&page=${page}`,
 
   // Banner plans
   bannerPlansList: "/banner-plans",
+  bannerPlansSeed: "/banner-plans/seed",
 
   // Categories
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -200,6 +220,7 @@ export const endpoints = {
   categoriesUpdate: (id: number) => `/categories/${id}`,
   categoriesDelete: (id: number) => `/categories/${id}`,
   categoriesUsage: (id: number) => `/categories/${id}/usage`,
+  categoriesSeed: "/categories/seed",
 
   // Upload
   uploadImage: "/upload/image",
@@ -214,9 +235,27 @@ export const endpoints = {
   // Admin
   adminStats: "/admin/stats",
   adminMonitoringOverview: "/admin/monitoring/overview",
+  adminMonitoringLogs: (type: string, page = 1, perPage = 30, search = "") =>
+    `/admin/monitoring/${type}?page=${page}&per_page=${perPage}${search ? `&search=${encodeURIComponent(search)}` : ""}`,
+  adminMonitoringAlerts: (page = 1, perPage = 30) => `/admin/monitoring/alerts?page=${page}&per_page=${perPage}`,
+  adminMonitoringAlertRead: (id: number) => `/admin/monitoring/alerts/${id}/read`,
+  adminMonitoringSecurityEventResolve: (id: number) => `/admin/monitoring/security-events/${id}/resolve`,
+  adminMonitoringBlockedIps: "/admin/monitoring/blocked-ips",
+  adminMonitoringBlockIp: "/admin/monitoring/block-ip",
+  adminMonitoringUnblockIp: (ip: string) => `/admin/monitoring/block-ip/${encodeURIComponent(ip)}`,
+  adminMonitoringExport: (type: string) => `/admin/monitoring/export?type=${type}`,
+  adminPayments: (status = "", search = "", page = 1, limit = 30) =>
+    `/payment/admin/list?status=${status}&search=${encodeURIComponent(search)}&page=${page}&limit=${limit}`,
+  adminPaymentRefund: (id: number) => `/payment/admin/${id}/refund`,
+  vendorPayments: (status = "", page = 1, limit = 30) =>
+    `/payment/my-list?status=${status}&page=${page}&limit=${limit}`,
   adminAnalyticsLogins: (days = 30) => `/admin/analytics/logins?days=${days}`,
   adminAnalyticsVendorActivity: (days = 30) => `/admin/analytics/vendor-activity?days=${days}`,
   adminAnalyticsGeography: (limit = 10) => `/admin/analytics/geography?limit=${limit}`,
+  adminAnalyticsCategories: (limit = 20) => `/admin/analytics/categories?limit=${limit}`,
+  adminAnalyticsCampaigns: (days = 30) => `/admin/analytics/campaigns?days=${days}`,
+  adminFeedConfig: "/admin/feed-config",
+  adminFeedConfigReset: "/admin/feed-config/reset",
   adminUsers: (search = "", status = "", limit = 30, offset = 0) =>
     `/admin/users?search=${encodeURIComponent(search)}&status=${status}&limit=${limit}&offset=${offset}`,
   adminUserAction: (id: number) => `/admin/users/${id}`,
@@ -233,12 +272,24 @@ export const endpoints = {
   adminVendorAction: (id: number) => `/admin/vendors/${id}`,
   adminVendorsBulkPlan: "/admin/vendors/bulk-plan",
   adminReviewVendor: (id: number) => `/admin/review-vendor/${id}`,
-  adminVendorRequests: () => "/admin/vendor-requests",
+  adminVendorRequests: (status = "", page = 1, limit = 30) =>
+    `/admin/vendor-requests?status=${status}&page=${page}&limit=${limit}`,
   adminBroadcast: "/admin/broadcast",
   adminSpotlight: (status = "") => (status ? `/spotlight/list?status=${status}` : "/spotlight/list"),
   adminSpotlightAction: (id: number) => `/spotlight/${id}/approve`,
   adminNotificationSettings: "/admin/notification-settings",
   adminNotificationSettingUpdate: (type: string) => `/admin/notification-settings/${type}`,
+  notificationTemplates: (type = "") => `/notifications/templates${type ? `?type=${type}` : ""}`,
+  notificationTemplateCreate: "/notifications/templates",
+  notificationTemplateUpdate: (id: number) => `/notifications/templates/${id}`,
+  notificationTemplateDelete: (id: number) => `/notifications/templates/${id}`,
+  notificationTemplateGenerate: "/notifications/templates/generate",
+  notificationTemplateSeed: "/notifications/templates/seed",
+  adminLeaderboardExclude: (userId: number) => `/leaderboard/admin/${userId}/exclude`,
+  adminLeaderboardInclude: (userId: number) => `/leaderboard/admin/${userId}/include`,
+  adminFeaturedOffers: "/admin/offers/featured",
+  adminSetFeatured: (id: number) => `/admin/offers/${id}/featured`,
+  adminReorderFeatured: "/admin/offers/featured/reorder",
   adminReviews: (page = 1, limit = 30) => `/admin/reviews?page=${page}&limit=${limit}`,
   adminReviewHide: (id: number) => `/admin/reviews/${id}/hide`,
   adminReviewUnhide: (id: number) => `/admin/reviews/${id}/unhide`,

@@ -5,6 +5,7 @@ import { api, endpoints } from '../utils/api';
 
 interface Slide {
   key: string;
+  bannerId?: number;
   mediaUrl: string;
   mediaType: 'image' | 'video';
   title: string;
@@ -37,6 +38,7 @@ function mapSpotlight(s: Record<string, unknown>): Slide {
 function mapBannerAd(b: Record<string, unknown>): Slide {
   return {
     key:          `banner-${b.id}`,
+    bannerId:     b.id as number,
     mediaUrl:     b.image_url as string,
     mediaType:    (b.media_type as string) === 'video' ? 'video' : 'image',
     title:        (b.title as string) ?? 'Sponsored',
@@ -84,6 +86,20 @@ export default function SpotlightHero({ onExplore }: Props) {
     if (v) { v.currentTime = 0; v.play().catch(() => {}); }
   }, [current]);
 
+  // Banner view tracking — no tracking existed for banner ads at all, so a
+  // vendor had no way to know how many people actually saw their (paid)
+  // banner. Fires once per slide becoming active; the backend dedupes
+  // repeats within an hour, this ref just avoids a duplicate call within
+  // the same mount for the same slide index.
+  const trackedViewRef = useRef<Set<number>>(new Set());
+  useEffect(() => {
+    const slide = slides[current];
+    if (slide?.source !== 'banner' || slide.bannerId == null) return;
+    if (trackedViewRef.current.has(slide.bannerId)) return;
+    trackedViewRef.current.add(slide.bannerId);
+    api.post(endpoints.bannerView(slide.bannerId)).catch(() => {});
+  }, [current, slides]);
+
   const activeSlide = slides[current];
   const activeMediaUrl = activeSlide?.mediaUrl ?? DEFAULT_VIDEO;
   const activeMediaType = activeSlide?.mediaType ?? 'video';
@@ -99,6 +115,9 @@ export default function SpotlightHero({ onExplore }: Props) {
 
   const handleCta = () => {
     if (activeSlide?.source === 'banner' && activeSlide.targetUrl) {
+      if (activeSlide.bannerId != null) {
+        api.post(endpoints.bannerClick(activeSlide.bannerId)).catch(() => {});
+      }
       window.open(activeSlide.targetUrl, '_blank', 'noopener,noreferrer');
     } else {
       onExplore();
