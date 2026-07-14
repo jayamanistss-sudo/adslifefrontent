@@ -6,6 +6,19 @@ import { useGeolocation } from '../hooks/useGeolocation';
 
 declare const L: any;
 
+// Offer titles and vendor business names are vendor-supplied free text —
+// they get interpolated into Leaflet popup/marker HTML below, so they must
+// be escaped or a crafted offer becomes a stored-XSS payload for every
+// visitor who opens that pin.
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 interface MapOffer {
   id: number;
   title: string;
@@ -26,8 +39,13 @@ export default function OffersMap() {
 
   useEffect(() => {
     if (!mapRef.current || mapObj.current) return;
+    let cancelled = false;
 
     const init = async () => {
+      // The external Leaflet script can still be loading when the user
+      // navigates away; without this guard script.onload fires after
+      // mapRef.current is already null and L.map(null) throws.
+      if (cancelled || !mapRef.current) return;
       const centerLat = lat || 13.0827;
       const centerLng = lng || 80.2707;
       const map = L.map(mapRef.current!).setView([centerLat, centerLng], 12);
@@ -45,7 +63,7 @@ export default function OffersMap() {
       try {
         const r = user
           ? await api.get(endpoints.feed(user.id, centerLat, centerLng, 1, 100, ''))
-          : await api.get(endpoints.trending('Chennai', 1, 100, ''));
+          : await api.get(endpoints.trending('Chennai', 1, 100, '', centerLat, centerLng));
         const offers: MapOffer[] = r.data?.data ?? [];
         // Group offers by vendor location so one shop = one pin listing all
         // its live offers (overlapping same-location pins were unusable).
@@ -72,12 +90,12 @@ export default function OffersMap() {
           });
           const list = group
             .map((g) => `<a href="/offer/${g.id}" style="display:block;color:#0f172a;text-decoration:none;padding:4px 0;border-top:1px solid #eee">
-                 <strong>${g.title}</strong> · <span style="color:#FF6200">${Math.round(g.discount_percent || 0)}% OFF</span></a>`)
+                 <strong>${escapeHtml(g.title)}</strong> · <span style="color:#FF6200">${Math.round(g.discount_percent || 0)}% OFF</span></a>`)
             .join('');
           L.marker([olat, olng], { icon })
             .addTo(map)
             .bindPopup(
-              `<div style="max-width:220px"><span style="color:#FF6200;font-weight:700">${group[0].business_name ?? 'Shop'}</span>
+              `<div style="max-width:220px"><span style="color:#FF6200;font-weight:700">${escapeHtml(group[0].business_name ?? 'Shop')}</span>
                <div style="font-size:11px;color:#64748b;margin-bottom:2px">${group.length} offer${group.length !== 1 ? 's' : ''}</div>${list}</div>`,
             );
         }
@@ -96,6 +114,7 @@ export default function OffersMap() {
     document.body.appendChild(script);
 
     return () => {
+      cancelled = true;
       mapObj.current?.remove();
       mapObj.current = null;
     };
