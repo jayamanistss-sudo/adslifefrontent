@@ -454,8 +454,13 @@ export default function Layout({ children }: Props) {
         <motion.header
           animate={{ y: headerHidden ? '-100%' : 0 }}
           transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] as const }}
-          className="fixed top-0 left-0 right-0 z-40 mobile-nav-glass border-b"
-          style={{ height: 'calc(3.5rem + env(safe-area-inset-top, 0px))', paddingTop: 'env(safe-area-inset-top, 0px)' }}
+          className="fixed top-0 left-0 right-0 z-40 mobile-nav-glass"
+          style={{
+            height: 'calc(3.5rem + env(safe-area-inset-top, 0px))',
+            paddingTop: 'env(safe-area-inset-top, 0px)',
+            backgroundImage: 'var(--gradient-header)',
+            boxShadow: 'var(--shadow-header)',
+          }}
         >
           <div className="flex items-center gap-3 px-4 h-14">
             <Link to="/feed" className="flex items-center gap-2 flex-shrink-0">
@@ -483,6 +488,9 @@ export default function Layout({ children }: Props) {
               {isAuthenticated && <NotificationPanel />}
             </div>
           </div>
+
+          {/* Signature premium-header trim — mirrors the Flutter app's gradient edge */}
+          <div className="absolute bottom-0 left-0 right-0 h-[2.5px]" style={{ background: 'var(--gradient-trim)' }} />
         </motion.header>
 
         {/* Mobile content */}
